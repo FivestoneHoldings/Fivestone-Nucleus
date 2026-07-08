@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay — Command Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#101214;--card:#1a1d21;--line:#2a2e33;--green:#3ecf8e;--amber:#f0a04b;--txt:#e8e6e1}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--txt);padding:16px 14px 60px}
+.mark{font-weight:800;font-size:1.2rem;margin-bottom:2px}.mark span{color:var(--green)}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#7a7f87;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.oid{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#7a7f87}
+.chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:3px 8px;border-radius:20px;text-transform:uppercase}
+.chip.received{background:#2a2e33;color:#b9bec6}.chip.confirmed{background:#173042;color:#6db3e8}
+.chip.assigned{background:#241a38;color:#a98be0}.chip.in_transit{background:#3a2a12;color:var(--amber)}
+.chip.delivered{background:#12321f;color:var(--green)}.chip.failed{background:#3a1512;color:#e07b6d}
+.line{font-size:.85rem;margin:6px 0;color:#c9cdd3}
+.line b{color:#7a7f87;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+.row{display:flex;gap:8px;margin-top:10px}
+select,button{padding:10px;border-radius:8px;border:1px solid var(--line);font-family:'Archivo';font-size:.85rem}
+select{flex:1;background:#111316;color:var(--txt)}
+button{background:var(--green);color:#0c1f16;font-weight:800;border:none;cursor:pointer}
+button.ghost{background:transparent;color:#6db3e8;border:1px solid #274257}
+.empty{text-align:center;color:#7a7f87;padding:48px 12px}
+</style>
+</head>
+<body>
+<div class="mark">GateWay <span>Command Board</span></div>
+<div class="sub">Live · auto-refreshes each minute</div>
+<div id="list"><div class="empty">Loading…</div></div>
+<script>
+const key = location.pathname.split('/').filter(Boolean).pop();
+const api = p => `/api/board/${key}` + p;
+let DRIVERS = [];
+
+async function load(){
+  const r = await fetch(api('/orders'));
+  if(!r.ok){ document.getElementById('list').innerHTML =
+    '<div class="empty">Bad board key.</div>'; return; }
+  const d = await r.json(); DRIVERS = d.drivers;
+  if(!d.orders.length){ document.getElementById('list').innerHTML =
+    '<div class="empty">No open orders. The board is clear. 🕊️</div>'; return; }
+  document.getElementById('list').innerHTML = d.orders.map(o => `
+    <div class="card">
+      <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+      <div class="oid">${o.order_id}</div>
+      ${o.customer?`<div class="line"><b>From</b>${o.customer}</div>`:''}
+      <div class="line"><b>Pickup</b>${o.pickup||'—'}</div>
+      <div class="line"><b>Drop</b>${o.dropoff||'—'}</div>
+      ${o.items?`<div class="line"><b>Items</b>${o.items}</div>`:''}
+      <div class="row">
+        ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}
+        ${['received','confirmed'].includes(o.status)?`
+          <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select>
+          <button onclick="assign('${o.id}')">Assign →</button>`:''}
+      </div>
+    </div>`).join('');
+}
+async function assign(id){
+  const drv = document.getElementById('d-'+id).value;
+  const r = await fetch(api(`/orders/${id}/assign`),{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({driver_id:drv})});
+  if(r.ok) load(); else alert('Assign failed');
+}
+async function confirmO(id){
+  const r = await fetch(api(`/orders/${id}/confirm`),{method:'POST'});
+  if(r.ok) load(); else alert('Confirm failed');
+}
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GateWay Delivery — Place an Order</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1d21; --paper: #f7f6f3; --line: #d8d5cf;
+    --accent: #1f4d3a; --accent-soft: #e8efe b;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: 'Archivo', system-ui, sans-serif;
+    background: var(--paper); color: var(--ink);
+    min-height: 100vh; display: flex; justify-content: center; padding: 24px 16px 64px;
+  }
+  .card { width: 100%; max-width: 560px; }
+  header { margin-bottom: 28px; }
+  .mark {
+    font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em;
+  }
+  .mark span { color: #1f4d3a; }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    color: #6b6f76; margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 22px 0 6px; }
+  p.sub { color: #6b6f76; font-size: 0.9rem; margin-bottom: 24px; }
+  fieldset { border: none; margin-bottom: 22px; }
+  legend {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #1f4d3a;
+    margin-bottom: 10px; font-weight: 500;
+  }
+  label { display: block; font-size: 0.82rem; font-weight: 600; margin: 12px 0 4px; }
+  input, textarea {
+    width: 100%; padding: 11px 12px; font-family: inherit; font-size: 0.95rem;
+    border: 1.5px solid var(--line); border-radius: 8px; background: #fff;
+  }
+  input:focus, textarea:focus { outline: none; border-color: #1f4d3a; }
+  textarea { min-height: 68px; resize: vertical; }
+  .req::after { content: " *"; color: #b3402e; }
+  button {
+    width: 100%; padding: 15px; margin-top: 8px;
+    font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1rem;
+    color: #fff; background: #1f4d3a; border: none; border-radius: 10px; cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  .note {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #8a8e95;
+    margin-top: 16px; text-align: center; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <header>
+    <div class="mark">GateWay <span>Delivery</span></div>
+    <div class="tag">Blount County · Same-Day Courier</div>
+  </header>
+
+  <h1>Place a Delivery Order</h1>
+  <p class="sub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
+
+  <form method="GET" action="https://hook.us2.make.com/kgbj06p6vgrcxm0wwprkng388is1qgl6">
+    <fieldset>
+      <legend>Who's ordering</legend>
+      <label class="req" for="cn">Your name / business</label>
+      <input id="cn" name="customer_name" required placeholder="Friends BBQ">
+      <label class="req" for="cp">Phone</label>
+      <input id="cp" name="customer_phone" type="tel" required placeholder="865-555-0100">
+    </fieldset>
+
+    <fieldset>
+      <legend>Pickup</legend>
+      <label class="req" for="pa">Pickup address</label>
+      <textarea id="pa" name="pickup_address" required placeholder="Street, City, TN"></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dropoff</legend>
+      <label class="req" for="da">Dropoff address</label>
+      <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"></textarea>
+      <label for="dcn">Recipient name</label>
+      <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it">
+      <label for="dcp">Recipient phone</label>
+      <input id="dcp" name="dropoff_contact_phone" type="tel" placeholder="865-555-0199">
+    </fieldset>
+
+    <fieldset>
+      <legend>The delivery</legend>
+      <label class="req" for="items">What are we delivering?</label>
+      <textarea id="items" name="items_description" required placeholder="2 catering trays, 1 cooler"></textarea>
+      <label for="si">Special instructions</label>
+      <textarea id="si" name="special_instructions" placeholder="Gate code, fragile, call on arrival…"></textarea>
+    </fieldset>
+
+    <button type="submit">Send Order to GateWay</button>
+  </form>
+
+  <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
+</div>
+</body>
+</html>

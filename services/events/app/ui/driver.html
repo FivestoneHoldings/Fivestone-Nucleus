@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>GateWay — Day Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#f7f6f3;--line:#e0ddd6;--green:#1f4d3a;--amber:#a86a1f;--red:#a33327}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);padding:16px 14px 60px}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.mark{font-weight:800;font-size:1.15rem}.mark span{color:var(--green)}
+.who{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#6b6f76;text-transform:uppercase;letter-spacing:.08em}
+.card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.oid{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#6b6f76}
+.chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.65rem;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em}
+.chip.assigned{background:#efe9f7;color:#5a3b8a}.chip.in_transit{background:#fdf1e2;color:var(--amber)}
+.addr{margin:10px 0 4px;font-size:.95rem;line-height:1.45}
+.addr b{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#8a8e95;display:block}
+.items{font-size:.85rem;color:#44474d;margin:8px 0;padding:8px 10px;background:#faf9f6;border-radius:8px}
+.contact{font-size:.82rem;margin:6px 0}
+.contact a{color:var(--green);font-weight:600;text-decoration:none}
+.row{display:flex;gap:8px;margin-top:12px}
+button{flex:1;padding:16px 4px;border:none;border-radius:10px;font-family:'Archivo';font-weight:800;font-size:.92rem;color:#fff;cursor:pointer}
+button:active{transform:translateY(1px)}
+.b-pick{background:var(--amber)}.b-del{background:var(--green)}.b-fail{background:var(--red);flex:.55}
+.empty{text-align:center;color:#8a8e95;padding:48px 12px;font-size:.95rem}
+.done{opacity:.35;transition:opacity .6s}
+.note{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#8a8e95;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="mark">GateWay <span>Day Sheet</span></div>
+  <div class="who" id="who">…</div>
+</div>
+<div id="list"><div class="empty">Loading your route…</div></div>
+<p class="note">Tap Picked Up when you have it. Tap Delivered when it's done.<br>GateWay Dispatch · Fivestone Holdings</p>
+<script>
+const token = location.pathname.split('/').filter(Boolean).pop();
+const api = p => `/api/driver/${token}` + p;
+
+async function load(){
+  const r = await fetch(api('/orders'));
+  if(!r.ok){ document.getElementById('list').innerHTML =
+    '<div class="empty">This day link isn\'t valid. Ask dispatch for today\'s link.</div>'; return; }
+  const d = await r.json();
+  document.getElementById('who').textContent = d.driver;
+  if(!d.orders.length){ document.getElementById('list').innerHTML =
+    '<div class="empty">No deliveries on your sheet right now.<br>Pull down to refresh.</div>'; return; }
+  document.getElementById('list').innerHTML = d.orders.map(o => `
+    <div class="card" id="${o.id}">
+      <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+      <div class="oid">${o.order_id}</div>
+      <div class="addr"><b>Pickup</b>${o.pickup||'—'}</div>
+      <div class="addr"><b>Dropoff</b>${o.dropoff||'—'}</div>
+      ${o.items?`<div class="items">${o.items}</div>`:''}
+      ${o.contact?`<div class="contact">${o.contact}${o.phone?` · <a href="tel:${o.phone}">${o.phone}</a>`:''}</div>`:''}
+      ${o.notes?`<div class="items">📝 ${o.notes}</div>`:''}
+      <div class="row">
+        ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
+        ${o.status==='in_transit'?`<button class="b-del" onclick="act('${o.id}','delivered')">Delivered ✓</button>`:''}
+        <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
+      </div>
+    </div>`).join('');
+}
+async function act(id, action, body){
+  const r = await fetch(api(`/orders/${id}/${action}`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+  if(r.ok){ const c=document.getElementById(id); c.classList.add('done');
+    setTimeout(load, 700); }
+  else alert('Could not update — try again or call dispatch.');
+}
+function fail(id){
+  const reason = prompt('What happened? (no answer, wrong address, refused…)');
+  if(reason!==null) act(id, 'failed', {reason});
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

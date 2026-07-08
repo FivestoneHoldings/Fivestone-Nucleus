@@ -5,17 +5,46 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from pathlib import Path
+from fastapi.responses import HTMLResponse
 from .db import Base, engine, get_db
 from .models import Event
 from .schemas import EventIn, EventOut
+from .dispatch import router as dispatch_router
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Nucleus Event Service",
-    version="0.1.0",
-    description="Append-only event log for all Fivestone operating companies. The record never pretends.",
+    title="Nucleus API",
+    version="0.2.0",
+    description="Fivestone Nucleus: append-only Event Service + GateWay Dispatch v0 surfaces (ADR-008 monolith; split at M3).",
 )
+
+app.include_router(dispatch_router)
+
+_UI = Path(__file__).parent / "ui"
+
+
+def _page(name: str) -> str:
+    return (_UI / name).read_text()
+
+
+@app.get("/driver/{day_token}", response_class=HTMLResponse)
+def driver_ui(day_token: str):
+    """Driver day-sheet (GWD-004): the three buttons live here."""
+    return _page("driver.html")
+
+
+@app.get("/board/{key}", response_class=HTMLResponse)
+def board_ui(key: str):
+    """Founder command board."""
+    return _page("board.html")
+
+
+@app.get("/order", response_class=HTMLResponse)
+def order_form():
+    """Public partner order form — posts to the canonical intake webhook."""
+    return _page("order-form.html")
 
 
 @app.get("/healthz")
