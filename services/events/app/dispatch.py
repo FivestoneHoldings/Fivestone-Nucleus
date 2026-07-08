@@ -58,6 +58,18 @@ async def _driver_by_token(day_token: str) -> dict:
     return drivers[0]
 
 
+# ---------- DIAGNOSTICS (no secrets returned; booleans only) ----------
+
+@router.get("/api/diag")
+async def diag():
+    return {
+        "airtable_pat_set": at.configured(),
+        "admin_key_set": bool(os.environ.get("ADMIN_KEY")),
+        "service": "nucleus-dispatch",
+        "note": "If either is false, the Railway Variable did not save or the service has not redeployed since it was added.",
+    }
+
+
 # ---------- DRIVER API ----------
 
 @router.get("/api/driver/{day_token}/orders")

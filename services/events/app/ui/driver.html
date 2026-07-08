@@ -42,8 +42,14 @@ const api = p => `/api/driver/${token}` + p;
 
 async function load(){
   const r = await fetch(api('/orders'));
-  if(!r.ok){ document.getElementById('list').innerHTML =
-    '<div class="empty">This day link isn\'t valid. Ask dispatch for today\'s link.</div>'; return; }
+  if(!r.ok){
+    let detail = '';
+    try{ const j = await r.json(); detail = j.detail || ''; }catch(e){}
+    document.getElementById('list').innerHTML =
+      `<div class="empty">This day link isn't valid.<br>Ask dispatch for today's link.<br>` +
+      `<span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;opacity:.55">HTTP ${r.status} ${detail}</span></div>`;
+    return;
+  }
   const d = await r.json();
   document.getElementById('who').textContent = d.driver;
   if(!d.orders.length){ document.getElementById('list').innerHTML =

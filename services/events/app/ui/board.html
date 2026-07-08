@@ -37,8 +37,14 @@ let DRIVERS = [];
 
 async function load(){
   const r = await fetch(api('/orders'));
-  if(!r.ok){ document.getElementById('list').innerHTML =
-    '<div class="empty">Bad board key.</div>'; return; }
+  if(!r.ok){
+    let detail = '';
+    try{ const j = await r.json(); detail = j.detail || ''; }catch(e){}
+    document.getElementById('list').innerHTML =
+      `<div class="empty">Bad board key.<br>` +
+      `<span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;opacity:.55">HTTP ${r.status} ${detail}</span></div>`;
+    return;
+  }
   const d = await r.json(); DRIVERS = d.drivers;
   if(!d.orders.length){ document.getElementById('list').innerHTML =
     '<div class="empty">No open orders. The board is clear. 🕊️</div>'; return; }
