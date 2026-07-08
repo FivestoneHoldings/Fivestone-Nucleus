@@ -56,6 +56,7 @@ async function load(){
       <div class="line"><b>Pickup</b>${o.pickup||'—'}</div>
       <div class="line"><b>Drop</b>${o.dropoff||'—'}</div>
       ${o.items?`<div class="line"><b>Items</b>${o.items}</div>`:''}
+      ${o.status==='delivered'?`<div class="line"><b>Proof</b><a href="/proof/${o.order_id}" target="_blank" style="color:#3ecf8e">📷 view photo</a></div>`:''}
       <div class="row">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}
         ${['received','confirmed'].includes(o.status)?`

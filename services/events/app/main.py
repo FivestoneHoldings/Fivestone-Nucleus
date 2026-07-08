@@ -11,6 +11,7 @@ from .db import Base, engine, get_db
 from .models import Event
 from .schemas import EventIn, EventOut
 from .dispatch import router as dispatch_router
+from .intake import router as intake_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +22,7 @@ app = FastAPI(
 )
 
 app.include_router(dispatch_router)
+app.include_router(intake_router)
 
 _UI = Path(__file__).parent / "ui"
 

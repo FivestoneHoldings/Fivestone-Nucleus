@@ -7,12 +7,12 @@ import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from . import airtable_client as at
 from .db import SessionLocal
-from .models import Event
+from .models import Event, Proof
 
 router = APIRouter()
 
@@ -99,6 +99,45 @@ async def driver_orders(day_token: str):
     }
 
 
+# ---------- PROOF OF DELIVERY ----------
+
+@router.post("/api/driver/{day_token}/orders/{record_id}/proof")
+async def upload_proof(day_token: str, record_id: str, request: Request):
+    drv = await _driver_by_token(day_token)
+    body = await request.json()
+    img = body.get("image_b64", "")
+    if not img or len(img) > 6_000_000:
+        raise HTTPException(400, "image_b64 required (max ~4MB)")
+    order_id = body.get("order_id", record_id)
+    db: Session = SessionLocal()
+    try:
+        db.add(Proof(order_id=order_id, content_b64=img,
+                     content_type=body.get("content_type", "image/jpeg"),
+                     lat=str(body.get("lat", ""))[:30], lng=str(body.get("lng", ""))[:30]))
+        db.commit()
+    finally:
+        db.close()
+    actor = f"driver:{drv['fields'].get('display_name','?')}"
+    _log_event("order.proof_captured", order_id, actor,
+               {"lat": str(body.get("lat", "")), "lng": str(body.get("lng", ""))})
+    return {"ok": True, "order_id": order_id, "proof_url": f"/proof/{order_id}"}
+
+
+@router.get("/proof/{order_id}")
+def get_proof(order_id: str):
+    import base64
+    db: Session = SessionLocal()
+    try:
+        p = (db.query(Proof).filter(Proof.order_id == order_id)
+             .order_by(Proof.created_at.desc()).first())
+    finally:
+        db.close()
+    if not p:
+        raise HTTPException(404, "No proof on file for this order")
+    return Response(content=base64.b64decode(p.content_b64), media_type=p.content_type)
+
+
+
 @router.post("/api/driver/{day_token}/orders/{record_id}/{action}")
 async def driver_action(day_token: str, record_id: str, action: str, request: Request):
     if action not in ACTION_MAP:
@@ -113,10 +152,13 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
         pass
     if action == "failed" and body.get("reason"):
         fields["fail_reason"] = str(body["reason"])[:200]
+    gps = {}
+    if body.get("lat") and body.get("lng"):
+        gps = {"lat": str(body["lat"])[:30], "lng": str(body["lng"])[:30]}
     updated = await at.patch_record(at.ORDERS, record_id, fields)
     order_id = updated.get("fields", {}).get("order_id", record_id)
     actor = f"driver:{drv['fields'].get('display_name','?')}"
-    _log_event(spec["event"], order_id, actor, {"action": action, **fields})
+    _log_event(spec["event"], order_id, actor, {"action": action, **fields, **gps})
     await _mirror_event_airtable(spec["event"], order_id, actor, json.dumps(fields))
     return {"ok": True, "order_id": order_id, "new_status": spec["status"]}
 

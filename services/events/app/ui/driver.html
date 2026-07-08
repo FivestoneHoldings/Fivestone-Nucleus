@@ -65,17 +65,60 @@ async function load(){
       ${o.notes?`<div class="items">📝 ${o.notes}</div>`:''}
       <div class="row">
         ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
-        ${o.status==='in_transit'?`<button class="b-del" onclick="act('${o.id}','delivered')">Delivered ✓</button>`:''}
+        ${o.status==='in_transit'?`<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`:''}
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
     </div>`).join('');
 }
+function gps(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res({});
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude, lng:p.coords.longitude}),
+      ()=>res({}), {timeout:3000, maximumAge:60000});
+  });
+}
 async function act(id, action, body){
+  const loc = await gps();
   const r = await fetch(api(`/orders/${id}/${action}`), {method:'POST',
-    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({...(body||{}), ...loc})});
   if(r.ok){ const c=document.getElementById(id); c.classList.add('done');
     setTimeout(load, 700); }
   else alert('Could not update — try again or call dispatch.');
+}
+function deliver(id, orderId){
+  // Offer proof photo; skipping is allowed (v0 grace)
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  let fired = false;
+  inp.onchange = async ()=>{
+    fired = true;
+    const f = inp.files[0];
+    if(f){
+      const b64 = await shrink(f);
+      const loc = await gps();
+      await fetch(api(`/orders/${id}/proof`), {method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({image_b64:b64, order_id:orderId, ...loc})}).catch(()=>{});
+    }
+    act(id, 'delivered');
+  };
+  // If picker is cancelled, still allow delivery after a beat
+  inp.addEventListener('cancel', ()=>{ if(!fired) act(id,'delivered'); });
+  inp.click();
+}
+function shrink(file){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 1280, sc = Math.min(1, max/Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = img.width*sc; cv.height = img.height*sc;
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      res(cv.toDataURL('image/jpeg', 0.72).split(',')[1]);
+    };
+    img.src = URL.createObjectURL(file);
+  });
 }
 function fail(id){
   const reason = prompt('What happened? (no answer, wrong address, refused…)');

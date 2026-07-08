@@ -31,3 +31,16 @@ class Event(Base):
         Index("ix_events_type_time", "event_type", "occurred_at"),
         Index("ix_events_tenant", "tenant"),
     )
+
+
+class Proof(Base):
+    """Proof-of-delivery photo, stored on OWNED infrastructure (closes the v0 gap)."""
+    __tablename__ = "proofs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    content_b64: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(60), nullable=False, default="image/jpeg")
+    lat: Mapped[str] = mapped_column(String(30), nullable=False, default="")
+    lng: Mapped[str] = mapped_column(String(30), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

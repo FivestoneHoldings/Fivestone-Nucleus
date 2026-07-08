@@ -35,13 +35,17 @@ async def fake_create(table, fields):
     return {"id": "recNEW", "fields": fields}
 
 
-at.list_records = fake_list
-at.patch_record = fake_patch
-at.create_record = fake_create
+import pytest
 import app.dispatch as dp
-dp.at.list_records = fake_list
-dp.at.patch_record = fake_patch
-dp.at.create_record = fake_create
+
+
+@pytest.fixture(autouse=True)
+def _patched_airtable(monkeypatch):
+    for mod in (at, dp.at):
+        monkeypatch.setattr(mod, "list_records", fake_list)
+        monkeypatch.setattr(mod, "patch_record", fake_patch)
+        monkeypatch.setattr(mod, "create_record", fake_create)
+    yield
 
 
 def test_driver_sheet_lists_their_orders():

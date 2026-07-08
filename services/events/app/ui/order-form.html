@@ -64,7 +64,8 @@
   <h1>Place a Delivery Order</h1>
   <p class="sub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
 
-  <form method="GET" action="https://hook.us2.make.com/kgbj06p6vgrcxm0wwprkng388is1qgl6">
+  <form method="GET" action="/v0/intake">
+    <input type="hidden" name="partner" id="partnerField" value="">
     <fieldset>
       <legend>Who's ordering</legend>
       <label class="req" for="cn">Your name / business</label>
@@ -102,5 +103,14 @@
 
   <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
 </div>
+<script>
+  const p = new URLSearchParams(location.search).get('partner');
+  if(p){
+    document.getElementById('partnerField').value = p;
+    const names = {asiacafe:'Asia Cafe', asiacafexpress:'Asia Cafe Xpress'};
+    const label = names[p] || p;
+    document.querySelector('.tag').textContent = label + ' × GateWay Delivery';
+  }
+</script>
 </body>
 </html>
