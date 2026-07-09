@@ -103,6 +103,8 @@ async function loadPartners(){
         <input id="pf-${x.code}" placeholder="Fee $" style="max-width:76px" value="${((x.delivery_fee_cents||0)/100).toFixed(2)}">
         <button class="ghost" onclick="savePartnerMeta('${x.code}')">Save</button></div>
       <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
+      <div class="line"><b>Kitchen screen</b><span class="copy" onclick="copyKitchen('${x.portal_token}')">copy kitchen link</span></div>
+      <div class="row"><button class="${x.accepting_orders?'warn':''}" onclick="setAccepting('${x.code}',${!x.accepting_orders})">${x.accepting_orders?'Pause orders ⏸':'Resume orders ▶'}</button></div>
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
@@ -157,6 +159,13 @@ async function savePartnerMeta(code){
   const cur = (await (await fetch(api('/partners'))).json()).partners.find(p=>p.code===code);
   if(await post('/partners', {code, display_name: cur?cur.display_name:code,
       address, delivery_fee_cents: fee})) loadPartners();
+}
+function copyKitchen(tok){
+  navigator.clipboard.writeText(location.origin + '/kitchen/' + tok);
+  alert('Kitchen Screen link copied — send it to the restaurant. It dings on new orders.');
+}
+async function setAccepting(code, on){
+  if(await post(`/partners/${code}/accepting`, {on})) loadPartners();
 }
 function copyOrderLink(code){
   navigator.clipboard.writeText(location.origin + '/order?partner=' + code);
@@ -225,6 +234,7 @@ async function load(){
       <div class="line"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
       <div class="line"><b>Drop</b>${esc(o.dropoff)||'—'}</div>
       ${o.items?`<div class="line"><b>Items</b>${esc(o.items)}</div>`:''}
+      ${o.requested_for?`<div class="line"><b>Scheduled</b><span style="color:#f0a04b;font-weight:700">${esc(o.requested_for).replace('T',' ').slice(0,16)}</span></div>`:''}
       ${o.status==='delivered'?`<div class="line"><b>Proof</b><a href="/proof/${o.order_id}" target="_blank" style="color:#3ecf8e">📷 view photo</a></div>`:''}
       <div class="row">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}

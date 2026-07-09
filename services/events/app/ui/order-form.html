@@ -92,6 +92,15 @@ font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
     <input type="hidden" name="total_cents" id="totalField" value="">
     <input type="hidden" name="tip_cents" id="tipField" value="">
     <div id="menuZone" style="display:none"></div>
+    <div id="pausedBanner" style="display:none;background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem"></div>
+    <fieldset id="whenFs">
+      <legend>When</legend>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" id="asapBtn" onclick="setWhen(false)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #1f4d3a;background:#1f4d3a;color:#fff;font-weight:800">ASAP</button>
+        <button type="button" id="schedBtn" onclick="setWhen(true)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #1f4d3a;background:#fff;color:#1f4d3a;font-weight:800">Schedule</button>
+      </div>
+      <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #e0ddd6;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
+    </fieldset>
     <fieldset>
       <legend>Who's ordering</legend>
       <label class="req" for="cn">Your name / business</label>
@@ -150,9 +159,23 @@ function setTip(cents, el){
   if(el){ el.style.background='#1f4d3a'; el.style.color='#fff'; }
   compose();
 }
+function setWhen(sched){
+  document.getElementById('reqFor').style.display = sched ? '' : 'none';
+  if(!sched) document.getElementById('reqFor').value = '';
+  const a = document.getElementById('asapBtn'), s = document.getElementById('schedBtn');
+  a.style.background = sched?'#fff':'#1f4d3a'; a.style.color = sched?'#1f4d3a':'#fff';
+  s.style.background = sched?'#1f4d3a':'#fff'; s.style.color = sched?'#fff':'#1f4d3a';
+}
 function applyPartnerMeta(d){
   if(!d) return;
   FEE_CENTS = d.delivery_fee_cents || 0;
+  if(d.accepting_orders === false){
+    const b = document.getElementById('pausedBanner');
+    b.style.display = '';
+    b.textContent = d.display_name + " isn't taking orders right now — check back soon.";
+    const send = document.querySelector('button[type="submit"]');
+    if(send){ send.disabled = true; send.style.opacity = .45; send.textContent = 'Ordering paused'; }
+  }
   if(d.address){
     const pa = document.getElementById('pa');
     if(pa){ pa.value = d.address; }

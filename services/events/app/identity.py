@@ -2,6 +2,7 @@
 Public: name lookup for co-branding. Key-gated: full list + create/update.
 """
 import os
+import secrets
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -13,13 +14,22 @@ router = APIRouter()
 SEED = [("asiacafe", "Asia Cafe"), ("asiacafexpress", "Asia Cafe Xpress")]
 
 
+def _new_portal_token() -> str:
+    return "kt-" + secrets.token_hex(5)
+
+
 def seed_partners():
     db: Session = SessionLocal()
     try:
         if db.query(Partner).count() == 0:
             for code, name in SEED:
-                db.add(Partner(code=code, display_name=name, status="pilot"))
+                db.add(Partner(code=code, display_name=name, status="pilot",
+                               portal_token=_new_portal_token()))
             db.commit()
+        # backfill portal tokens on existing partners (idempotent)
+        for p in db.query(Partner).filter(Partner.portal_token == "").all():
+            p.portal_token = _new_portal_token()
+        db.commit()
     finally:
         db.close()
 
@@ -62,7 +72,8 @@ def partner_lookup(code: str):
     if not p:
         raise HTTPException(404, "Unknown partner")
     return {"code": p.code, "display_name": p.display_name, "status": p.status,
-            "address": p.address, "delivery_fee_cents": p.delivery_fee_cents}
+            "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
+            "accepting_orders": p.accepting_orders}
 
 
 @router.get("/api/board/{key}/partners")
@@ -75,7 +86,9 @@ def list_partners(key: str):
         db.close()
     return {"partners": [{"code": p.code, "display_name": p.display_name,
                           "status": p.status, "contact": p.contact,
-                          "address": p.address, "delivery_fee_cents": p.delivery_fee_cents}
+                          "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
+                          "accepting_orders": p.accepting_orders,
+                          "portal_token": p.portal_token}
                          for p in rows]}
 
 
@@ -110,3 +123,21 @@ async def upsert_partner(key: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "code": code, "order_link": f"/order?partner={code}"}
+
+
+@router.post("/api/board/{key}/partners/{code}/accepting")
+async def set_accepting(key: str, code: str, request: Request):
+    """Pause/resume ordering for a partner (kitchen slammed, closed, etc)."""
+    _check_key(key)
+    body = await request.json()
+    on = bool(body.get("on", True))
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.accepting_orders = on
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "accepting_orders": on}

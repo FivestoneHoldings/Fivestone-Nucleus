@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from . import airtable_client as at
 from . import notify
 from .db import SessionLocal
-from .models import Event
+from .models import Event, Partner
 
 router = APIRouter()
 
@@ -112,6 +112,20 @@ async def intake(request: Request):
                 headline="Something's missing", order_id="—",
                 message="We need at least a dropoff address and what we're delivering. Go back and try again."), status_code=400)
         return JSONResponse({"received": False, "error": "dropoff_address and items_description required"}, status_code=400)
+
+    if data["partner"]:
+        db = SessionLocal()
+        try:
+            p = db.get(Partner, data["partner"].lower())
+        finally:
+            db.close()
+        if p and not p.accepting_orders:
+            if wants_html:
+                return HTMLResponse(CONFIRM_PAGE.format(
+                    headline=f"{p.display_name} isn't taking orders right now",
+                    order_id="—",
+                    message="The kitchen is paused at the moment. Please check back soon — or call GateWay and we'll help."), status_code=423)
+            return JSONResponse({"received": False, "error": "partner_paused"}, status_code=423)
 
     fp = _fingerprint(data["dropoff_address"], data["items_description"], data["requested_for"])
     order_id = "ORD-" + fp[:8].upper()

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay — Kitchen Screen</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f4d3a">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f7f6f3;--ink:#16181b;--green:#1f4d3a;--mint:#3ecf8e;--line:#e0ddd6;--dim:#7a7f87}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);padding:18px 16px 60px;max-width:640px;margin:0 auto}
+.mark{font-weight:900;font-size:1.35rem}.mark span{color:var(--green)}
+.who{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:2px 0 18px}
+.card{background:#fff;border:2px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+.card.ready{border-color:var(--green);background:#f1f7f3}
+.oid{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--dim)}
+.chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.64rem;padding:4px 10px;border-radius:20px;text-transform:uppercase;background:#eee}
+.chip.in_transit{background:#fdf1e3;color:#a86a1f}.chip.assigned{background:#efe9fa;color:#6d4fa8}
+.items{font-size:1.08rem;font-weight:700;line-height:1.5;margin:10px 0}
+.notes{font-size:.88rem;color:#8a6d3b;background:#fdf6e3;border-radius:8px;padding:8px 12px;margin-bottom:10px}
+.when{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--dim);margin-bottom:12px}
+button{width:100%;padding:16px;border-radius:12px;border:none;background:var(--green);color:#fff;
+font-weight:900;font-size:1rem;font-family:'Archivo';cursor:pointer}
+.done-label{color:var(--green);font-weight:900;text-align:center;font-size:1rem;padding:8px}
+.empty{text-align:center;color:var(--dim);padding:50px 12px}
+.paused{background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;
+text-align:center;margin-bottom:14px;font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="mark">GateWay <span>Kitchen</span></div>
+<div class="who" id="who">LOADING…</div>
+<div id="pauseBanner"></div>
+<div id="list"><div class="empty">Loading…</div></div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;text-align:center;margin-top:24px;text-transform:uppercase;letter-spacing:.08em">
+Tap READY when the order is bagged. GateWay Dispatch · Fivestone Holdings</div>
+<script>
+const token = location.pathname.split('/').filter(Boolean).pop();
+const api = p => `/api/kitchen/${token}` + p;
+let KNOWN = new Set(), FIRST = true;
+
+function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [0, .2].forEach(t=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(.35, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + t + .18);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .2);
+    });
+  }catch(e){}
+  if(navigator.vibrate) navigator.vibrate([180, 90, 180]);
+}
+function fmtWhen(o){
+  if(o.requested_for) return 'SCHEDULED · ' + esc(o.requested_for).replace('T',' ').slice(0,16);
+  return 'ASAP · in ' + esc((o.received_at||'').replace('T',' ').slice(11,16)) + ' UTC';
+}
+async function load(){
+  const r = await fetch(api('/orders'));
+  if(!r.ok){ document.getElementById('list').innerHTML =
+    '<div class="empty">This kitchen link isn\'t valid. Ask GateWay for a fresh one.</div>';
+    document.getElementById('who').textContent = '—'; return; }
+  const d = await r.json();
+  document.getElementById('who').textContent = d.kitchen.toUpperCase() + ' · TODAY';
+  document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
+    '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';
+  const fresh = d.orders.filter(o=>!KNOWN.has(o.order_id));
+  if(!FIRST && fresh.length) beep();
+  d.orders.forEach(o=>KNOWN.add(o.order_id));
+  FIRST = false;
+  document.getElementById('list').innerHTML = d.orders.length ? d.orders.map(o=>`
+    <div class="card ${o.ready?'ready':''}" id="${o.id}">
+      <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+      <div class="oid">${o.order_id}</div>
+      <div class="items">${esc(o.items)||'—'}</div>
+      ${o.notes?`<div class="notes">📝 ${esc(o.notes)}</div>`:''}
+      <div class="when">${fmtWhen(o)}</div>
+      ${o.ready
+        ? '<div class="done-label">✓ READY — driver notified</div>'
+        : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`}
+    </div>`).join('') :
+    '<div class="empty">No open orders right now.<br>New ones will ring in automatically. 🔔</div>';
+}
+async function markReady(id){
+  const r = await fetch(api(`/orders/${id}/ready`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:'{}'});
+  if(r.ok) load();
+}
+load(); setInterval(load, 20000);
+</script>
+</body>
+</html>

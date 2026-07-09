@@ -218,6 +218,11 @@ def seed_menus():
             elif not existing.address:
                 existing.address = addr
         db.commit()
+        # ensure every partner has a kitchen portal token (runs after ALL partner creation)
+        from .identity import _new_portal_token
+        for p in db.query(Partner).filter(Partner.portal_token == "").all():
+            p.portal_token = _new_portal_token()
+        db.commit()
         for code, cats in SEED_MENUS.items():
             if db.query(MenuItem).filter(MenuItem.partner_code == code).count() == 0:
                 sort = 0

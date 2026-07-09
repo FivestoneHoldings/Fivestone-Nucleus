@@ -16,6 +16,7 @@ from .intake import router as intake_router
 from .identity import router as identity_router, seed_partners
 from .menu import router as menu_router, seed_menus
 from .track import router as track_router
+from .kitchen import router as kitchen_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -29,6 +30,7 @@ app.include_router(dispatch_router)
 app.include_router(intake_router)
 app.include_router(identity_router)
 app.include_router(track_router)
+app.include_router(kitchen_router)
 app.include_router(menu_router)
 seed_partners()
 seed_menus()

@@ -85,6 +85,17 @@ async def driver_orders(day_token: str):
         max_records=100,
     )
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    mine_ids = [r["fields"].get("order_id", "") for r in mine]
+    ready_ids: set = set()
+    if mine_ids:
+        _dbr: Session = SessionLocal()
+        try:
+            _rows = (_dbr.query(Event)
+                     .filter(Event.event_type == "order.kitchen_ready",
+                             Event.entity_ref.in_(mine_ids)).all())
+            ready_ids = {e.entity_ref for e in _rows}
+        finally:
+            _dbr.close()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     done_recs = await at.list_records(
         at.ORDERS,
@@ -106,6 +117,8 @@ async def driver_orders(day_token: str):
             "phone": r["fields"].get("dropoff_contact_phone", ""),
             "items": r["fields"].get("items_description", ""),
             "notes": r["fields"].get("special_instructions", ""),
+            "requested_for": r["fields"].get("requested_for", ""),
+            "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
         } for r in mine],
     }
 
@@ -239,6 +252,7 @@ async def board_orders(key: str):
             "pickup": r["fields"].get("pickup_address", ""),
             "dropoff": r["fields"].get("dropoff_address", ""),
             "items": r["fields"].get("items_description", ""),
+            "requested_for": r["fields"].get("requested_for", ""),
             "driver": (r["fields"].get("driver") or [None])[0],
         } for r in records],
         "drivers": [{"id": d["id"], "name": d["fields"].get("display_name", "")}

@@ -56,6 +56,8 @@ class Partner(Base):
     contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     address: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     delivery_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=399)
+    accepting_orders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 

@@ -77,7 +77,7 @@ async function load(){
       </div>
     </div>`).join('');
 }
-let SHIFT = false;
+let SHIFT = false; let LASTN;
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 function paintShift(){
   const b = document.getElementById('shiftBtn');
