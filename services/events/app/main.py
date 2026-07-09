@@ -31,6 +31,11 @@ app.include_router(track_router)
 seed_partners()
 
 _UI = Path(__file__).parent / "ui"
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return (_UI / "home.html").read_text()
+
+
 app.mount("/static", StaticFiles(directory=str(_UI / "static")), name="static")
 
 

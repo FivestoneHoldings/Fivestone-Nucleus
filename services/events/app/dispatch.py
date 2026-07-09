@@ -87,6 +87,7 @@ async def driver_orders(day_token: str):
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     return {
         "driver": drv["fields"].get("display_name", "Driver"),
+        "shift": drv["fields"].get("status", "") == "on_shift",
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),
@@ -99,6 +100,21 @@ async def driver_orders(day_token: str):
             "notes": r["fields"].get("special_instructions", ""),
         } for r in mine],
     }
+
+
+# ---------- SHIFT TOGGLE ----------
+
+@router.post("/api/driver/{day_token}/shift")
+async def toggle_shift(day_token: str, request: Request):
+    drv = await _driver_by_token(day_token)
+    body = await request.json()
+    on = bool(body.get("on", True))
+    new_status = "on_shift" if on else "active"
+    await at.patch_record(at.DRIVERS, drv["id"], {"status": new_status})
+    actor = f"driver:{drv['fields'].get('display_name','?')}"
+    _log_event("driver.shift_started" if on else "driver.shift_ended",
+               drv["fields"].get("driver_id", drv["id"]), actor, {})
+    return {"ok": True, "shift": on}
 
 
 # ---------- PROOF OF DELIVERY ----------

@@ -109,7 +109,9 @@ async function loadStats(){
       <div class="stat"><b>${d.orders_today}</b><span>orders today</span></div>
       <div class="stat"><b>${d.delivered_today}</b><span>delivered</span></div>
       <div class="stat"><b>${avg!=null?avg+'m':'—'}</b><span>avg door-to-door</span></div>
-      <div class="stat"><b>${(d.by_status||{}).in_transit||0}</b><span>on the road</span></div>`;
+      <div class="stat"><b>${(d.by_status||{}).in_transit||0}</b><span>on the road</span></div>` +
+      Object.entries(d.by_partner||{}).map(([p,n])=>
+        `<div class="stat"><b>${n}</b><span>${p}</span></div>`).join('');
   }catch(e){}
 }
 
@@ -190,12 +192,25 @@ function copyLink(tok){
   alert('Day-sheet link copied — text it to the driver.');
 }
 
+let LOGMODE = 'events';
 async function loadLog(){
-  const d = await (await fetch(api('/events'))).json();
-  document.getElementById('log').innerHTML = d.events.length
-    ? d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> ${e.entity_ref}
-        <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join('')
-    : '<div class="empty">The log is empty.</div>';
+  const toggle = `<div class="tabs" style="margin-bottom:10px">
+    <div class="tab ${LOGMODE==='events'?'on':''}" onclick="LOGMODE='events';loadLog()">Events</div>
+    <div class="tab ${LOGMODE==='texts'?'on':''}" onclick="LOGMODE='texts';loadLog()">Texts</div></div>`;
+  if(LOGMODE==='events'){
+    const d = await (await fetch(api('/events'))).json();
+    document.getElementById('log').innerHTML = toggle + (d.events.length
+      ? d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> ${e.entity_ref}
+          <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join('')
+      : '<div class="empty">The log is empty.</div>');
+  } else {
+    const d = await (await fetch(api('/notifications'))).json();
+    document.getElementById('log').innerHTML = toggle + (d.notifications.length
+      ? d.notifications.map(n=>`<div class="ev"><b>${n.status}</b> ${n.order_id} → ${n.to}
+          <span>· ${n.at.replace('T',' ').slice(0,19)} UTC</span><br>
+          <span>${n.body}</span>${n.detail?`<br><span style="color:#e07b6d">${n.detail}</span>`:''}</div>`).join('')
+      : '<div class="empty">No texts yet. (SMS engine idles until Twilio is wired.)</div>');
+  }
 }
 
 load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
