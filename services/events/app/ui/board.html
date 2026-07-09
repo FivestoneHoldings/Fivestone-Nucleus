@@ -218,7 +218,9 @@ async function load(){
           <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select>
           <button onclick="assign('${o.id}')">Assign →</button>`:''}
         ${o.status==='delivered'?`<button class="ghost" onclick="closeO('${o.id}')">Close ✓</button>`:''}
-        ${!['delivered','failed'].includes(o.status)?`<button class="warn" onclick="cancelO('${o.id}')">Cancel</button>`:''}
+        ${o.status==='failed'?`<button onclick="requeueO('${o.id}')">Requeue ↻</button>`:''}
+        ${o.status!=='delivered'?`<button class="warn" onclick="cancelO('${o.id}')">Cancel</button>`:''}
+        ${['assigned','in_transit'].includes(o.status)?`<button class="ghost" onclick="notifyO('${o.id}')">Text update</button>`:''}
       </div>
     </div>`).join('');
   loadStats();
@@ -233,6 +235,15 @@ async function post(path, body){
 async function assign(id){ if(await post(`/orders/${id}/assign`,{driver_id:document.getElementById('d-'+id).value})) load(); }
 async function confirmO(id){ if(await post(`/orders/${id}/confirm`)) load(); }
 async function closeO(id){ if(await post(`/orders/${id}/close`)) load(); }
+async function requeueO(id){ if(await post(`/orders/${id}/requeue`)) load(); }
+async function notifyO(id){
+  const message = prompt('Text to send the customer:');
+  if(!message) return;
+  const r = await fetch(api(`/orders/${id}/notify`),{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});
+  const d = await r.json().catch(()=>({}));
+  alert(r.ok ? ('SMS: ' + (d.sms_status||'queued')) : 'Failed to send.');
+}
 async function cancelO(id){
   const reason = prompt('Cancel reason? (optional)');
   if(reason===null) return;

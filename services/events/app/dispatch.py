@@ -203,6 +203,7 @@ async def board_orders(key: str):
         formula="NOT(OR({status}='closed',{status}='cancelled'))",
         max_records=100,
     )
+    # failed orders surface for recovery (reassign/cancel)
     drivers = await at.list_records(at.DRIVERS, formula="{status}!='inactive'")
     return {
         "orders": [{
@@ -431,3 +432,33 @@ async def order_detail(key: str, order_id: str):
                     "occurred_at": e.occurred_at.isoformat(), "payload": e.payload}
                    for e in evs],
     }
+
+
+@router.post("/api/board/{key}/orders/{record_id}/requeue")
+async def requeue_order(key: str, record_id: str):
+    """Recover a failed delivery: return it to 'confirmed' so it can be reassigned."""
+    _check_key(key)
+    updated = await at.patch_record(at.ORDERS, record_id,
+                                    {"status": "confirmed", "failed_at": ""})
+    order_id = updated.get("fields", {}).get("order_id", record_id)
+    _log_event("order.requeued", order_id, "founder", {})
+    await _mirror_event_airtable("order.requeued", order_id, "founder", "")
+    return {"ok": True, "order_id": order_id}
+
+
+@router.post("/api/board/{key}/orders/{record_id}/notify")
+async def manual_notify(key: str, record_id: str, request: Request):
+    """Founder-triggered SMS to the customer (e.g. a delay note)."""
+    _check_key(key)
+    body = await request.json()
+    text = str(body.get("message", "")).strip()[:320]
+    if not text:
+        raise HTTPException(400, "message required")
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    phone = ""
+    order_id = record_id
+    if recs:
+        phone = recs[0]["fields"].get("customer_phone_raw", "")
+        order_id = recs[0]["fields"].get("order_id", record_id)
+    status = await notify.send_sms(order_id, phone, text)
+    return {"ok": True, "sms_status": status}
