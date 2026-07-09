@@ -4,6 +4,7 @@ Temporarily hosted inside the events service per ADR-008 (split at M3).
 """
 import json
 import os
+import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
@@ -222,3 +223,140 @@ async def confirm_order(key: str, record_id: str):
     _log_event("order.confirmed", order_id, "founder", {})
     await _mirror_event_airtable("order.confirmed", order_id, "founder", "")
     return {"ok": True, "order_id": order_id}
+
+
+# ---------- BOARD: LIFECYCLE COMPLETION ----------
+
+@router.post("/api/board/{key}/orders/{record_id}/close")
+async def close_order(key: str, record_id: str):
+    _check_key(key)
+    updated = await at.patch_record(at.ORDERS, record_id,
+                                    {"status": "closed", "closed_at": _now()})
+    order_id = updated.get("fields", {}).get("order_id", record_id)
+    _log_event("order.closed", order_id, "founder", {})
+    await _mirror_event_airtable("order.closed", order_id, "founder", "")
+    return {"ok": True, "order_id": order_id}
+
+
+@router.post("/api/board/{key}/orders/{record_id}/cancel")
+async def cancel_order(key: str, record_id: str, request: Request):
+    _check_key(key)
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    reason = str(body.get("reason", ""))[:200]
+    fields = {"status": "cancelled", "cancelled_at": _now()}
+    if reason:
+        fields["cancel_reason"] = reason
+    updated = await at.patch_record(at.ORDERS, record_id, fields)
+    order_id = updated.get("fields", {}).get("order_id", record_id)
+    _log_event("order.cancelled", order_id, "founder", {"reason": reason})
+    await _mirror_event_airtable("order.cancelled", order_id, "founder", reason)
+    return {"ok": True, "order_id": order_id}
+
+
+# ---------- BOARD: DRIVER MANAGEMENT (Access service owns this at M3) ----------
+
+def _new_token() -> str:
+    return "gw-" + secrets.token_hex(4)
+
+
+@router.get("/api/board/{key}/drivers")
+async def board_drivers(key: str):
+    _check_key(key)
+    drivers = await at.list_records(at.DRIVERS)
+    return {"drivers": [{
+        "id": d["id"],
+        "driver_id": d["fields"].get("driver_id", ""),
+        "name": d["fields"].get("display_name", ""),
+        "status": d["fields"].get("status", ""),
+        "day_token": d["fields"].get("day_token", ""),
+    } for d in drivers]}
+
+
+@router.post("/api/board/{key}/drivers")
+async def create_driver(key: str, request: Request):
+    _check_key(key)
+    body = await request.json()
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(400, "name required")
+    token = _new_token()
+    created = await at.create_record(at.DRIVERS, {
+        "driver_id": "DRV-" + secrets.token_hex(3).upper(),
+        "display_name": name, "status": "active", "day_token": token,
+    })
+    _log_event("driver.created", created["fields"].get("driver_id", ""), "founder", {"name": name})
+    return {"ok": True, "id": created["id"], "day_token": token}
+
+
+@router.post("/api/board/{key}/drivers/{record_id}/rotate")
+async def rotate_driver_token(key: str, record_id: str):
+    _check_key(key)
+    token = _new_token()
+    updated = await at.patch_record(at.DRIVERS, record_id, {"day_token": token})
+    _log_event("driver.token_rotated",
+               updated.get("fields", {}).get("driver_id", record_id), "founder", {})
+    return {"ok": True, "day_token": token}
+
+
+# ---------- BOARD: STATS ----------
+
+def _minutes_between(a: str, b: str):
+    try:
+        t1 = datetime.fromisoformat(a.replace("Z", "+00:00"))
+        t2 = datetime.fromisoformat(b.replace("Z", "+00:00"))
+        return max(0.0, (t2 - t1).total_seconds() / 60.0)
+    except Exception:
+        return None
+
+
+@router.get("/api/board/{key}/stats")
+async def board_stats(key: str):
+    _check_key(key)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS, formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
+        max_records=100)
+    by_status: dict = {}
+    partners: dict = {}
+    times = []
+    for r in records:
+        f = r["fields"]
+        st = f.get("status", "?")
+        by_status[st] = by_status.get(st, 0) + 1
+        p = f.get("partner_code", "")
+        if p:
+            partners[p] = partners.get(p, 0) + 1
+        if f.get("received_at") and f.get("delivered_at"):
+            m = _minutes_between(f["received_at"], f["delivered_at"])
+            if m is not None:
+                times.append(m)
+    return {
+        "date": today,
+        "orders_today": len(records),
+        "by_status": by_status,
+        "by_partner": partners,
+        "delivered_today": by_status.get("delivered", 0) + by_status.get("closed", 0),
+        "avg_received_to_delivered_min": round(sum(times) / len(times), 1) if times else None,
+    }
+
+
+# ---------- BOARD: OWNED TRUTH LOG ----------
+
+@router.get("/api/board/{key}/events")
+def board_events(key: str, limit: int = 50):
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Event).order_by(Event.occurred_at.desc())
+                .limit(min(limit, 200)).all())
+    finally:
+        db.close()
+    return {"events": [{
+        "event_type": e.event_type, "entity_ref": e.entity_ref,
+        "actor": e.actor, "occurred_at": e.occurred_at.isoformat(),
+        "payload": e.payload,
+    } for e in rows]}

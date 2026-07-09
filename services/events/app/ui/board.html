@@ -5,50 +5,91 @@
 <title>GateWay — Command Board</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#16181b;--paper:#101214;--card:#1a1d21;--line:#2a2e33;--green:#3ecf8e;--amber:#f0a04b;--txt:#e8e6e1}
+:root{--paper:#101214;--card:#1a1d21;--line:#2a2e33;--green:#3ecf8e;--amber:#f0a04b;--txt:#e8e6e1;--dim:#7a7f87}
 *{box-sizing:border-box;margin:0}
 body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--txt);padding:16px 14px 60px}
 .mark{font-weight:800;font-size:1.2rem;margin-bottom:2px}.mark span{color:var(--green)}
-.sub{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#7a7f87;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+.stats{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:86px;flex-shrink:0}
+.stat b{display:block;font-size:1.25rem;color:var(--green)}
+.stat span{font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;padding:10px;text-align:center;border-radius:8px;border:1px solid var(--line);
+background:var(--card);color:var(--dim);font-weight:800;font-size:.82rem;cursor:pointer}
+.tab.on{background:#12321f;color:var(--green);border-color:#1f4d3a}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
-.oid{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#7a7f87}
+.oid{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--dim)}
 .chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:3px 8px;border-radius:20px;text-transform:uppercase}
 .chip.received{background:#2a2e33;color:#b9bec6}.chip.confirmed{background:#173042;color:#6db3e8}
 .chip.assigned{background:#241a38;color:#a98be0}.chip.in_transit{background:#3a2a12;color:var(--amber)}
 .chip.delivered{background:#12321f;color:var(--green)}.chip.failed{background:#3a1512;color:#e07b6d}
+.chip.active{background:#12321f;color:var(--green)}.chip.on_shift{background:#3a2a12;color:var(--amber)}.chip.inactive{background:#2a2e33;color:var(--dim)}
 .line{font-size:.85rem;margin:6px 0;color:#c9cdd3}
-.line b{color:#7a7f87;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
-.row{display:flex;gap:8px;margin-top:10px}
-select,button{padding:10px;border-radius:8px;border:1px solid var(--line);font-family:'Archivo';font-size:.85rem}
-select{flex:1;background:#111316;color:var(--txt)}
+.line b{color:var(--dim);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+select,input,button{padding:10px;border-radius:8px;border:1px solid var(--line);font-family:'Archivo';font-size:.85rem}
+select,input{flex:1;background:#111316;color:var(--txt);min-width:120px}
 button{background:var(--green);color:#0c1f16;font-weight:800;border:none;cursor:pointer}
 button.ghost{background:transparent;color:#6db3e8;border:1px solid #274257}
-.empty{text-align:center;color:#7a7f87;padding:48px 12px}
+button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
+.empty{text-align:center;color:var(--dim);padding:40px 12px}
+.ev{font-family:'IBM Plex Mono',monospace;font-size:.68rem;padding:9px 4px;border-bottom:1px solid var(--line);line-height:1.6;word-break:break-word}
+.ev b{color:var(--green)}.ev span{color:var(--dim)}
+.copy{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:#6db3e8;cursor:pointer;text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="mark">GateWay <span>Command Board</span></div>
-<div class="sub">Live · auto-refreshes each minute</div>
-<div id="list"><div class="empty">Loading…</div></div>
+<div class="sub">Live · Fivestone infrastructure</div>
+<div class="stats" id="stats"></div>
+<div class="tabs">
+  <div class="tab on" id="t-orders" onclick="show('orders')">Orders</div>
+  <div class="tab" id="t-drivers" onclick="show('drivers')">Drivers</div>
+  <div class="tab" id="t-log" onclick="show('log')">Truth Log</div>
+</div>
+<div id="orders"><div class="empty">Loading…</div></div>
+<div id="drivers" style="display:none"></div>
+<div id="log" style="display:none"></div>
 <script>
 const key = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/board/${key}` + p;
-let DRIVERS = [];
+let DRIVERS = [], VIEW = 'orders';
+
+function show(v){
+  VIEW = v;
+  for(const x of ['orders','drivers','log']){
+    document.getElementById(x).style.display = x===v?'':'none';
+    document.getElementById('t-'+x).classList.toggle('on', x===v);
+  }
+  if(v==='drivers') loadDrivers();
+  if(v==='log') loadLog();
+}
+
+async function loadStats(){
+  try{
+    const d = await (await fetch(api('/stats'))).json();
+    const avg = d.avg_received_to_delivered_min;
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><b>${d.orders_today}</b><span>orders today</span></div>
+      <div class="stat"><b>${d.delivered_today}</b><span>delivered</span></div>
+      <div class="stat"><b>${avg!=null?avg+'m':'—'}</b><span>avg door-to-door</span></div>
+      <div class="stat"><b>${(d.by_status||{}).in_transit||0}</b><span>on the road</span></div>`;
+  }catch(e){}
+}
 
 async function load(){
   const r = await fetch(api('/orders'));
   if(!r.ok){
-    let detail = '';
-    try{ const j = await r.json(); detail = j.detail || ''; }catch(e){}
-    document.getElementById('list').innerHTML =
-      `<div class="empty">Bad board key.<br>` +
-      `<span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;opacity:.55">HTTP ${r.status} ${detail}</span></div>`;
+    let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){}
+    document.getElementById('orders').innerHTML =
+      `<div class="empty">Bad board key.<br><span style="font-size:.62rem;opacity:.55">HTTP ${r.status} ${detail}</span></div>`;
     return;
   }
   const d = await r.json(); DRIVERS = d.drivers;
-  if(!d.orders.length){ document.getElementById('list').innerHTML =
-    '<div class="empty">No open orders. The board is clear. 🕊️</div>'; return; }
-  document.getElementById('list').innerHTML = d.orders.map(o => `
+  if(!d.orders.length){ document.getElementById('orders').innerHTML =
+    '<div class="empty">No open orders. The board is clear. 🕊️</div>'; }
+  else document.getElementById('orders').innerHTML = d.orders.map(o => `
     <div class="card">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
       <div class="oid">${o.order_id}</div>
@@ -62,20 +103,67 @@ async function load(){
         ${['received','confirmed'].includes(o.status)?`
           <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select>
           <button onclick="assign('${o.id}')">Assign →</button>`:''}
+        ${o.status==='delivered'?`<button class="ghost" onclick="closeO('${o.id}')">Close ✓</button>`:''}
+        ${!['delivered','failed'].includes(o.status)?`<button class="warn" onclick="cancelO('${o.id}')">Cancel</button>`:''}
       </div>
     </div>`).join('');
+  loadStats();
 }
-async function assign(id){
-  const drv = document.getElementById('d-'+id).value;
-  const r = await fetch(api(`/orders/${id}/assign`),{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({driver_id:drv})});
-  if(r.ok) load(); else alert('Assign failed');
+
+async function post(path, body){
+  const r = await fetch(api(path),{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body||{})});
+  if(!r.ok) alert('Action failed — try again.');
+  return r.ok;
 }
-async function confirmO(id){
-  const r = await fetch(api(`/orders/${id}/confirm`),{method:'POST'});
-  if(r.ok) load(); else alert('Confirm failed');
+async function assign(id){ if(await post(`/orders/${id}/assign`,{driver_id:document.getElementById('d-'+id).value})) load(); }
+async function confirmO(id){ if(await post(`/orders/${id}/confirm`)) load(); }
+async function closeO(id){ if(await post(`/orders/${id}/close`)) load(); }
+async function cancelO(id){
+  const reason = prompt('Cancel reason? (optional)');
+  if(reason===null) return;
+  if(await post(`/orders/${id}/cancel`,{reason})) load();
 }
-load(); setInterval(load, 60000);
+
+async function loadDrivers(){
+  const d = await (await fetch(api('/drivers'))).json();
+  document.getElementById('drivers').innerHTML = `
+    <div class="card"><div class="line"><b>Add driver</b></div>
+      <div class="row"><input id="newDrvName" placeholder="Driver name">
+      <button onclick="addDriver()">Add +</button></div></div>` +
+    d.drivers.map(x=>`
+    <div class="card">
+      <span class="chip ${x.status}">${x.status||'—'}</span>
+      <div class="oid">${x.driver_id}</div>
+      <div class="line" style="font-weight:600">${x.name}</div>
+      <div class="line"><b>Day link</b><span class="copy" onclick="copyLink('${x.day_token}')">copy link</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#555">/driver/${x.day_token}</span></div>
+      <div class="row"><button class="ghost" onclick="rotate('${x.id}')">Rotate token ↻</button></div>
+    </div>`).join('');
+}
+async function addDriver(){
+  const name = document.getElementById('newDrvName').value.trim();
+  if(!name) return;
+  if(await post('/drivers',{name})) loadDrivers();
+}
+async function rotate(id){
+  if(!confirm('Rotate this driver\\'s day token? Their old link stops working.')) return;
+  if(await post(`/drivers/${id}/rotate`)) loadDrivers();
+}
+function copyLink(tok){
+  navigator.clipboard.writeText(location.origin + '/driver/' + tok);
+  alert('Day-sheet link copied — text it to the driver.');
+}
+
+async function loadLog(){
+  const d = await (await fetch(api('/events'))).json();
+  document.getElementById('log').innerHTML = d.events.length
+    ? d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> ${e.entity_ref}
+        <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join('')
+    : '<div class="empty">The log is empty.</div>';
+}
+
+load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
 </script>
 </body>
 </html>
