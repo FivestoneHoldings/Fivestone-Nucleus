@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from .db import Base, engine, get_db
 from .models import Event
@@ -30,6 +31,7 @@ app.include_router(track_router)
 seed_partners()
 
 _UI = Path(__file__).parent / "ui"
+app.mount("/static", StaticFiles(directory=str(_UI / "static")), name="static")
 
 
 def _page(name: str) -> str:

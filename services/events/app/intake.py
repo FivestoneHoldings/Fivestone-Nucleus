@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import airtable_client as at
+from . import notify
 from .db import SessionLocal
 from .models import Event
 
@@ -116,6 +117,9 @@ async def intake(request: Request):
                        {"partner": data["partner"], "customer": data["customer_name"],
                         "dropoff": data["dropoff_address"], "items": data["items_description"],
                         "channel": "nucleus-intake"})
+            if data["customer_phone"]:
+                await notify.send_sms(order_id, data["customer_phone"],
+                                      notify.msg_received(order_id))
 
     if wants_html:
         if duplicate:

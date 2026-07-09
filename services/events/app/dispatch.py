@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from . import airtable_client as at
+from . import notify
 from .db import SessionLocal
 from .models import Event, Proof
 
@@ -161,6 +162,12 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
     actor = f"driver:{drv['fields'].get('display_name','?')}"
     _log_event(spec["event"], order_id, actor, {"action": action, **fields, **gps})
     await _mirror_event_airtable(spec["event"], order_id, actor, json.dumps(fields))
+    phone = updated.get("fields", {}).get("customer_phone_raw", "")
+    if phone:
+        if action == "picked_up":
+            await notify.send_sms(order_id, phone, notify.msg_on_the_way(order_id))
+        elif action == "delivered":
+            await notify.send_sms(order_id, phone, notify.msg_delivered(order_id))
     return {"ok": True, "order_id": order_id, "new_status": spec["status"]}
 
 
@@ -360,3 +367,19 @@ def board_events(key: str, limit: int = 50):
         "actor": e.actor, "occurred_at": e.occurred_at.isoformat(),
         "payload": e.payload,
     } for e in rows]}
+
+
+@router.get("/api/board/{key}/notifications")
+def board_notifications(key: str, limit: int = 50):
+    _check_key(key)
+    from .models import Notification
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Notification).order_by(Notification.created_at.desc())
+                .limit(min(limit, 200)).all())
+    finally:
+        db.close()
+    return {"notifications": [{
+        "order_id": n.order_id, "to": n.to_phone, "status": n.status,
+        "body": n.body, "detail": n.detail, "at": n.created_at.isoformat(),
+    } for n in rows]}

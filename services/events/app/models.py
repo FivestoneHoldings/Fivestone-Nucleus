@@ -55,3 +55,16 @@ class Partner(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pilot")
     contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Notification(Base):
+    """SMS outbox — every attempt recorded, sent or not. The record never pretends."""
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    to_phone: Mapped[str] = mapped_column(String(30), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)  # sent | failed | skipped_unconfigured | skipped_no_phone
+    detail: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

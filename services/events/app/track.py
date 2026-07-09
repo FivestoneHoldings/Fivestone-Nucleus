@@ -17,6 +17,9 @@ STEPS = [("received_at", "Order received"),
 PAGE = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Track your order — GateWay Delivery</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="theme-color" content="#1f4d3a">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>body{{font-family:'Archivo',system-ui,sans-serif;background:#f7f6f3;color:#16181b;
 max-width:480px;margin:0 auto;padding:28px 20px 60px}}
