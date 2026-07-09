@@ -66,14 +66,14 @@ CONFIRM_PAGE = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Order Received — GateWay Delivery</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<style>body{{font-family:'Archivo',system-ui,sans-serif;background:#f7f6f3;color:#16181b;
+<style>body{{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
 display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}}
 .card{{text-align:center;max-width:420px}}
-.check{{width:72px;height:72px;border-radius:50%;background:#1f4d3a;color:#fff;font-size:2rem;
+.check{{width:72px;height:72px;border-radius:50%;background:#16337a;color:#fff;font-size:2rem;
 line-height:72px;margin:0 auto 20px}}
 h1{{font-size:1.3rem;font-weight:800}}
 p{{color:#5a5e64;line-height:1.6;font-size:.95rem}}
-.oid{{font-family:'IBM Plex Mono',monospace;background:#fff;border:1.5px solid #e0ddd6;
+.oid{{font-family:'IBM Plex Mono',monospace;background:#fff;border:1.5px solid #d9deea;
 border-radius:8px;padding:10px 16px;display:inline-block;margin:14px 0;font-size:.9rem}}
 .foot{{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:#9a9ea5;margin-top:28px;
 text-transform:uppercase;letter-spacing:.08em}}</style></head>
@@ -176,7 +176,7 @@ async def intake(request: Request):
             f'<!DOCTYPE html><html><head><meta charset="UTF-8">'
             f'<meta http-equiv="refresh" content="0; url=/track/{order_id}">'
             f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-            f'</head><body style="font-family:system-ui;background:#f7f6f3;text-align:center;padding-top:80px">'
+            f'</head><body style="font-family:system-ui;background:#f7f8fb;text-align:center;padding-top:80px">'
             f'Order received — taking you to live tracking…'
             f'<script>location.replace("/track/{order_id}")</script></body></html>')
     return JSONResponse({"received": True, "order_id": order_id, "duplicate": duplicate})

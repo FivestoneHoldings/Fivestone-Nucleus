@@ -8,13 +8,13 @@
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#1f4d3a">
+<meta name="theme-color" content="#0e1526">
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a1d21; --paper: #f7f6f3; --line: #d8d5cf;
-    --accent: #1f4d3a; --accent-soft: #e8efe b;
+    --ink: #1a1d21; --paper: #f7f8fb; --line: #d8d5cf;
+    --accent: #16337a; --accent-soft: #e8efe b;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
@@ -27,7 +27,7 @@
   .mark {
     font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em;
   }
-  .mark span { color: #1f4d3a; }
+  .mark span { color: #16337a; }
   .tag {
     font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
     color: #6b6f76; margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -37,7 +37,7 @@
   fieldset { border: none; margin-bottom: 22px; }
   legend {
     font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
-    letter-spacing: 0.1em; text-transform: uppercase; color: #1f4d3a;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #16337a;
     margin-bottom: 10px; font-weight: 500;
   }
   label { display: block; font-size: 0.82rem; font-weight: 600; margin: 12px 0 4px; }
@@ -45,31 +45,31 @@
     width: 100%; padding: 11px 12px; font-family: inherit; font-size: 0.95rem;
     border: 1.5px solid var(--line); border-radius: 8px; background: #fff;
   }
-  input:focus, textarea:focus { outline: none; border-color: #1f4d3a; }
+  input:focus, textarea:focus { outline: none; border-color: #16337a; }
   textarea { min-height: 68px; resize: vertical; }
   .req::after { content: " *"; color: #b3402e; }
   button {
     width: 100%; padding: 15px; margin-top: 8px;
     font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1rem;
-    color: #fff; background: #1f4d3a; border: none; border-radius: 10px; cursor: pointer;
+    color: #fff; background: #16337a; border: none; border-radius: 10px; cursor: pointer;
   }
   button:active { transform: translateY(1px); }
   .note {
     font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #8a8e95;
     margin-top: 16px; text-align: center; line-height: 1.5;
   }
-.mcat{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#1f4d3a;
+.mcat{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#16337a;
 font-weight:800;margin:20px 0 8px}
-.mitem{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #e0ddd6;
+.mitem{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #d9deea;
 border-radius:12px;padding:12px;margin-bottom:8px}
 .mi-info{flex:1}.mi-name{font-weight:700;font-size:.92rem}
 .mi-desc{font-size:.75rem;color:#7a7f87;line-height:1.4}
-.mi-price{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:#1f4d3a;font-weight:500}
+.mi-price{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:#16337a;font-weight:500}
 .step{display:flex;align-items:center;gap:8px}
-.step button{width:34px;height:34px;border-radius:50%;border:1.5px solid #1f4d3a;
-background:#fff;color:#1f4d3a;font-size:1.1rem;font-weight:800;padding:0;cursor:pointer}
+.step button{width:34px;height:34px;border-radius:50%;border:1.5px solid #16337a;
+background:#fff;color:#16337a;font-size:1.1rem;font-weight:800;padding:0;cursor:pointer}
 .step .qty{min-width:18px;text-align:center;font-weight:800}
-.cartbar{position:sticky;bottom:12px;background:#1f4d3a;color:#fff;border-radius:14px;
+.cartbar{position:sticky;bottom:12px;background:#16337a;color:#fff;border-radius:14px;
 padding:14px 18px;display:none;justify-content:space-between;align-items:center;
 font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
 .cartbar .tot{font-family:'IBM Plex Mono',monospace}
@@ -96,10 +96,10 @@ font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
     <fieldset id="whenFs">
       <legend>When</legend>
       <div style="display:flex;gap:8px;margin-bottom:8px">
-        <button type="button" id="asapBtn" onclick="setWhen(false)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #1f4d3a;background:#1f4d3a;color:#fff;font-weight:800">ASAP</button>
-        <button type="button" id="schedBtn" onclick="setWhen(true)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #1f4d3a;background:#fff;color:#1f4d3a;font-weight:800">Schedule</button>
+        <button type="button" id="asapBtn" onclick="setWhen(false)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#16337a;color:#fff;font-weight:800">ASAP</button>
+        <button type="button" id="schedBtn" onclick="setWhen(true)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800">Schedule</button>
       </div>
-      <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #e0ddd6;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
+      <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
     </fieldset>
     <fieldset>
       <legend>Who's ordering</legend>
@@ -155,16 +155,16 @@ function money(c){ return '$' + (c/100).toFixed(2); }
 let FEE_CENTS = 0, TIP_CENTS = 0;
 function setTip(cents, el){
   TIP_CENTS = cents;
-  document.querySelectorAll('.tipchip').forEach(c=>{c.style.background='#fff';c.style.color='#1f4d3a'});
-  if(el){ el.style.background='#1f4d3a'; el.style.color='#fff'; }
+  document.querySelectorAll('.tipchip').forEach(c=>{c.style.background='#fff';c.style.color='#16337a'});
+  if(el){ el.style.background='#16337a'; el.style.color='#fff'; }
   compose();
 }
 function setWhen(sched){
   document.getElementById('reqFor').style.display = sched ? '' : 'none';
   if(!sched) document.getElementById('reqFor').value = '';
   const a = document.getElementById('asapBtn'), s = document.getElementById('schedBtn');
-  a.style.background = sched?'#fff':'#1f4d3a'; a.style.color = sched?'#1f4d3a':'#fff';
-  s.style.background = sched?'#1f4d3a':'#fff'; s.style.color = sched?'#fff':'#1f4d3a';
+  a.style.background = sched?'#fff':'#16337a'; a.style.color = sched?'#16337a':'#fff';
+  s.style.background = sched?'#16337a':'#fff'; s.style.color = sched?'#fff':'#16337a';
 }
 function applyPartnerMeta(d){
   if(!d) return;
@@ -204,7 +204,7 @@ function renderMenu(m){
      <div style="display:flex;gap:8px;margin-bottom:6px">
        ${[["No tip",0],["$2",200],["$3",300],["$5",500]].map(([l,c],i)=>
          `<button type="button" class="tipchip" onclick="setTip(${c},this)"
-           style="flex:1;padding:10px;border-radius:20px;border:1.5px solid #1f4d3a;background:${i===0?'#1f4d3a':'#fff'};color:${i===0?'#fff':'#1f4d3a'};font-weight:800;font-size:.8rem">${l}</button>`).join('')}
+           style="flex:1;padding:10px;border-radius:20px;border:1.5px solid #16337a;background:${i===0?'#16337a':'#fff'};color:${i===0?'#fff':'#16337a'};font-weight:800;font-size:.8rem">${l}</button>`).join('')}
      </div>
      <div style="font-size:.72rem;color:#9a9ea5;margin-bottom:4px">100% of tips go to your driver.</div>
      <div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;

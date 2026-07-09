@@ -25,22 +25,22 @@ _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>Track your order — GateWay Delivery</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<meta name="theme-color" content="#1f4d3a">
+<meta name="theme-color" content="#0e1526">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>body{font-family:'Archivo',system-ui,sans-serif;background:#f7f6f3;color:#16181b;
+<style>body{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
 max-width:480px;margin:0 auto;padding:28px 20px 60px}
-.mark{font-weight:800;font-size:1.15rem}.mark span{color:#1f4d3a}
+.mark{font-weight:800;font-size:1.15rem}.mark span{color:#16337a}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
 .status{font-size:1.5rem;font-weight:800;margin-bottom:4px}
-.items{font-size:.9rem;color:#5a5e64;background:#fff;border:1.5px solid #e0ddd6;
+.items{font-size:.9rem;color:#5a5e64;background:#fff;border:1.5px solid #d9deea;
 border-radius:10px;padding:10px 14px;margin:14px 0 26px}
 .step{display:flex;gap:14px;padding:0 0 26px 0;position:relative}
-.dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:#e0ddd6;z-index:1}
-.step.done .dot{background:#1f4d3a}
-.step:not(:last-child):before{content:"";position:absolute;left:10px;top:22px;bottom:0;width:2px;background:#e0ddd6}
-.step.done:not(:last-child):before{background:#1f4d3a}
+.dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:#d9deea;z-index:1}
+.step.done .dot{background:#16337a}
+.step:not(:last-child):before{content:"";position:absolute;left:10px;top:22px;bottom:0;width:2px;background:#d9deea}
+.step.done:not(:last-child):before{background:#16337a}
 .lbl{font-weight:600;font-size:.95rem}
 .time{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#9a9ea5}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:26px;
@@ -49,7 +49,7 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}</style></head>"
 _MAP_SCRIPT = """
 <div id="mapwrap" style="display:none;margin:20px 0">
   <div style="font-weight:800;font-size:.9rem;margin-bottom:8px">Your driver is on the way \U0001F69A</div>
-  <div id="map" style="height:260px;border-radius:14px;overflow:hidden;border:1.5px solid #e0ddd6"></div>
+  <div id="map" style="height:260px;border-radius:14px;overflow:hidden;border:1.5px solid #d9deea"></div>
 </div>
 <div class="foot">Updates automatically \u00b7 GateWay Delivery \u00b7 Fivestone Holdings</div>
 <script>
@@ -113,7 +113,7 @@ async def track(order_id: str):
     total = f.get("total_cents")
     if total:
         try:
-            items_line += f'<br><b style="color:#1f4d3a">Total ${int(total)/100:.2f}</b>'
+            items_line += f'<br><b style="color:#16337a">Total ${int(total)/100:.2f}</b>'
         except (ValueError, TypeError):
             pass
 
