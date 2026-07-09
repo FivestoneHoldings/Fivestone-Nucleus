@@ -58,6 +58,21 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #8a8e95;
     margin-top: 16px; text-align: center; line-height: 1.5;
   }
+.mcat{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#1f4d3a;
+font-weight:800;margin:20px 0 8px}
+.mitem{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #e0ddd6;
+border-radius:12px;padding:12px;margin-bottom:8px}
+.mi-info{flex:1}.mi-name{font-weight:700;font-size:.92rem}
+.mi-desc{font-size:.75rem;color:#7a7f87;line-height:1.4}
+.mi-price{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:#1f4d3a;font-weight:500}
+.step{display:flex;align-items:center;gap:8px}
+.step button{width:34px;height:34px;border-radius:50%;border:1.5px solid #1f4d3a;
+background:#fff;color:#1f4d3a;font-size:1.1rem;font-weight:800;padding:0;cursor:pointer}
+.step .qty{min-width:18px;text-align:center;font-weight:800}
+.cartbar{position:sticky;bottom:12px;background:#1f4d3a;color:#fff;border-radius:14px;
+padding:14px 18px;display:none;justify-content:space-between;align-items:center;
+font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
+.cartbar .tot{font-family:'IBM Plex Mono',monospace}
 </style>
 </head>
 <body>
@@ -72,6 +87,7 @@
 
   <form method="GET" action="/v0/intake">
     <input type="hidden" name="partner" id="partnerField" value="">
+    <div id="menuZone" style="display:none"></div>
     <fieldset>
       <legend>Who's ordering</legend>
       <label class="req" for="cn">Your name / business</label>
@@ -110,16 +126,62 @@
   <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
 </div>
 <script>
-  const p = new URLSearchParams(location.search).get('partner');
-  if(p){
-    document.getElementById('partnerField').value = p;
-    fetch('/v0/partners/' + encodeURIComponent(p))
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        document.querySelector('.tag').textContent =
-          (d ? d.display_name : p) + ' × GateWay Delivery';
-      }).catch(()=>{});
-  }
+const p = new URLSearchParams(location.search).get('partner');
+const CART = {};  // id -> {name, cents, qty}
+if(p){
+  document.getElementById('partnerField').value = p;
+  fetch('/v0/partners/' + encodeURIComponent(p))
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { document.querySelector('.tag').textContent =
+      (d ? d.display_name : p) + ' × GateWay Delivery'; }).catch(()=>{});
+  fetch('/v0/partners/' + encodeURIComponent(p) + '/menu')
+    .then(r => r.ok ? r.json() : null)
+    .then(renderMenu).catch(()=>{});
+}
+function money(c){ return '$' + (c/100).toFixed(2); }
+function renderMenu(m){
+  if(!m || !m.categories || !m.categories.length) return;
+  const z = document.getElementById('menuZone');
+  z.style.display = '';
+  z.innerHTML = '<div class="mcat" style="margin-top:4px">Tap + to build your order</div>' +
+    m.categories.map(c => `<div class="mcat">${c.name}</div>` +
+      c.items.map(i => `
+      <div class="mitem">
+        <div class="mi-info"><div class="mi-name">${i.name}</div>
+          ${i.description?`<div class="mi-desc">${i.description}</div>`:''}
+          <div class="mi-price">${money(i.price_cents)}</div></div>
+        <div class="step">
+          <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},-1)">−</button>
+          <span class="qty" id="q-${i.id}">0</span>
+          <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},1)">+</button>
+        </div>
+      </div>`).join('')).join('') +
+    `<div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
+  // items field becomes the composed summary (still editable for special requests)
+  const itemsField = document.querySelector('[name="items_description"]');
+  if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
+}
+function bump(id, name, cents, d){
+  const e = CART[id] || {name, cents, qty:0};
+  e.qty = Math.max(0, e.qty + d);
+  if(e.qty === 0) delete CART[id]; else CART[id] = e;
+  document.getElementById('q-'+id).textContent = e.qty;
+  compose();
+}
+function compose(){
+  const entries = Object.values(CART);
+  const itemsField = document.querySelector('[name="items_description"]');
+  const bar = document.getElementById('cartbar');
+  if(!entries.length){ if(itemsField) itemsField.value=''; bar.style.display='none'; return; }
+  const total = entries.reduce((s,e)=>s+e.cents*e.qty,0);
+  const n = entries.reduce((s,e)=>s+e.qty,0);
+  if(itemsField) itemsField.value =
+    entries.map(e=>`${e.qty}× ${e.name} (${money(e.cents*e.qty)})`).join(', ') +
+    ` — subtotal ${money(total)}`;
+  bar.style.display = 'flex';
+  document.getElementById('cartCount').textContent = n + (n===1?' item':' items');
+  document.getElementById('cartTot').textContent = money(total);
+}
 </script>
 </body>
 </html>

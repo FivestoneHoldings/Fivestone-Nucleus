@@ -88,6 +88,8 @@ async function loadPartners(){
       <div class="oid">${x.code}</div>
       <div class="line" style="font-weight:600">${x.display_name}</div>
       <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
+      <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button></div>
+      <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
 }
 async function addPartner(){
@@ -95,6 +97,44 @@ async function addPartner(){
   const name = document.getElementById('pName').value.trim();
   if(!code || !name) return;
   if(await post('/partners',{code, display_name:name})) loadPartners();
+}
+async function toggleMenu(code){
+  const el = document.getElementById('menu-'+code);
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api(`/partners/${code}/menu`))).json();
+  const rows = (d.categories||[]).map(c =>
+    `<div class="line" style="margin-top:8px"><b>${c.name}</b></div>` +
+    c.items.map(i => `
+      <div class="row" style="align-items:center">
+        <span style="flex:2;font-size:.82rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${i.name}</span>
+        <span class="oid" style="flex:0">$${(i.price_cents/100).toFixed(2)}</span>
+        <button class="ghost" style="padding:6px 10px" onclick="menuAvail('${code}','${i.id}',${!i.available})">${i.available?'86':'restore'}</button>
+        <button class="warn" style="padding:6px 10px" onclick="menuDel('${code}','${i.id}')">✕</button>
+      </div>`).join('')).join('');
+  el.innerHTML = rows + `
+    <div class="line" style="margin-top:10px"><b>Add item</b></div>
+    <div class="row"><input id="mn-${code}" placeholder="Name">
+      <input id="mp-${code}" placeholder="9.99" style="max-width:80px"></div>
+    <div class="row"><input id="mc-${code}" placeholder="Category">
+      <button onclick="menuAdd('${code}')">Add +</button></div>`;
+}
+async function menuAdd(code){
+  const name = document.getElementById('mn-'+code).value.trim();
+  const price = Math.round(parseFloat(document.getElementById('mp-'+code).value||'0')*100);
+  const cat = document.getElementById('mc-'+code).value.trim() || 'Menu';
+  if(!name) return;
+  if(await post(`/partners/${code}/menu`, {name, price_cents:price, category:cat}))
+    { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function menuAvail(code, id, avail){
+  if(await post(`/partners/${code}/menu`, {id, available:avail}))
+    { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function menuDel(code, id){
+  if(!confirm('Remove this item from the menu?')) return;
+  const r = await fetch(api(`/menu-items/${id}`), {method:'DELETE'});
+  if(r.ok){ document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
 function copyOrderLink(code){
   navigator.clipboard.writeText(location.origin + '/order?partner=' + code);

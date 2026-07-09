@@ -3,7 +3,7 @@ No update or delete path exists in this service. None will be added.
 """
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, DateTime, Text, Index
+from sqlalchemy import Boolean, Integer, String, DateTime, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
@@ -68,3 +68,18 @@ class Notification(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False)  # sent | failed | skipped_unconfigured | skipped_no_phone
     detail: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class MenuItem(Base):
+    """Partner menu catalog. Prices in cents. Seeded menus are DRAFTS until the
+    partner confirms pricing — editable live from the Command Board."""
+    __tablename__ = "menu_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(80), nullable=False, default="Menu")
+    name: Mapped[str] = mapped_column(String(140), nullable=False)
+    description: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    price_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
