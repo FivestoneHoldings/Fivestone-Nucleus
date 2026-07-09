@@ -49,7 +49,9 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
 <div class="mark">GateWay <span>Command Board</span></div>
 <div class="sub">Live · Fivestone infrastructure</div>
 <div class="stats" id="stats"></div>
-<div style="margin:-6px 0 12px"><a id="csvLink" href="#" style="font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#6db3e8;text-decoration:underline">⬇ export today (CSV)</a></div>
+<div style="margin:-6px 0 12px"><a id="csvLink" href="#" style="font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#6db3e8;text-decoration:underline">⬇ export today (CSV)</a>
+<span class="copy" style="margin-left:14px" onclick="toggleTrend()">📈 7-day trend</span></div>
+<div id="trend" style="display:none;margin-bottom:12px"></div>
 <div class="tabs">
   <div class="tab on" id="t-orders" onclick="show('orders')">Orders</div>
   <div class="tab" id="t-drivers" onclick="show('drivers')">Drivers</div>
@@ -200,6 +202,21 @@ async function editField(recordId, field, current){
   const r = await fetch(api(`/orders/${recordId}/edit`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: v})});
   if(r.ok){ findOrder(); load(); } else alert('Edit failed.');
+}
+async function toggleTrend(){
+  const el = document.getElementById('trend');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api('/digest'))).json();
+  const max = Math.max(1, ...d.days.map(x=>x.orders));
+  el.innerHTML = d.days.length ? d.days.map(x=>
+    `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+      <span class="oid" style="width:70px">${x.date.slice(5)}</span>
+      <div style="height:12px;border-radius:6px;background:#2f6fe0;width:${Math.round(x.orders/max*60)}%;min-width:4px"></div>
+      <span class="oid">${x.orders} · $${(x.revenue_cents/100).toFixed(0)}</span>
+    </div>`).join('') +
+    `<div class="ev" style="color:#6fa0ff;border:none"><b>WEEK</b> · ${d.totals.orders} orders · ${d.totals.delivered} delivered · $${(d.totals.revenue_cents/100).toFixed(2)}</div>`
+    : '<div class="empty" style="padding:12px">No orders this week.</div>';
 }
 async function findOrder(){
   let v = document.getElementById('findOrd').value.trim().toUpperCase();

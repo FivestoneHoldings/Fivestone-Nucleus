@@ -121,9 +121,15 @@ async def track(order_id: str):
         except (ValueError, TypeError):
             pass
 
+    proof_html = ""
+    if status in ("delivered", "closed"):
+        proof_html = (f'<img src="/proof/{_esc(oid)}" alt="Delivery photo" '
+                      f'style="width:100%;border-radius:14px;border:1.5px solid #d9deea;'
+                      f'margin:6px 0 14px" onerror="this.style.display=\'none\'">')
     body = (f'<body data-oid="{_esc(oid)}"><div class="mark">GateWay <span>Delivery</span></div>'
             f'<div class="oid">{_esc(oid)}</div>'
             f'<div class="status">{HEADLINES.get(status, _esc(status))}</div>'
             f'<div class="items">{items_line}</div>'
+            f'{proof_html}'
             f'{steps_html}')
     return HTMLResponse(_HEAD + body + _MAP_SCRIPT, status_code=200)

@@ -96,8 +96,16 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
 }).catch(()=>{});
 function go(path, id){
   const v = document.getElementById(id).value.trim();
-  if(v) location.href = '/' + path + '/' + encodeURIComponent(v);
+  if(!v) return;
+  try{ localStorage.setItem('gw_'+id, v); }catch(e){}
+  location.href = '/' + path + '/' + encodeURIComponent(v);
 }
+try{
+  for(const id of ['drv','brd']){
+    const saved = localStorage.getItem('gw_'+id);
+    if(saved) document.getElementById(id).value = saved;
+  }
+}catch(e){}
 function goTrack(){
   let v = document.getElementById(trk.id||'trk').value.trim().toUpperCase();
   if(!v) return;

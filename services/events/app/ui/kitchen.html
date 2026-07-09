@@ -35,13 +35,26 @@ text-align:center;margin-bottom:14px;font-size:.85rem}
 <div class="mark">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
 <div id="pauseBanner"></div>
+<button id="gateBtn" onclick="toggleGate()" style="width:auto;padding:10px 18px;margin-bottom:14px;border-radius:20px;font-size:.82rem;background:transparent;border:1.5px solid #16337a;color:#16337a;font-weight:800;display:none"></button>
 <div id="list"><div class="empty">Loading…</div></div>
 <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;text-align:center;margin-top:24px;text-transform:uppercase;letter-spacing:.08em">
 Tap READY when the order is bagged. GateWay Dispatch · Fivestone Holdings</div>
 <script>
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/kitchen/${token}` + p;
-let KNOWN = new Set(), FIRST = true;
+let KNOWN = new Set(), FIRST = true, ACCEPTING = true;
+function paintGate(){
+  const b = document.getElementById('gateBtn');
+  b.style.display = '';
+  b.textContent = ACCEPTING ? '⏸ Pause new orders' : '▶ Resume orders';
+  b.style.background = ACCEPTING ? 'transparent' : '#16337a';
+  b.style.color = ACCEPTING ? '#16337a' : '#fff';
+}
+async function toggleGate(){
+  const r = await fetch(api('/accepting'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({on: !ACCEPTING})});
+  if(r.ok){ ACCEPTING = !ACCEPTING; paintGate(); load(); }
+}
 
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 function beep(){
@@ -68,6 +81,7 @@ async function load(){
     document.getElementById('who').textContent = '—'; return; }
   const d = await r.json();
   document.getElementById('who').textContent = d.kitchen.toUpperCase() + ' · TODAY';
+  ACCEPTING = d.accepting; paintGate();
   document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
     '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';
   const fresh = d.orders.filter(o=>!KNOWN.has(o.order_id));

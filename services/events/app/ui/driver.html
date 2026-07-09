@@ -78,6 +78,11 @@ async function load(){
     </div>`).join('');
 }
 let SHIFT = false; let LASTN;
+function doneText(d){
+  let t = '✓ ' + d.done_today + ' delivered today';
+  if(d.tips_today_cents > 0) t += ' · $' + (d.tips_today_cents/100).toFixed(2) + ' tips';
+  return t;
+}
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 function paintShift(){
   const b = document.getElementById('shiftBtn');

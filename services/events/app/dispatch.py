@@ -104,11 +104,14 @@ async def driver_orders(day_token: str):
         formula=f"AND(OR({{status}}='delivered',{{status}}='closed'),"
                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}')",
         max_records=100)
-    done_today = sum(1 for r in done_recs if drv["id"] in (r["fields"].get("driver") or []))
+    my_done = [r for r in done_recs if drv["id"] in (r["fields"].get("driver") or [])]
+    done_today = len(my_done)
+    tips_today = sum(int(r["fields"].get("tip_cents") or 0) for r in my_done)
     return {
         "driver": drv["fields"].get("display_name", "Driver"),
         "shift": drv["fields"].get("status", "") == "on_shift",
         "done_today": done_today,
+        "tips_today_cents": tips_today,
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),

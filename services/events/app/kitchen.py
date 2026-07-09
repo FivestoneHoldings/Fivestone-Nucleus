@@ -83,3 +83,22 @@ async def kitchen_ready(token: str, record_id: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "order_id": order_id}
+
+
+@router.post("/api/kitchen/{token}/accepting")
+async def kitchen_accepting(token: str, request: Request):
+    """Kitchen self-serve pause/resume — merchants control their own gate."""
+    p = _partner_by_token(token)
+    body = await request.json()
+    on = bool(body.get("on", True))
+    db: Session = SessionLocal()
+    try:
+        row = db.get(Partner, p.code)
+        row.accepting_orders = on
+        db.add(Event(event_type="partner.resumed" if on else "partner.paused",
+                     entity_ref=p.code, tenant="gateway",
+                     actor=f"kitchen:{p.code}", payload=json.dumps({})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "accepting": on}
