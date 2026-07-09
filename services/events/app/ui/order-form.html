@@ -87,6 +87,9 @@ font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
 
   <form method="GET" action="/v0/intake">
     <input type="hidden" name="partner" id="partnerField" value="">
+    <input type="hidden" name="subtotal_cents" id="subtotalField" value="">
+    <input type="hidden" name="fee_cents" id="feeField" value="">
+    <input type="hidden" name="total_cents" id="totalField" value="">
     <div id="menuZone" style="display:none"></div>
     <fieldset>
       <legend>Who's ordering</legend>
@@ -96,15 +99,15 @@ font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
       <input id="cp" name="customer_phone" type="tel" required placeholder="865-555-0100">
     </fieldset>
 
-    <fieldset>
+    <fieldset id="pickupFs">
       <legend>Pickup</legend>
       <label class="req" for="pa">Pickup address</label>
       <textarea id="pa" name="pickup_address" required placeholder="Street, City, TN"></textarea>
     </fieldset>
 
     <fieldset>
-      <legend>Dropoff</legend>
-      <label class="req" for="da">Dropoff address</label>
+      <legend>Deliver to</legend>
+      <label class="req" for="da">Your delivery address</label>
       <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"></textarea>
       <label for="dcn">Recipient name</label>
       <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it">
@@ -133,12 +136,23 @@ if(p){
   fetch('/v0/partners/' + encodeURIComponent(p))
     .then(r => r.ok ? r.json() : null)
     .then(d => { document.querySelector('.tag').textContent =
-      (d ? d.display_name : p) + ' × GateWay Delivery'; }).catch(()=>{});
+      (d ? d.display_name : p) + ' × GateWay Delivery'; applyPartnerMeta(d); }).catch(()=>{});
   fetch('/v0/partners/' + encodeURIComponent(p) + '/menu')
     .then(r => r.ok ? r.json() : null)
     .then(renderMenu).catch(()=>{});
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
+let FEE_CENTS = 0;
+function applyPartnerMeta(d){
+  if(!d) return;
+  FEE_CENTS = d.delivery_fee_cents || 0;
+  if(d.address){
+    const pa = document.getElementById('pa');
+    if(pa){ pa.value = d.address; }
+    const fs = document.getElementById('pickupFs');
+    if(fs) fs.style.display = 'none';  // restaurant pickup is known
+  }
+}
 function renderMenu(m){
   if(!m || !m.categories || !m.categories.length) return;
   const z = document.getElementById('menuZone');
@@ -172,15 +186,21 @@ function compose(){
   const entries = Object.values(CART);
   const itemsField = document.querySelector('[name="items_description"]');
   const bar = document.getElementById('cartbar');
-  if(!entries.length){ if(itemsField) itemsField.value=''; bar.style.display='none'; return; }
-  const total = entries.reduce((s,e)=>s+e.cents*e.qty,0);
+  const sub = entries.reduce((s,e)=>s+e.cents*e.qty,0);
   const n = entries.reduce((s,e)=>s+e.qty,0);
+  document.getElementById('subtotalField').value = entries.length ? sub : '';
+  document.getElementById('feeField').value = entries.length ? FEE_CENTS : '';
+  document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS) : '';
+  if(!entries.length){ if(itemsField) itemsField.value=''; bar.style.display='none'; return; }
   if(itemsField) itemsField.value =
     entries.map(e=>`${e.qty}× ${e.name} (${money(e.cents*e.qty)})`).join(', ') +
-    ` — subtotal ${money(total)}`;
-  bar.style.display = 'flex';
-  document.getElementById('cartCount').textContent = n + (n===1?' item':' items');
-  document.getElementById('cartTot').textContent = money(total);
+    ` — subtotal ${money(sub)}`;
+  bar.style.display = 'block';
+  const total = sub + FEE_CENTS;
+  bar.innerHTML =
+    `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85"><span>Subtotal</span><span class="tot">${money(sub)}</span></div>` +
+    `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Delivery fee</span><span class="tot">${money(FEE_CENTS)}</span></div>` +
+    `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25);font-size:1rem"><span>${n} ${n===1?'item':'items'} · Total</span><span class="tot">${money(total)}</span></div>`;
 }
 </script>
 </body>

@@ -72,6 +72,13 @@ async def track(order_id: str):
         steps_html += (f'<div class="step {"done" if ts else ""}"><div class="dot"></div>'
                        f'<div><div class="lbl">{label}</div>'
                        f'<div class="time">{_fmt(ts) if ts else "—"}</div></div></div>')
+    total = f.get("total_cents")
+    items_line = f.get("items_description", "")
+    if total:
+        try:
+            items_line += f'<br><b style="color:#1f4d3a">Total ${int(total)/100:.2f}</b>'
+        except (ValueError, TypeError):
+            pass
     return PAGE.format(order_id=oid,
                        headline=HEADLINES.get(status, status),
-                       items=f.get("items_description", ""), timeline=steps_html)
+                       items=items_line, timeline=steps_html)

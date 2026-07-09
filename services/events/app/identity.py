@@ -40,7 +40,8 @@ def partner_lookup(code: str):
         db.close()
     if not p:
         raise HTTPException(404, "Unknown partner")
-    return {"code": p.code, "display_name": p.display_name, "status": p.status}
+    return {"code": p.code, "display_name": p.display_name, "status": p.status,
+            "address": p.address, "delivery_fee_cents": p.delivery_fee_cents}
 
 
 @router.get("/api/board/{key}/partners")
@@ -52,7 +53,9 @@ def list_partners(key: str):
     finally:
         db.close()
     return {"partners": [{"code": p.code, "display_name": p.display_name,
-                          "status": p.status, "contact": p.contact} for p in rows]}
+                          "status": p.status, "contact": p.contact,
+                          "address": p.address, "delivery_fee_cents": p.delivery_fee_cents}
+                         for p in rows]}
 
 
 @router.post("/api/board/{key}/partners")
@@ -72,10 +75,16 @@ async def upsert_partner(key: str, request: Request):
                 p.status = str(body["status"])[:30]
             if body.get("contact") is not None:
                 p.contact = str(body["contact"])[:200]
+            if body.get("address") is not None:
+                p.address = str(body["address"])[:300]
+            if body.get("delivery_fee_cents") is not None:
+                p.delivery_fee_cents = max(0, int(body["delivery_fee_cents"]))
         else:
             db.add(Partner(code=code, display_name=name,
                            status=str(body.get("status", "pilot"))[:30],
-                           contact=str(body.get("contact", ""))[:200]))
+                           contact=str(body.get("contact", ""))[:200],
+                           address=str(body.get("address", ""))[:300],
+                           delivery_fee_cents=max(0, int(body.get("delivery_fee_cents", 399)))))
         db.commit()
     finally:
         db.close()

@@ -423,7 +423,8 @@ async def order_detail(key: str, order_id: str):
             "dropoff_contact_phone", "items_description", "special_instructions",
             "cancel_reason", "received_at", "confirmed_at", "assigned_at",
             "in_transit_at", "delivered_at", "closed_at", "cancelled_at", "failed_at",
-            "customer_name_raw", "customer_phone_raw"]
+            "customer_name_raw", "customer_phone_raw",
+            "subtotal_cents", "fee_cents", "total_cents"]
     return {
         "record_id": recs[0]["id"],
         "fields": {k: f.get(k, "") for k in keep if f.get(k)},

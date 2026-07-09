@@ -54,6 +54,8 @@ class Partner(Base):
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pilot")
     contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    address: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    delivery_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=399)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 

@@ -95,6 +95,11 @@ async function loadPartners(){
       <span class="chip ${x.status==='active'?'active':'assigned'}">${x.status}</span>
       <div class="oid">${x.code}</div>
       <div class="line" style="font-weight:600">${x.display_name}</div>
+      <div class="line"><b>Address</b>${x.address||'—'}</div>
+      <div class="line"><b>Delivery fee</b>$${((x.delivery_fee_cents||0)/100).toFixed(2)}</div>
+      <div class="row"><input id="pa-${x.code}" placeholder="Pickup address" value="${(x.address||'').replace(/"/g,'&quot;')}">
+        <input id="pf-${x.code}" placeholder="Fee $" style="max-width:76px" value="${((x.delivery_fee_cents||0)/100).toFixed(2)}">
+        <button class="ghost" onclick="savePartnerMeta('${x.code}')">Save</button></div>
       <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
@@ -143,6 +148,13 @@ async function menuDel(code, id){
   if(!confirm('Remove this item from the menu?')) return;
   const r = await fetch(api(`/menu-items/${id}`), {method:'DELETE'});
   if(r.ok){ document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function savePartnerMeta(code){
+  const address = document.getElementById('pa-'+code).value.trim();
+  const fee = Math.round(parseFloat(document.getElementById('pf-'+code).value||'0')*100);
+  const cur = (await (await fetch(api('/partners'))).json()).partners.find(p=>p.code===code);
+  if(await post('/partners', {code, display_name: cur?cur.display_name:code,
+      address, delivery_fee_cents: fee})) loadPartners();
 }
 function copyOrderLink(code){
   navigator.clipboard.writeText(location.origin + '/order?partner=' + code);

@@ -100,9 +100,11 @@ def delete_item(key: str, item_id: str):
 
 # ---------- SEEDS (drafts — grounded in published menus, partner-editable) ----------
 
-SEED_PARTNERS = [("burgerboys", "Burger Boys"),
-                 ("friendsbbq", "Friends BBQ"),
-                 ("stephens", "Stephen's Pizzeria")]
+SEED_PARTNERS = [
+    ("burgerboys", "Burger Boys", "3000 N Broadway, Knoxville, TN 37917"),
+    ("friendsbbq", "Friends BBQ", "2580 E Magnolia Ave, Knoxville, TN 37914"),
+    ("stephens", "Stephen's Pizzeria", "5049 Bobby Hicks Hwy #105, Gray, TN 37615"),
+]
 
 SEED_MENUS = {
     "burgerboys": [
@@ -209,9 +211,12 @@ def seed_menus():
     migrate_split_burgerboys()
     db: Session = SessionLocal()
     try:
-        for code, name in SEED_PARTNERS:
-            if db.get(Partner, code) is None:
-                db.add(Partner(code=code, display_name=name, status="pilot"))
+        for code, name, addr in SEED_PARTNERS:
+            existing = db.get(Partner, code)
+            if existing is None:
+                db.add(Partner(code=code, display_name=name, status="pilot", address=addr))
+            elif not existing.address:
+                existing.address = addr
         db.commit()
         for code, cats in SEED_MENUS.items():
             if db.query(MenuItem).filter(MenuItem.partner_code == code).count() == 0:

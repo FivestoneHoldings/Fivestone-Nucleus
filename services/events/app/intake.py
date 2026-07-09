@@ -18,7 +18,8 @@ router = APIRouter()
 
 FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address",
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
-          "special_instructions", "requested_for", "partner"]
+          "special_instructions", "requested_for", "partner",
+          "subtotal_cents", "fee_cents", "total_cents"]
 
 
 def _now() -> str:
@@ -112,6 +113,12 @@ async def intake(request: Request):
                 fields["partner_code"] = data["partner"]
             if data["requested_for"]:
                 fields["requested_for"] = data["requested_for"]
+            for money_field in ("subtotal_cents", "fee_cents", "total_cents"):
+                if data.get(money_field):
+                    try:
+                        fields[money_field] = int(data[money_field])
+                    except (ValueError, TypeError):
+                        pass
             await at.create_record(at.ORDERS, fields)
             _log_owned("order.received", order_id,
                        {"partner": data["partner"], "customer": data["customer_name"],
@@ -126,7 +133,11 @@ async def intake(request: Request):
             return HTMLResponse(CONFIRM_PAGE.format(
                 headline="We already have this one!", order_id=order_id,
                 message="This exact order was already received today — no duplicate was created. We're on it."))
-        return HTMLResponse(CONFIRM_PAGE.format(
-            headline="Order received!", order_id=order_id,
-            message="Your order is in the GateWay system. Save your order number — we'll take it from here."))
+        return HTMLResponse(
+            f'<!DOCTYPE html><html><head><meta charset="UTF-8">'
+            f'<meta http-equiv="refresh" content="0; url=/track/{order_id}">'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1">'
+            f'</head><body style="font-family:system-ui;background:#f7f6f3;text-align:center;padding-top:80px">'
+            f'Order received — taking you to live tracking…'
+            f'<script>location.replace("/track/{order_id}")</script></body></html>')
     return JSONResponse({"received": True, "order_id": order_id, "duplicate": duplicate})
