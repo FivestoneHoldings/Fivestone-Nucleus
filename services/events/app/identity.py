@@ -1,0 +1,82 @@
+"""Identity v0 — partner/tenant registry (staged in the monolith per ADR-008).
+Public: name lookup for co-branding. Key-gated: full list + create/update.
+"""
+import os
+from fastapi import APIRouter, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from .db import SessionLocal
+from .models import Partner
+
+router = APIRouter()
+
+SEED = [("asiacafe", "Asia Cafe"), ("asiacafexpress", "Asia Cafe Xpress")]
+
+
+def seed_partners():
+    db: Session = SessionLocal()
+    try:
+        if db.query(Partner).count() == 0:
+            for code, name in SEED:
+                db.add(Partner(code=code, display_name=name, status="pilot"))
+            db.commit()
+    finally:
+        db.close()
+
+
+def _check_key(key: str):
+    admin = os.environ.get("ADMIN_KEY", "")
+    if not admin or key != admin:
+        raise HTTPException(403, "Bad board key")
+
+
+@router.get("/v0/partners/{code}")
+def partner_lookup(code: str):
+    """Public co-branding lookup — name and status only."""
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+    finally:
+        db.close()
+    if not p:
+        raise HTTPException(404, "Unknown partner")
+    return {"code": p.code, "display_name": p.display_name, "status": p.status}
+
+
+@router.get("/api/board/{key}/partners")
+def list_partners(key: str):
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        rows = db.query(Partner).order_by(Partner.created_at).all()
+    finally:
+        db.close()
+    return {"partners": [{"code": p.code, "display_name": p.display_name,
+                          "status": p.status, "contact": p.contact} for p in rows]}
+
+
+@router.post("/api/board/{key}/partners")
+async def upsert_partner(key: str, request: Request):
+    _check_key(key)
+    body = await request.json()
+    code = str(body.get("code", "")).lower().strip().replace(" ", "")
+    name = str(body.get("display_name", "")).strip()
+    if not code or not name:
+        raise HTTPException(400, "code and display_name required")
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code)
+        if p:
+            p.display_name = name
+            if body.get("status"):
+                p.status = str(body["status"])[:30]
+            if body.get("contact") is not None:
+                p.contact = str(body["contact"])[:200]
+        else:
+            db.add(Partner(code=code, display_name=name,
+                           status=str(body.get("status", "pilot"))[:30],
+                           contact=str(body.get("contact", ""))[:200]))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "code": code, "order_link": f"/order?partner={code}"}

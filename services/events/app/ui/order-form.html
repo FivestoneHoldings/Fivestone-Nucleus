@@ -107,9 +107,12 @@
   const p = new URLSearchParams(location.search).get('partner');
   if(p){
     document.getElementById('partnerField').value = p;
-    const names = {asiacafe:'Asia Cafe', asiacafexpress:'Asia Cafe Xpress'};
-    const label = names[p] || p;
-    document.querySelector('.tag').textContent = label + ' × GateWay Delivery';
+    fetch('/v0/partners/' + encodeURIComponent(p))
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        document.querySelector('.tag').textContent =
+          (d ? d.display_name : p) + ' × GateWay Delivery';
+      }).catch(()=>{});
   }
 </script>
 </body>

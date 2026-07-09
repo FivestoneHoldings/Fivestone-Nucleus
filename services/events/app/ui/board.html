@@ -46,10 +46,12 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
 <div class="tabs">
   <div class="tab on" id="t-orders" onclick="show('orders')">Orders</div>
   <div class="tab" id="t-drivers" onclick="show('drivers')">Drivers</div>
-  <div class="tab" id="t-log" onclick="show('log')">Truth Log</div>
+  <div class="tab" id="t-partners" onclick="show('partners')">Partners</div>
+  <div class="tab" id="t-log" onclick="show('log')">Log</div>
 </div>
 <div id="orders"><div class="empty">Loading…</div></div>
 <div id="drivers" style="display:none"></div>
+<div id="partners" style="display:none"></div>
 <div id="log" style="display:none"></div>
 <script>
 const key = location.pathname.split('/').filter(Boolean).pop();
@@ -58,12 +60,39 @@ let DRIVERS = [], VIEW = 'orders';
 
 function show(v){
   VIEW = v;
-  for(const x of ['orders','drivers','log']){
+  for(const x of ['orders','drivers','partners','log']){
     document.getElementById(x).style.display = x===v?'':'none';
     document.getElementById('t-'+x).classList.toggle('on', x===v);
   }
   if(v==='drivers') loadDrivers();
+  if(v==='partners') loadPartners();
   if(v==='log') loadLog();
+}
+
+async function loadPartners(){
+  const d = await (await fetch(api('/partners'))).json();
+  document.getElementById('partners').innerHTML = `
+    <div class="card"><div class="line"><b>Add / update partner</b></div>
+      <div class="row"><input id="pCode" placeholder="code (e.g. asiacafe)">
+      <input id="pName" placeholder="Display name"></div>
+      <div class="row"><button onclick="addPartner()">Save +</button></div></div>` +
+    d.partners.map(x=>`
+    <div class="card">
+      <span class="chip ${x.status==='active'?'active':'assigned'}">${x.status}</span>
+      <div class="oid">${x.code}</div>
+      <div class="line" style="font-weight:600">${x.display_name}</div>
+      <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
+    </div>`).join('');
+}
+async function addPartner(){
+  const code = document.getElementById('pCode').value.trim();
+  const name = document.getElementById('pName').value.trim();
+  if(!code || !name) return;
+  if(await post('/partners',{code, display_name:name})) loadPartners();
+}
+function copyOrderLink(code){
+  navigator.clipboard.writeText(location.origin + '/order?partner=' + code);
+  alert('Branded order link copied — send it to the partner.');
 }
 
 async function loadStats(){

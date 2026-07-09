@@ -44,3 +44,14 @@ class Proof(Base):
     lat: Mapped[str] = mapped_column(String(30), nullable=False, default="")
     lng: Mapped[str] = mapped_column(String(30), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Partner(Base):
+    """Partner/tenant registry — Identity service owns this at M3 (ADR-008 staging)."""
+    __tablename__ = "partners"
+
+    code: Mapped[str] = mapped_column(String(60), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pilot")
+    contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

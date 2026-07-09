@@ -12,6 +12,8 @@ from .models import Event
 from .schemas import EventIn, EventOut
 from .dispatch import router as dispatch_router
 from .intake import router as intake_router
+from .identity import router as identity_router, seed_partners
+from .track import router as track_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +25,9 @@ app = FastAPI(
 
 app.include_router(dispatch_router)
 app.include_router(intake_router)
+app.include_router(identity_router)
+app.include_router(track_router)
+seed_partners()
 
 _UI = Path(__file__).parent / "ui"
 
