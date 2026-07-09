@@ -8,7 +8,7 @@ from sqlalchemy import select
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from .db import Base, engine, get_db
+from .db import SessionLocal, Base, engine, get_db
 from .models import Event
 from .schemas import EventIn, EventOut
 from .dispatch import router as dispatch_router
@@ -64,9 +64,22 @@ def order_form():
     return _page("order-form.html")
 
 
+NUCLEUS_VERSION = "0.14"
+
+
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "service": "events", "time": datetime.now(timezone.utc).isoformat()}
+    db_ok = True
+    try:
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+    except Exception:
+        db_ok = False
+    return {"ok": db_ok, "service": "nucleus", "version": NUCLEUS_VERSION,
+            "db": "up" if db_ok else "DOWN",
+            "time": datetime.now(timezone.utc).isoformat()}
 
 
 @app.post("/v0/events", response_model=EventOut, status_code=201)

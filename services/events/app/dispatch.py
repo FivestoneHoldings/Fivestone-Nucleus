@@ -85,9 +85,17 @@ async def driver_orders(day_token: str):
         max_records=100,
     )
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    done_recs = await at.list_records(
+        at.ORDERS,
+        formula=f"AND(OR({{status}}='delivered',{{status}}='closed'),"
+                f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}')",
+        max_records=100)
+    done_today = sum(1 for r in done_recs if drv["id"] in (r["fields"].get("driver") or []))
     return {
         "driver": drv["fields"].get("display_name", "Driver"),
         "shift": drv["fields"].get("status", "") == "on_shift",
+        "done_today": done_today,
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),
@@ -100,6 +108,23 @@ async def driver_orders(day_token: str):
             "notes": r["fields"].get("special_instructions", ""),
         } for r in mine],
     }
+
+
+# ---------- DRIVER NOTES ----------
+
+@router.post("/api/driver/{day_token}/orders/{record_id}/note")
+async def driver_note(day_token: str, record_id: str, request: Request):
+    drv = await _driver_by_token(day_token)
+    body = await request.json()
+    text = str(body.get("text", "")).strip()[:400]
+    if not text:
+        raise HTTPException(400, "text required")
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    order_id = recs[0]["fields"].get("order_id", record_id) if recs else record_id
+    actor = f"driver:{drv['fields'].get('display_name','?')}"
+    _log_event("order.driver_note", order_id, actor, {"note": text})
+    await _mirror_event_airtable("order.driver_note", order_id, actor, text)
+    return {"ok": True}
 
 
 # ---------- SHIFT TOGGLE ----------
@@ -525,3 +550,52 @@ async def track_location(order_id: str):
         return {"live": False}
     return {"live": True, "lat": loc.lat, "lng": loc.lng,
             "dropoff": f.get("dropoff_address", "")}
+
+
+@router.get("/api/board/{key}/summary")
+async def day_summary(key: str, date: str = "", partner: str = ""):
+    _check_key(key)
+    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{day}'"
+    if partner:
+        formula = f"AND({formula},{{partner_code}}='{partner}')"
+    records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    delivered = [r for r in records if r["fields"].get("status") in ("delivered", "closed")]
+    revenue = sum(int(r["fields"].get("total_cents") or 0) for r in delivered)
+    times = []
+    for r in delivered:
+        f = r["fields"]
+        m = _minutes_between(f.get("received_at", ""), f.get("delivered_at", ""))
+        if m is not None:
+            times.append(m)
+    return {"date": day, "partner": partner or "all",
+            "orders": len(records), "delivered": len(delivered),
+            "cancelled": sum(1 for r in records if r["fields"].get("status") == "cancelled"),
+            "failed_open": sum(1 for r in records if r["fields"].get("status") == "failed"),
+            "revenue_cents": revenue,
+            "avg_minutes": round(sum(times) / len(times), 1) if times else None}
+
+
+@router.get("/api/board/{key}/export.csv")
+async def export_day_csv(key: str, date: str = ""):
+    _check_key(key)
+    import csv
+    import io
+    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{day}'",
+        max_records=100)
+    cols = ["order_id", "status", "partner_code", "customer_name_raw",
+            "pickup_address", "dropoff_address", "items_description",
+            "subtotal_cents", "fee_cents", "tip_cents", "total_cents",
+            "received_at", "delivered_at", "cancel_reason"]
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(cols)
+    for r in records:
+        f = r["fields"]
+        w.writerow([f.get(c, "") for c in cols])
+    return Response(content=buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="gateway-{day}.csv"'})

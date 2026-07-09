@@ -90,6 +90,7 @@ font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
     <input type="hidden" name="subtotal_cents" id="subtotalField" value="">
     <input type="hidden" name="fee_cents" id="feeField" value="">
     <input type="hidden" name="total_cents" id="totalField" value="">
+    <input type="hidden" name="tip_cents" id="tipField" value="">
     <div id="menuZone" style="display:none"></div>
     <fieldset>
       <legend>Who's ordering</legend>
@@ -142,7 +143,13 @@ if(p){
     .then(renderMenu).catch(()=>{});
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
-let FEE_CENTS = 0;
+let FEE_CENTS = 0, TIP_CENTS = 0;
+function setTip(cents, el){
+  TIP_CENTS = cents;
+  document.querySelectorAll('.tipchip').forEach(c=>{c.style.background='#fff';c.style.color='#1f4d3a'});
+  if(el){ el.style.background='#1f4d3a'; el.style.color='#fff'; }
+  compose();
+}
 function applyPartnerMeta(d){
   if(!d) return;
   FEE_CENTS = d.delivery_fee_cents || 0;
@@ -170,7 +177,14 @@ function renderMenu(m){
           <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},1)">+</button>
         </div>
       </div>`).join('')).join('') +
-    `<div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
+    `<div class="mcat">Add a tip for your driver</div>
+     <div style="display:flex;gap:8px;margin-bottom:6px">
+       ${[["No tip",0],["$2",200],["$3",300],["$5",500]].map(([l,c],i)=>
+         `<button type="button" class="tipchip" onclick="setTip(${c},this)"
+           style="flex:1;padding:10px;border-radius:20px;border:1.5px solid #1f4d3a;background:${i===0?'#1f4d3a':'#fff'};color:${i===0?'#fff':'#1f4d3a'};font-weight:800;font-size:.8rem">${l}</button>`).join('')}
+     </div>
+     <div style="font-size:.72rem;color:#9a9ea5;margin-bottom:4px">100% of tips go to your driver.</div>
+     <div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
   // items field becomes the composed summary (still editable for special requests)
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
@@ -190,16 +204,18 @@ function compose(){
   const n = entries.reduce((s,e)=>s+e.qty,0);
   document.getElementById('subtotalField').value = entries.length ? sub : '';
   document.getElementById('feeField').value = entries.length ? FEE_CENTS : '';
-  document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS) : '';
+  document.getElementById('tipField').value = entries.length ? TIP_CENTS : '';
+  document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS + TIP_CENTS) : '';
   if(!entries.length){ if(itemsField) itemsField.value=''; bar.style.display='none'; return; }
   if(itemsField) itemsField.value =
     entries.map(e=>`${e.qty}× ${e.name} (${money(e.cents*e.qty)})`).join(', ') +
     ` — subtotal ${money(sub)}`;
   bar.style.display = 'block';
-  const total = sub + FEE_CENTS;
+  const total = sub + FEE_CENTS + TIP_CENTS;
   bar.innerHTML =
     `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85"><span>Subtotal</span><span class="tot">${money(sub)}</span></div>` +
     `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Delivery fee</span><span class="tot">${money(FEE_CENTS)}</span></div>` +
+    (TIP_CENTS>0?`<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Driver tip</span><span class="tot">${money(TIP_CENTS)}</span></div>`:'') +
     `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25);font-size:1rem"><span>${n} ${n===1?'item':'items'} · Total</span><span class="tot">${money(total)}</span></div>`;
 }
 </script>

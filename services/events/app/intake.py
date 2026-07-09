@@ -19,7 +19,28 @@ router = APIRouter()
 FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address",
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
           "special_instructions", "requested_for", "partner",
-          "subtotal_cents", "fee_cents", "total_cents"]
+          "subtotal_cents", "fee_cents", "total_cents", "tip_cents"]
+
+CAPS = {"items_description": 1000, "special_instructions": 600,
+        "pickup_address": 300, "dropoff_address": 300,
+        "customer_name": 120, "dropoff_contact_name": 120,
+        "customer_phone": 30, "dropoff_contact_phone": 30,
+        "requested_for": 40, "partner": 60,
+        "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12}
+
+# In-memory per-IP throttle: 30 submissions/minute (dispatch-scale abuse guard)
+_HITS: dict = {}
+
+
+def _throttled(ip: str) -> bool:
+    import time
+    now = time.time()
+    window = [t for t in _HITS.get(ip, []) if now - t < 60]
+    window.append(now)
+    _HITS[ip] = window
+    if len(_HITS) > 5000:  # bound memory
+        _HITS.clear()
+    return len(window) > 30
 
 
 def _now() -> str:
@@ -78,7 +99,11 @@ async def intake(request: Request):
             form = await request.form()
             data = dict(form)
 
-    data = {k: str(data.get(k, "")).strip() for k in FIELDS}
+    data = {k: str(data.get(k, "")).strip()[:CAPS[k]] for k in FIELDS}
+    client_ip = (request.headers.get("x-forwarded-for", "") or
+                 (request.client.host if request.client else "?")).split(",")[0].strip()
+    if _throttled(client_ip):
+        return JSONResponse({"received": False, "error": "Too many requests"}, status_code=429)
     wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
 
     if not data["dropoff_address"] or not data["items_description"]:
@@ -113,7 +138,7 @@ async def intake(request: Request):
                 fields["partner_code"] = data["partner"]
             if data["requested_for"]:
                 fields["requested_for"] = data["requested_for"]
-            for money_field in ("subtotal_cents", "fee_cents", "total_cents"):
+            for money_field in ("subtotal_cents", "fee_cents", "total_cents", "tip_cents"):
                 if data.get(money_field):
                     try:
                         fields[money_field] = int(data[money_field])

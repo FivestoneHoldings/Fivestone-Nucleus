@@ -46,6 +46,7 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}
   <h2>Place an order</h2>
   <p>Pickup and delivery, straight from us — no middleman.</p>
 </a>
+<div id="restaurants"></div>
 
 <div class="tile" style="padding-bottom:14px">
   <h2>Track an order</h2>
@@ -70,6 +71,15 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}
 
 <div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
 <script>
+fetch('/v0/partners').then(r=>r.json()).then(d=>{
+  if(!d.partners || !d.partners.length) return;
+  document.getElementById('restaurants').innerHTML =
+    '<h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#5a5e64;margin:4px 0 10px;font-weight:800">Order from a local kitchen</h3>' +
+    d.partners.map(p=>`<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:15px 20px">
+      <span class="arrow" style="margin-top:2px">→</span>
+      <h2 style="font-size:1rem">${p.display_name.replace(/</g,'&lt;')}</h2>
+      <p style="margin:0">Browse the menu · delivered by GateWay</p></a>`).join('');
+}).catch(()=>{});
 function go(path, id){
   const v = document.getElementById(id).value.trim();
   if(v) location.href = '/' + path + '/' + encodeURIComponent(v);

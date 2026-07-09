@@ -49,6 +49,7 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
 <div class="mark">GateWay <span>Command Board</span></div>
 <div class="sub">Live · Fivestone infrastructure</div>
 <div class="stats" id="stats"></div>
+<div style="margin:-6px 0 12px"><a id="csvLink" href="#" style="font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#6db3e8;text-decoration:underline">⬇ export today (CSV)</a></div>
 <div class="tabs">
   <div class="tab on" id="t-orders" onclick="show('orders')">Orders</div>
   <div class="tab" id="t-drivers" onclick="show('drivers')">Drivers</div>
@@ -70,6 +71,7 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
 const key = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/board/${key}` + p;
 let DRIVERS = [], VIEW = 'orders';
+function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 
 function show(v){
   VIEW = v;
@@ -174,12 +176,12 @@ async function findOrder(){
     <span class="chip ${f.status}">${(f.status||'').replace('_',' ')}</span>
     <div class="oid">${f.order_id}</div>
     ${f.partner_code?`<div class="line"><b>Partner</b>${f.partner_code}</div>`:''}
-    ${f.customer_name_raw?`<div class="line"><b>Customer</b>${f.customer_name_raw} ${f.customer_phone_raw||''}</div>`:''}
-    <div class="line"><b>Pickup</b>${f.pickup_address||'—'}</div>
-    <div class="line"><b>Drop</b>${f.dropoff_address||'—'} ${f.dropoff_contact_name?('· '+f.dropoff_contact_name):''}</div>
-    ${f.items_description?`<div class="line"><b>Items</b>${f.items_description}</div>`:''}
-    ${f.special_instructions?`<div class="line"><b>Notes</b>${f.special_instructions}</div>`:''}
-    ${f.cancel_reason?`<div class="line"><b>Cancel reason</b>${f.cancel_reason}</div>`:''}
+    ${f.customer_name_raw?`<div class="line"><b>Customer</b>${esc(f.customer_name_raw)} ${f.customer_phone_raw||''}</div>`:''}
+    <div class="line"><b>Pickup</b>${esc(f.pickup_address)||'—'}</div>
+    <div class="line"><b>Drop</b>${esc(f.dropoff_address)||'—'} ${f.dropoff_contact_name?('· '+f.dropoff_contact_name):''}</div>
+    ${f.items_description?`<div class="line"><b>Items</b>${esc(f.items_description)}</div>`:''}
+    ${f.special_instructions?`<div class="line"><b>Notes</b>${esc(f.special_instructions)}</div>`:''}
+    ${f.cancel_reason?`<div class="line"><b>Cancel reason</b>${esc(f.cancel_reason)}</div>`:''}
     ${stampRow('Received', f.received_at)}${stampRow('Confirmed', f.confirmed_at)}
     ${stampRow('Assigned', f.assigned_at)}${stampRow('Picked up', f.in_transit_at)}
     ${stampRow('Delivered', f.delivered_at)}${stampRow('Closed', f.closed_at)}
@@ -219,10 +221,10 @@ async function load(){
     <div class="card">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
       <div class="oid">${o.order_id}</div>
-      ${o.customer?`<div class="line"><b>From</b>${o.customer}</div>`:''}
-      <div class="line"><b>Pickup</b>${o.pickup||'—'}</div>
-      <div class="line"><b>Drop</b>${o.dropoff||'—'}</div>
-      ${o.items?`<div class="line"><b>Items</b>${o.items}</div>`:''}
+      ${o.customer?`<div class="line"><b>From</b>${esc(o.customer)}</div>`:''}
+      <div class="line"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
+      <div class="line"><b>Drop</b>${esc(o.dropoff)||'—'}</div>
+      ${o.items?`<div class="line"><b>Items</b>${esc(o.items)}</div>`:''}
       ${o.status==='delivered'?`<div class="line"><b>Proof</b><a href="/proof/${o.order_id}" target="_blank" style="color:#3ecf8e">📷 view photo</a></div>`:''}
       <div class="row">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}
@@ -313,6 +315,7 @@ async function loadLog(){
   }
 }
 
+document.getElementById('csvLink').href = api('/export.csv');
 load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
 </script>
 </body>

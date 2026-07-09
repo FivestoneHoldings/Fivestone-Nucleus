@@ -30,6 +30,27 @@ def _check_key(key: str):
         raise HTTPException(403, "Bad board key")
 
 
+@router.get("/v0/partners")
+def public_partner_directory():
+    """Public: active/pilot partners that have a menu — the 'restaurant list'."""
+    from .models import MenuItem
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Partner)
+                .filter(Partner.status.in_(["active", "pilot"]))
+                .order_by(Partner.display_name).all())
+        out = []
+        for p in rows:
+            has_menu = (db.query(MenuItem)
+                        .filter(MenuItem.partner_code == p.code,
+                                MenuItem.available.is_(True)).count() > 0)
+            if has_menu:
+                out.append({"code": p.code, "display_name": p.display_name})
+    finally:
+        db.close()
+    return {"partners": out}
+
+
 @router.get("/v0/partners/{code}")
 def partner_lookup(code: str):
     """Public co-branding lookup — name and status only."""

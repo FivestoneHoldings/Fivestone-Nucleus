@@ -72,11 +72,13 @@ async function load(){
       <div class="row">
         ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
         ${o.status==='in_transit'?`<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`:''}
+        <button class="b-note" onclick="addNote('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Note</button>
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
     </div>`).join('');
 }
 let SHIFT = false;
+function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 function paintShift(){
   const b = document.getElementById('shiftBtn');
   b.textContent = SHIFT ? '● ON SHIFT — tap to end' : '○ OFF SHIFT — tap to start';
@@ -103,6 +105,13 @@ async function act(id, action, body){
   if(r.ok){ const c=document.getElementById(id); c.classList.add('done');
     setTimeout(load, 700); }
   else alert('Could not update — try again or call dispatch.');
+}
+async function addNote(id){
+  const text = prompt('Note for dispatch (e.g. "gate code 4412 worked", "customer asked for 6pm"):');
+  if(!text) return;
+  const r = await fetch(api(`/orders/${id}/note`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+  alert(r.ok ? 'Note logged ✓' : 'Could not save note.');
 }
 function deliver(id, orderId){
   // Offer proof photo; skipping is allowed (v0 grace)
