@@ -247,9 +247,9 @@ async function findOrder(){
     <div class="row"><button class="ghost" onclick="document.getElementById('orderDetail').innerHTML='';document.getElementById('findOrd').value=''">Close ✕</button></div>
   </div>`;
 }
-async function loadStats(){
+function paintStats(d){
   try{
-    const d = await (await fetch(api('/stats'))).json();
+    if(!d) return;
     const avg = d.avg_received_to_delivered_min;
     document.getElementById('stats').innerHTML = `
       <div class="stat"><b>${d.orders_today}</b><span>orders today</span></div>
@@ -262,7 +262,7 @@ async function loadStats(){
 }
 
 async function load(){
-  const r = await fetch(api('/orders'));
+  const r = await fetch(api('/snapshot'));
   if(!r.ok){
     let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){}
     document.getElementById('orders').innerHTML =
@@ -294,7 +294,7 @@ async function load(){
         ${['assigned','in_transit'].includes(o.status)?`<button class="ghost" onclick="notifyO('${o.id}')">Text update</button>`:''}
       </div>
     </div>`).join('');
-  loadStats();
+  paintStats(d.stats);
 }
 
 async function post(path, body){

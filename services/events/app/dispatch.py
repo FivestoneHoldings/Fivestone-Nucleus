@@ -53,11 +53,36 @@ async def _mirror_event_airtable(event_type: str, entity_ref: str, actor: str, p
 
 
 async def _driver_by_token(day_token: str) -> dict:
+    cached = _cget(f"drv:{day_token}")
+    if cached is not None:
+        return cached
     drivers = await at.list_records(
         at.DRIVERS, formula=f"{{day_token}}='{day_token}'", max_records=1)
     if not drivers:
         raise HTTPException(404, "Unknown day token")
+    _cput(f"drv:{day_token}", drivers[0], 30)
     return drivers[0]
+
+
+# ---------- TTL CACHE (slow-changing lookups only; mutations bust it) ----------
+import time as _time
+
+_TTL_CACHE: dict = {}
+
+
+def _cget(key: str):
+    hit = _TTL_CACHE.get(key)
+    if hit and _time.time() < hit[1]:
+        return hit[0]
+    return None
+
+
+def _cput(key: str, value, ttl: float):
+    _TTL_CACHE[key] = (value, _time.time() + ttl)
+
+
+def _cbust():
+    _TTL_CACHE.clear()
 
 
 # ---------- DIAGNOSTICS (no secrets returned; booleans only) ----------
@@ -79,11 +104,15 @@ async def driver_orders(day_token: str):
     if not at.configured():
         raise HTTPException(503, "AIRTABLE_PAT not configured")
     drv = await _driver_by_token(day_token)
-    records = await at.list_records(
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    combined = await at.list_records(
         at.ORDERS,
-        formula="OR({status}='assigned',{status}='in_transit')",
+        formula=(f"OR({{status}}='assigned',{{status}}='in_transit',"
+                 f"AND(OR({{status}}='delivered',{{status}}='closed'),"
+                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}'))"),
         max_records=100,
     )
+    records = [r for r in combined if r["fields"].get("status") in ("assigned", "in_transit")]
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     mine.sort(key=lambda r: (r["fields"].get("requested_for")
                              or r["fields"].get("received_at") or "9999"))
@@ -98,12 +127,8 @@ async def driver_orders(day_token: str):
             ready_ids = {e.entity_ref for e in _rows}
         finally:
             _dbr.close()
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    done_recs = await at.list_records(
-        at.ORDERS,
-        formula=f"AND(OR({{status}}='delivered',{{status}}='closed'),"
-                f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}')",
-        max_records=100)
+    done_recs = [r for r in combined
+                 if r["fields"].get("status") in ("delivered", "closed")]
     my_done = [r for r in done_recs if drv["id"] in (r["fields"].get("driver") or [])]
     done_today = len(my_done)
     tips_today = sum(int(r["fields"].get("tip_cents") or 0) for r in my_done)
@@ -157,6 +182,7 @@ async def toggle_shift(day_token: str, request: Request):
     actor = f"driver:{drv['fields'].get('display_name','?')}"
     _log_event("driver.shift_started" if on else "driver.shift_ended",
                drv["fields"].get("driver_id", drv["id"]), actor, {})
+    _cbust()
     return {"ok": True, "shift": on}
 
 
@@ -389,6 +415,7 @@ async def create_driver(key: str, request: Request):
         "display_name": name, "status": "active", "day_token": token,
     })
     _log_event("driver.created", created["fields"].get("driver_id", ""), "founder", {"name": name})
+    _cbust()
     return {"ok": True, "id": created["id"], "day_token": token}
 
 
@@ -399,6 +426,7 @@ async def rotate_driver_token(key: str, record_id: str):
     updated = await at.patch_record(at.DRIVERS, record_id, {"day_token": token})
     _log_event("driver.token_rotated",
                updated.get("fields", {}).get("driver_id", record_id), "founder", {})
+    _cbust()
     return {"ok": True, "day_token": token}
 
 
@@ -579,9 +607,13 @@ async def track_location(order_id: str):
     # resolve driver record -> driver_id
     ref = None
     if driver_refs:
-        drecs = await at.list_records(at.DRIVERS, formula=f"RECORD_ID()='{driver_refs[0]}'", max_records=1)
-        if drecs:
-            ref = drecs[0]["fields"].get("driver_id", drecs[0]["id"])
+        ref = _cget(f"dref:{driver_refs[0]}")
+        if ref is None:
+            drecs = await at.list_records(at.DRIVERS,
+                                          formula=f"RECORD_ID()='{driver_refs[0]}'", max_records=1)
+            if drecs:
+                ref = drecs[0]["fields"].get("driver_id", drecs[0]["id"])
+                _cput(f"dref:{driver_refs[0]}", ref, 600)
     if not ref:
         return {"live": False}
     db: Session = SessionLocal()
@@ -697,3 +729,78 @@ async def edit_order(key: str, record_id: str, request: Request):
     _log_event("order.edited", order_id, "founder",
                {"changed": {k: {"from": old.get(k, ""), "to": v} for k, v in changes.items()}})
     return {"ok": True, "order_id": order_id}
+
+
+def _stats_from(records: list) -> dict:
+    by_status: dict = {}
+    partners: dict = {}
+    times = []
+    for r in records:
+        f = r["fields"]
+        st = f.get("status", "?")
+        by_status[st] = by_status.get(st, 0) + 1
+        p = f.get("partner_code", "")
+        if p:
+            partners[p] = partners.get(p, 0) + 1
+        if f.get("received_at") and f.get("delivered_at"):
+            m = _minutes_between(f["received_at"], f["delivered_at"])
+            if m is not None:
+                times.append(m)
+    return {
+        "orders_today": len(records),
+        "by_status": by_status,
+        "by_partner": partners,
+        "delivered_today": by_status.get("delivered", 0) + by_status.get("closed", 0),
+        "avg_received_to_delivered_min": round(sum(times) / len(times), 1) if times else None,
+    }
+
+
+@router.get("/api/board/{key}/snapshot")
+async def board_snapshot(key: str):
+    """One round-trip board load: open orders + drivers + today's stats."""
+    _check_key(key)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS, formula="NOT(OR({status}='closed',{status}='cancelled'))",
+        max_records=100)
+    today_records = await at.list_records(
+        at.ORDERS,
+        formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
+        max_records=100)
+    drivers = _cget("drivers:list")
+    if drivers is None:
+        drivers = await at.list_records(at.DRIVERS)
+        _cput("drivers:list", drivers, 45)
+    all_ids = [r["fields"].get("order_id", "") for r in records]
+    ready_ids: set = set()
+    if all_ids:
+        db: Session = SessionLocal()
+        try:
+            rows = (db.query(Event)
+                    .filter(Event.event_type == "order.kitchen_ready",
+                            Event.entity_ref.in_(all_ids)).all())
+            ready_ids = {e.entity_ref for e in rows}
+        finally:
+            db.close()
+    return {
+        "orders": [{
+            "id": r["id"],
+            "order_id": r["fields"].get("order_id", ""),
+            "status": r["fields"].get("status", ""),
+            "customer": r["fields"].get("customer_name_raw", ""),
+            "pickup": r["fields"].get("pickup_address", ""),
+            "dropoff": r["fields"].get("dropoff_address", ""),
+            "items": r["fields"].get("items_description", ""),
+            "requested_for": r["fields"].get("requested_for", ""),
+            "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
+            "driver": (r["fields"].get("driver") or [None])[0],
+        } for r in records],
+        "drivers": [{
+            "id": d["id"],
+            "name": d["fields"].get("display_name", ""),
+            "active": sum(1 for r in records
+                          if d["id"] in (r["fields"].get("driver") or [])
+                          and r["fields"].get("status") in ("assigned", "in_transit")),
+        } for d in drivers],
+        "stats": _stats_from(today_records),
+    }
