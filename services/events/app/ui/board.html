@@ -127,7 +127,7 @@ async function toggleMenu(code){
     c.items.map(i => `
       <div class="row" style="align-items:center">
         <span style="flex:2;font-size:.82rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${i.name}</span>
-        <span class="oid" style="flex:0">$${(i.price_cents/100).toFixed(2)}</span>
+        <span class="oid copy" style="flex:0" onclick="menuPrice('${code}','${i.id}',${i.price_cents})">$${(i.price_cents/100).toFixed(2)} ✎</span>
         <button class="ghost" style="padding:6px 10px" onclick="menuAvail('${code}','${i.id}',${!i.available})">${i.available?'86':'restore'}</button>
         <button class="warn" style="padding:6px 10px" onclick="menuDel('${code}','${i.id}')">✕</button>
       </div>`).join('')).join('');
@@ -144,6 +144,14 @@ async function menuAdd(code){
   const cat = document.getElementById('mc-'+code).value.trim() || 'Menu';
   if(!name) return;
   if(await post(`/partners/${code}/menu`, {name, price_cents:price, category:cat}))
+    { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function menuPrice(code, id, current){
+  const v = prompt('New price ($):', (current/100).toFixed(2));
+  if(v === null) return;
+  const cents = Math.round(parseFloat(v)*100);
+  if(isNaN(cents) || cents < 0) return alert('Enter a valid price.');
+  if(await post(`/partners/${code}/menu`, {id, price_cents: cents}))
     { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
 async function menuAvail(code, id, avail){
@@ -184,6 +192,15 @@ function copyOrderLink(code){
   alert('Branded order link copied — send it to the partner.');
 }
 
+async function editField(recordId, field, current){
+  const labels = {pickup_address:'Pickup address', dropoff_address:'Dropoff address',
+    items_description:'Items', special_instructions:'Notes', customer_phone_raw:'Customer phone'};
+  const v = prompt('Edit ' + (labels[field]||field) + ':', current);
+  if(v === null || v === current) return;
+  const r = await fetch(api(`/orders/${recordId}/edit`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: v})});
+  if(r.ok){ findOrder(); load(); } else alert('Edit failed.');
+}
 async function findOrder(){
   let v = document.getElementById('findOrd').value.trim().toUpperCase();
   if(!v) { document.getElementById('orderDetail').innerHTML=''; return; }
@@ -247,6 +264,7 @@ async function load(){
       <div class="line"><b>Drop</b>${esc(o.dropoff)||'—'}</div>
       ${o.items?`<div class="line"><b>Items</b>${esc(o.items)}</div>`:''}
       ${o.requested_for?`<div class="line"><b>Scheduled</b><span style="color:#f0a04b;font-weight:700">${esc(o.requested_for).replace('T',' ').slice(0,16)}</span></div>`:''}
+      ${o.kitchen_ready?`<div class="line" style="color:#6fa0ff;font-weight:800">🍳 Kitchen: READY</div>`:''}
       ${o.status==='delivered'?`<div class="line"><b>Proof</b><a href="/proof/${o.order_id}" target="_blank" style="color:#6fa0ff">📷 view photo</a></div>`:''}
       <div class="row">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}

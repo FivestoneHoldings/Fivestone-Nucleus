@@ -214,6 +214,18 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
     gps = {}
     if body.get("lat") and body.get("lng"):
         gps = {"lat": str(body["lat"])[:30], "lng": str(body["lng"])[:30]}
+        ref = drv["fields"].get("driver_id", drv["id"])
+        _dbl: Session = SessionLocal()
+        try:
+            _loc = _dbl.get(DriverLocation, ref)
+            if _loc is None:
+                _dbl.add(DriverLocation(driver_ref=ref, lat=gps["lat"], lng=gps["lng"]))
+            else:
+                _loc.lat, _loc.lng = gps["lat"], gps["lng"]
+                _loc.updated_at = datetime.now(timezone.utc)
+            _dbl.commit()
+        finally:
+            _dbl.close()
     updated = await at.patch_record(at.ORDERS, record_id, fields)
     order_id = updated.get("fields", {}).get("order_id", record_id)
     actor = f"driver:{drv['fields'].get('display_name','?')}"
@@ -247,6 +259,17 @@ async def board_orders(key: str):
         max_records=100,
     )
     # failed orders surface for recovery (reassign/cancel)
+    all_ids = [r["fields"].get("order_id", "") for r in records]
+    ready_ids: set = set()
+    if all_ids:
+        _dbb: Session = SessionLocal()
+        try:
+            _rws = (_dbb.query(Event)
+                    .filter(Event.event_type == "order.kitchen_ready",
+                            Event.entity_ref.in_(all_ids)).all())
+            ready_ids = {e.entity_ref for e in _rws}
+        finally:
+            _dbb.close()
     drivers = await at.list_records(at.DRIVERS, formula="{status}!='inactive'")
     return {
         "orders": [{
@@ -258,6 +281,7 @@ async def board_orders(key: str):
             "dropoff": r["fields"].get("dropoff_address", ""),
             "items": r["fields"].get("items_description", ""),
             "requested_for": r["fields"].get("requested_for", ""),
+            "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
             "driver": (r["fields"].get("driver") or [None])[0],
         } for r in records],
         "drivers": [{
@@ -649,3 +673,24 @@ async def weekly_digest(key: str, partner: str = "", days: int = 7):
             "totals": {"orders": sum(d["orders"] for d in days_list),
                        "delivered": sum(d["delivered"] for d in days_list),
                        "revenue_cents": sum(d["revenue_cents"] for d in days_list)}}
+
+
+EDITABLE_FIELDS = {"pickup_address", "dropoff_address", "dropoff_contact_name",
+                   "dropoff_contact_phone", "items_description",
+                   "special_instructions", "requested_for", "customer_phone_raw"}
+
+
+@router.post("/api/board/{key}/orders/{record_id}/edit")
+async def edit_order(key: str, record_id: str, request: Request):
+    _check_key(key)
+    body = await request.json()
+    changes = {k: str(v)[:600] for k, v in body.items() if k in EDITABLE_FIELDS}
+    if not changes:
+        raise HTTPException(400, "No editable fields provided")
+    before = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    old = {k: before[0]["fields"].get(k, "") for k in changes} if before else {}
+    updated = await at.patch_record(at.ORDERS, record_id, changes)
+    order_id = updated.get("fields", {}).get("order_id", record_id)
+    _log_event("order.edited", order_id, "founder",
+               {"changed": {k: {"from": old.get(k, ""), "to": v} for k, v in changes.items()}})
+    return {"ok": True, "order_id": order_id}
