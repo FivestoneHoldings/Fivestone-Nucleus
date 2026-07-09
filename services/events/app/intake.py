@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import airtable_client as at
@@ -86,7 +86,7 @@ text-transform:uppercase;letter-spacing:.08em}}</style></head>
 
 
 @router.api_route("/v0/intake", methods=["GET", "POST"])
-async def intake(request: Request):
+async def intake(request: Request, background_tasks: BackgroundTasks):
     # Accept form GET, form POST, or JSON POST
     data: dict = {}
     if request.method == "GET":
@@ -130,8 +130,15 @@ async def intake(request: Request):
     fp = _fingerprint(data["dropoff_address"], data["items_description"], data["requested_for"])
     order_id = "ORD-" + fp[:8].upper()
 
+    if not at.configured():
+        if wants_html:
+            return HTMLResponse(CONFIRM_PAGE.format(
+                headline="We couldn't take your order online", order_id="—",
+                message="Our order system is briefly unavailable. Please call GateWay and we'll take it by phone — sorry for the trouble."), status_code=503)
+        return JSONResponse({"received": False, "error": "intake_unavailable"}, status_code=503)
+
     duplicate = False
-    if at.configured():
+    try:
         existing = await at.list_records(at.ORDERS, formula=f"{{fingerprint}}='{fp}'", max_records=1)
         duplicate = bool(existing)
         if not duplicate:
@@ -164,8 +171,16 @@ async def intake(request: Request):
                         "dropoff": data["dropoff_address"], "items": data["items_description"],
                         "channel": "nucleus-intake"})
             if data["customer_phone"]:
-                await notify.send_sms(order_id, data["customer_phone"],
-                                      notify.msg_received(order_id))
+                background_tasks.add_task(notify.send_sms, order_id,
+                                          data["customer_phone"],
+                                          notify.msg_received(order_id))
+    except Exception as e:
+        _log_owned("order.intake_error", order_id, {"error": str(e)[:300]})
+        if wants_html:
+            return HTMLResponse(CONFIRM_PAGE.format(
+                headline="We couldn't save your order", order_id="—",
+                message="Something went wrong on our side and your order was NOT placed. Please try again in a minute or call GateWay."), status_code=503)
+        return JSONResponse({"received": False, "error": "intake_failed"}, status_code=503)
 
     if wants_html:
         if duplicate:

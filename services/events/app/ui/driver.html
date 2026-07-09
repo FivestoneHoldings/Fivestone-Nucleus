@@ -60,10 +60,10 @@ async function load(){
   document.getElementById('who').textContent = d.driver;
   if(!d.orders.length){ document.getElementById('list').innerHTML =
     '<div class="empty">No deliveries on your sheet right now.<br>Pull down to refresh.</div>'; return; }
-  document.getElementById('list').innerHTML = d.orders.map(o => `
+  document.getElementById('list').innerHTML = d.orders.map((o, i) => `
     <div class="card" id="${o.id}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
-      <div class="oid">${o.order_id}</div>
+      <div class="oid">${d.orders.length>1?`<b style="color:#16337a">STOP ${i+1} · </b>`:''}${o.order_id}</div>
       <div class="addr"><b>Pickup</b>${o.pickup||'—'}</div>
       <div class="addr"><b>Dropoff</b>${o.dropoff||'—'}</div>
       ${o.items?`<div class="items">${o.items}</div>`:''}

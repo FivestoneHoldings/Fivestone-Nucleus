@@ -105,7 +105,9 @@ async function loadPartners(){
       <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
       <div class="line"><b>Kitchen screen</b><span class="copy" onclick="copyKitchen('${x.portal_token}')">copy kitchen link</span></div>
       <div class="row"><button class="${x.accepting_orders?'warn':''}" onclick="setAccepting('${x.code}',${!x.accepting_orders})">${x.accepting_orders?'Pause orders ⏸':'Resume orders ▶'}</button></div>
-      <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button></div>
+      <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button>
+        <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button></div>
+      <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
 }
@@ -152,6 +154,16 @@ async function menuDel(code, id){
   if(!confirm('Remove this item from the menu?')) return;
   const r = await fetch(api(`/menu-items/${id}`), {method:'DELETE'});
   if(r.ok){ document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function showDigest(code){
+  const el = document.getElementById('digest-'+code);
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api(`/digest?partner=${code}`))).json();
+  el.innerHTML = d.days.length ? d.days.map(x=>
+    `<div class="ev"><b>${x.date}</b> · ${x.orders} orders · ${x.delivered} delivered · $${(x.revenue_cents/100).toFixed(2)}</div>`).join('') +
+    `<div class="ev" style="color:#6fa0ff"><b>7-DAY TOTAL</b> · ${d.totals.orders} orders · $${(d.totals.revenue_cents/100).toFixed(2)}</div>`
+    : '<div class="ev">No orders in the last 7 days.</div>';
 }
 async function savePartnerMeta(code){
   const address = document.getElementById('pa-'+code).value.trim();
@@ -239,7 +251,7 @@ async function load(){
       <div class="row">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}
         ${['received','confirmed'].includes(o.status)?`
-          <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select>
+          <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${esc(x.name)}${x.active?` (${x.active} active)`:''}</option>`).join('')}</select>
           <button onclick="assign('${o.id}')">Assign →</button>`:''}
         ${o.status==='delivered'?`<button class="ghost" onclick="closeO('${o.id}')">Close ✓</button>`:''}
         ${o.status==='failed'?`<button onclick="requeueO('${o.id}')">Requeue ↻</button>`:''}

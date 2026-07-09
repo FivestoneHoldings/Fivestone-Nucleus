@@ -7,7 +7,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 
@@ -85,6 +85,8 @@ async def driver_orders(day_token: str):
         max_records=100,
     )
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    mine.sort(key=lambda r: (r["fields"].get("requested_for")
+                             or r["fields"].get("received_at") or "9999"))
     mine_ids = [r["fields"].get("order_id", "") for r in mine]
     ready_ids: set = set()
     if mine_ids:
@@ -195,7 +197,8 @@ def get_proof(order_id: str):
 
 
 @router.post("/api/driver/{day_token}/orders/{record_id}/{action}")
-async def driver_action(day_token: str, record_id: str, action: str, request: Request):
+async def driver_action(day_token: str, record_id: str, action: str, request: Request,
+                        background_tasks: BackgroundTasks):
     if action not in ACTION_MAP:
         raise HTTPException(400, "Action must be picked_up, delivered, or failed")
     drv = await _driver_by_token(day_token)
@@ -219,9 +222,11 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
     phone = updated.get("fields", {}).get("customer_phone_raw", "")
     if phone:
         if action == "picked_up":
-            await notify.send_sms(order_id, phone, notify.msg_on_the_way(order_id))
+            background_tasks.add_task(notify.send_sms, order_id, phone,
+                                      notify.msg_on_the_way(order_id))
         elif action == "delivered":
-            await notify.send_sms(order_id, phone, notify.msg_delivered(order_id))
+            background_tasks.add_task(notify.send_sms, order_id, phone,
+                                      notify.msg_delivered(order_id))
     return {"ok": True, "order_id": order_id, "new_status": spec["status"]}
 
 
@@ -255,8 +260,13 @@ async def board_orders(key: str):
             "requested_for": r["fields"].get("requested_for", ""),
             "driver": (r["fields"].get("driver") or [None])[0],
         } for r in records],
-        "drivers": [{"id": d["id"], "name": d["fields"].get("display_name", "")}
-                    for d in drivers],
+        "drivers": [{
+            "id": d["id"],
+            "name": d["fields"].get("display_name", ""),
+            "active": sum(1 for r in records
+                          if d["id"] in (r["fields"].get("driver") or [])
+                          and r["fields"].get("status") in ("assigned", "in_transit")),
+        } for d in drivers],
     }
 
 
@@ -613,3 +623,29 @@ async def export_day_csv(key: str, date: str = ""):
     return Response(content=buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition":
                              f'attachment; filename="gateway-{day}.csv"'})
+
+
+@router.get("/api/board/{key}/digest")
+async def weekly_digest(key: str, partner: str = "", days: int = 7):
+    _check_key(key)
+    from datetime import timedelta
+    days = max(1, min(days, 31))
+    start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}'"
+    if partner:
+        formula = f"AND({formula},{{partner_code}}='{partner}')"
+    records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    by_day: dict = {}
+    for r in records:
+        f = r["fields"]
+        day = (f.get("received_at") or "")[:10]
+        d = by_day.setdefault(day, {"date": day, "orders": 0, "delivered": 0, "revenue_cents": 0})
+        d["orders"] += 1
+        if f.get("status") in ("delivered", "closed"):
+            d["delivered"] += 1
+            d["revenue_cents"] += int(f.get("total_cents") or 0)
+    days_list = sorted(by_day.values(), key=lambda x: x["date"])
+    return {"partner": partner or "all", "since": start, "days": days_list,
+            "totals": {"orders": sum(d["orders"] for d in days_list),
+                       "delivered": sum(d["delivered"] for d in days_list),
+                       "revenue_cents": sum(d["revenue_cents"] for d in days_list)}}
