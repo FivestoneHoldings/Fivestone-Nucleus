@@ -36,6 +36,58 @@ seed_partners()
 seed_menus()
 
 _UI = Path(__file__).parent / "ui"
+def _error_page(title: str, msg: str, status: int) -> HTMLResponse:
+    return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>GateWay Delivery</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;800&display=swap" rel="stylesheet">
+<style>body{{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center}}
+h1{{font-size:1.25rem;font-weight:800}}p{{color:#5a5e64;max-width:340px;line-height:1.6}}
+a{{display:inline-block;margin-top:14px;background:#16337a;color:#fff;text-decoration:none;
+padding:12px 22px;border-radius:10px;font-weight:800}}</style></head>
+<body><div><div style="font-weight:900;font-size:1.5rem;margin-bottom:14px">Gate<span style="color:#d81f2a">Way</span></div>
+<h1>{title}</h1><p>{msg}</p><a href="/">Back to GateWay</a></div></body></html>""", status_code=status)
+
+
+def _wants_html(request) -> bool:
+    if request.url.path.startswith(("/api/", "/v0/")):
+        return False
+    return "text/html" in request.headers.get("accept", "")
+
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+async def branded_http_errors(request, exc):
+    if exc.status_code == 404 and _wants_html(request):
+        return _error_page("That page doesn't exist",
+                           "The link may be old or mistyped. Head back to the app and try from there.", 404)
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(Exception)
+async def branded_server_errors(request, exc):
+    # The record never pretends: every unexpected failure is logged permanently.
+    try:
+        import json as _json
+        from .models import Event
+        db = SessionLocal()
+        db.add(Event(event_type="system.error", entity_ref=request.url.path[:120],
+                     tenant="gateway", actor="system",
+                     payload=_json.dumps({"error": str(exc)[:300]})))
+        db.commit()
+        db.close()
+    except Exception:
+        pass
+    if _wants_html(request):
+        return _error_page("Something went wrong on our side",
+                           "Your action was NOT completed. Give it another try in a minute — the issue has been logged.", 500)
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"detail": "internal_error"}, status_code=500)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     return (_UI / "home.html").read_text()
@@ -66,7 +118,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "0.20"
+NUCLEUS_VERSION = "0.21"
 
 
 @app.get("/healthz")

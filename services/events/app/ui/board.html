@@ -373,6 +373,16 @@ async function loadLog(){
 }
 
 document.getElementById('csvLink').href = api('/export.csv');
+function netDown(){
+  if(document.getElementById('netB')) return;
+  const b = document.createElement('div'); b.id = 'netB';
+  b.textContent = '⚠ Connection lost — retrying…';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#d81f2a;color:#fff;font-weight:800;text-align:center;padding:8px;z-index:99;font-size:.8rem';
+  document.body.prepend(b);
+}
+function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
+const _rawLoad = load;
+load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
 load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
 </script>
 </body>

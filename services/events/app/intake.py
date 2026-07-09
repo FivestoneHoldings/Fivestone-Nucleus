@@ -100,12 +100,15 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
             data = dict(form)
 
     data = {k: str(data.get(k, "")).strip()[:CAPS[k]] for k in FIELDS}
+    wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
     client_ip = (request.headers.get("x-forwarded-for", "") or
                  (request.client.host if request.client else "?")).split(",")[0].strip()
     if _throttled(client_ip):
+        if wants_html:
+            return HTMLResponse(CONFIRM_PAGE.format(
+                headline="Whoa — slow down a second", order_id="—",
+                message="Too many orders from this connection in one minute. Wait a moment and try again."), status_code=429)
         return JSONResponse({"received": False, "error": "Too many requests"}, status_code=429)
-    wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
-
     if not data["dropoff_address"] or not data["items_description"]:
         if wants_html:
             return HTMLResponse(CONFIRM_PAGE.format(
