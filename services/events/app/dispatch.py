@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from . import airtable_client as at
 from . import notify
 from .db import SessionLocal
-from .models import Event, Proof
+from .models import Event, Proof, DriverLocation
 
 router = APIRouter()
 
@@ -463,3 +463,65 @@ async def manual_notify(key: str, record_id: str, request: Request):
         order_id = recs[0]["fields"].get("order_id", record_id)
     status = await notify.send_sms(order_id, phone, text)
     return {"ok": True, "sms_status": status}
+
+
+@router.post("/api/driver/{day_token}/ping")
+async def driver_ping(day_token: str, request: Request):
+    """Continuous location ping while a driver is running deliveries. Upsert."""
+    drv = await _driver_by_token(day_token)
+    body = await request.json()
+    lat, lng = str(body.get("lat", ""))[:30], str(body.get("lng", ""))[:30]
+    if not lat or not lng:
+        return {"ok": False, "reason": "no coords"}
+    ref = drv["fields"].get("driver_id", drv["id"])
+    db: Session = SessionLocal()
+    try:
+        loc = db.get(DriverLocation, ref)
+        if loc is None:
+            db.add(DriverLocation(driver_ref=ref, lat=lat, lng=lng))
+        else:
+            loc.lat, loc.lng = lat, lng
+            loc.updated_at = datetime.now(timezone.utc)
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.get("/v0/track/{order_id}/location")
+async def track_location(order_id: str):
+    """Public: last-known driver location for an in-transit order. Coarse, time-boxed.
+    Returns nothing unless the order is actively in transit (privacy)."""
+    oid = order_id.upper().strip()
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs:
+        return {"live": False}
+    f = recs[0]["fields"]
+    if f.get("status") != "in_transit":
+        return {"live": False}
+    driver_refs = f.get("driver") or []
+    # resolve driver record -> driver_id
+    ref = None
+    if driver_refs:
+        drecs = await at.list_records(at.DRIVERS, formula=f"RECORD_ID()='{driver_refs[0]}'", max_records=1)
+        if drecs:
+            ref = drecs[0]["fields"].get("driver_id", drecs[0]["id"])
+    if not ref:
+        return {"live": False}
+    db: Session = SessionLocal()
+    try:
+        loc = db.get(DriverLocation, ref)
+    finally:
+        db.close()
+    if not loc or not loc.lat:
+        return {"live": False}
+    # staleness guard: only surface pings from the last 10 minutes.
+    # SQLite returns naive datetimes; normalize to UTC-aware before diffing.
+    updated = loc.updated_at
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    age = (datetime.now(timezone.utc) - updated).total_seconds()
+    if age > 600:
+        return {"live": False}
+    return {"live": True, "lat": loc.lat, "lng": loc.lng,
+            "dropoff": f.get("dropoff_address", "")}

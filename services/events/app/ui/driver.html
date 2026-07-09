@@ -144,6 +144,17 @@ function fail(id){
 }
 load();
 setInterval(load, 60000);
+
+// Continuous location ping while actively delivering (in_transit orders present)
+let HAS_ACTIVE = false;
+async function pingLoc(){
+  if(!HAS_ACTIVE || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async p=>{
+    await fetch(api('/ping'), {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({lat:p.coords.latitude, lng:p.coords.longitude})}).catch(()=>{});
+  }, ()=>{}, {enableHighAccuracy:true, timeout:8000, maximumAge:30000});
+}
+setInterval(pingLoc, 45000);
 </script>
 </body>
 </html>

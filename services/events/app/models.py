@@ -85,3 +85,14 @@ class MenuItem(Base):
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class DriverLocation(Base):
+    """Last-known driver position (upsert, one row per driver). Powers the
+    live map on the customer tracking page while a delivery is in transit."""
+    __tablename__ = "driver_locations"
+
+    driver_ref: Mapped[str] = mapped_column(String(120), primary_key=True)
+    lat: Mapped[str] = mapped_column(String(30), nullable=False, default="")
+    lng: Mapped[str] = mapped_column(String(30), nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
