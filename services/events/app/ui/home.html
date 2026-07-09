@@ -71,6 +71,20 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}
 
 <div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
 <script>
+try{
+  const lastO = localStorage.getItem('gw_last_order');
+  const lastP = JSON.parse(localStorage.getItem('gw_last_partner')||'null');
+  let quick = '';
+  if(lastP && lastP.code) quick += `<a class="tile" href="/order?partner=${encodeURIComponent(lastP.code)}" style="padding:15px 20px;border-color:#16337a">
+    <span class="arrow" style="margin-top:2px">↻</span>
+    <h2 style="font-size:1rem">Order again — ${(lastP.name||'').replace(/</g,'&lt;')}</h2>
+    <p style="margin:0">Jump back to their menu</p></a>`;
+  if(lastO) quick += `<a class="tile" href="/track/${encodeURIComponent(lastO)}" style="padding:15px 20px">
+    <span class="arrow" style="margin-top:2px">→</span>
+    <h2 style="font-size:1rem">Track my last order</h2>
+    <p style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:.72rem">${lastO.replace(/</g,'&lt;')}</p></a>`;
+  if(quick) document.getElementById('restaurants').insertAdjacentHTML('beforebegin', quick);
+}catch(e){}
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
   if(!d.partners || !d.partners.length) return;
   document.getElementById('restaurants').innerHTML =

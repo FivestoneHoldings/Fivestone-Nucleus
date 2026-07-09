@@ -183,6 +183,12 @@ function applyPartnerMeta(d){
     if(fs) fs.style.display = 'none';  // restaurant pickup is known
   }
 }
+try{
+  document.querySelector('form').addEventListener('submit', ()=>{
+    if(p) localStorage.setItem('gw_last_partner', JSON.stringify(
+      {code: p, name: (document.querySelector('.tag').textContent||'').split(' × ')[0]}));
+  });
+}catch(e){}
 function renderMenu(m){
   if(!m || !m.categories || !m.categories.length) return;
   const z = document.getElementById('menuZone');

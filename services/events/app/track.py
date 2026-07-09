@@ -72,6 +72,7 @@ async function pollLoc(){
     }
   }catch(e){}
 }
+try{ localStorage.setItem('gw_last_order', OID); }catch(e){}
 pollLoc(); setInterval(pollLoc, 20000);
 setInterval(async ()=>{
   const d = await (await fetch('/v0/track/' + encodeURIComponent(OID) + '/location')).json().catch(()=>({live:false}));
@@ -109,7 +110,10 @@ async def track(order_id: str):
                        f'<div><div class="lbl">{label}</div>'
                        f'<div class="time">{_fmt(ts) if ts else "—"}</div></div></div>')
 
-    items_line = _esc(f.get("items_description", ""))
+    raw_items = f.get("items_description", "")
+    # cart strings look like "2× A ($9.00), 1× B ($4.00) — subtotal $13.00"
+    raw_items = raw_items.split(" — subtotal")[0]
+    items_line = _esc(raw_items).replace("), ", ")<br>")
     total = f.get("total_cents")
     if total:
         try:
