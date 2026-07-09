@@ -399,3 +399,35 @@ def board_notifications(key: str, limit: int = 50):
         "order_id": n.order_id, "to": n.to_phone, "status": n.status,
         "body": n.body, "detail": n.detail, "at": n.created_at.isoformat(),
     } for n in rows]}
+
+
+@router.get("/api/board/{key}/order-detail/{order_id}")
+async def order_detail(key: str, order_id: str):
+    _check_key(key)
+    oid = order_id.upper().strip()
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No order with that ID")
+    f = recs[0]["fields"]
+    db: Session = SessionLocal()
+    try:
+        evs = (db.query(Event).filter(Event.entity_ref == oid)
+               .order_by(Event.occurred_at.asc()).all())
+        from .models import Proof
+        has_proof = db.query(Proof).filter(Proof.order_id == oid).count() > 0
+    finally:
+        db.close()
+    keep = ["order_id", "status", "partner_code", "source_channel",
+            "pickup_address", "dropoff_address", "dropoff_contact_name",
+            "dropoff_contact_phone", "items_description", "special_instructions",
+            "cancel_reason", "received_at", "confirmed_at", "assigned_at",
+            "in_transit_at", "delivered_at", "closed_at", "cancelled_at", "failed_at",
+            "customer_name_raw", "customer_phone_raw"]
+    return {
+        "record_id": recs[0]["id"],
+        "fields": {k: f.get(k, "") for k in keep if f.get(k)},
+        "has_proof": has_proof,
+        "events": [{"event_type": e.event_type, "actor": e.actor,
+                    "occurred_at": e.occurred_at.isoformat(), "payload": e.payload}
+                   for e in evs],
+    }

@@ -37,17 +37,17 @@ def test_seed_and_public_lookup():
 
 
 def test_partner_upsert_and_list():
-    r = client.post(f"{K}/partners", json={"code": "Friends BBQ", "display_name": "Friends BBQ"})
+    r = client.post(f"{K}/partners", json={"code": "Corner Deli", "display_name": "Corner Deli"})
     assert r.status_code == 200
-    assert r.json()["code"] == "friendsbbq"  # normalized
+    assert r.json()["code"] == "cornerdeli"  # normalized
     codes = [p["code"] for p in client.get(f"{K}/partners").json()["partners"]]
-    assert "friendsbbq" in codes and "asiacafe" in codes
+    assert "cornerdeli" in codes and "asiacafe" in codes
     # update path
-    r2 = client.post(f"{K}/partners", json={"code": "friendsbbq",
-                                            "display_name": "Friends BBQ Maryville", "status": "active"})
+    r2 = client.post(f"{K}/partners", json={"code": "cornerdeli",
+                                            "display_name": "Corner Deli Maryville", "status": "active"})
     assert r2.status_code == 200
-    got = client.get("/v0/partners/friendsbbq").json()
-    assert got["display_name"] == "Friends BBQ Maryville" and got["status"] == "active"
+    got = client.get("/v0/partners/cornerdeli").json()
+    assert got["display_name"] == "Corner Deli Maryville" and got["status"] == "active"
 
 
 def test_partner_requires_key_and_fields():

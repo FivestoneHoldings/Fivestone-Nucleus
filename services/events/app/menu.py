@@ -100,7 +100,8 @@ def delete_item(key: str, item_id: str):
 
 # ---------- SEEDS (drafts — grounded in published menus, partner-editable) ----------
 
-SEED_PARTNERS = [("burgerboys", "Burger Boys & Friends BBQ"),
+SEED_PARTNERS = [("burgerboys", "Burger Boys"),
+                 ("friendsbbq", "Friends BBQ"),
                  ("stephens", "Stephen's Pizzeria")]
 
 SEED_MENUS = {
@@ -112,14 +113,11 @@ SEED_MENUS = {
             ("Lil Dre's Burger", "Loaded with everything in the garden, cheese, 6 strips of bacon", 1050),
             ("Fire Burger", "Habanero & cayenne sauces, jalapenos — for the brave", 1150),
         ]),
-        ("BBQ", [
-            ("Pulled Pork Sandwich", "Slow-smoked pork, house BBQ sauce, on a bun", 899),
-            ("Smoked Chicken Plate", "Smoked BBQ chicken with 2 sides", 1199),
-            ("Rib Plate", "Slow-smoked ribs with 2 sides", 1399),
-        ]),
-        ("Wings & More", [
-            ("Chicken Wings (8)", "Fried or smoked, sauced", 999),
+        ("Chicken, Wings & Fish", [
+            ("Chicken Wings (8)", "Fried, sauced", 999),
+            ("Fried Chicken Sandwich", "Crispy, dressed", 899),
             ("Fish Sandwich", "Crispy fried fish, dressed", 899),
+            ("Chicken Livers", "Southern style", 799),
         ]),
         ("Sides", [
             ("Mac & Cheese", "", 349), ("Collard Greens", "", 349),
@@ -128,6 +126,28 @@ SEED_MENUS = {
         ]),
         ("Desserts", [
             ("Sweet Potato Pie", "", 399), ("Cheesecake Slice", "", 449),
+        ]),
+    ],
+    "friendsbbq": [
+        ("Sandwiches & Plates", [
+            ("Pulled Pork Sandwich", "Slow-smoked pork, house BBQ sauce", 899),
+            ("BBQ Chicken Plate", "Smoked BBQ chicken with 2 sides", 1199),
+            ("Rib Plate", "Slow-smoked ribs with 2 sides", 1399),
+            ("Smoked Hot Dog", "Off the smoker, dressed", 499),
+            ("Meatloaf Plate", "Homestyle, with 2 sides", 1099),
+        ]),
+        ("Family Packs", [
+            ("Pork Family Pack (serves 5)", "20 oz BBQ pork, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
+            ("Chicken Family Pack (serves 5)", "20 oz BBQ chicken, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
+            ("Rib Family Pack (serves 5)", "2.5 lb ribs, 3 pint sides, sauce, 5 cookies", 4999),
+            ("Pork Family Pack (serves 10)", "40 oz BBQ pork, 3 quart sides, sauce, 10 buns, 10 cookies", 6999),
+        ]),
+        ("Sides", [
+            ("Baked Beans", "", 349), ("Mac & Cheese", "", 349),
+            ("Coleslaw", "", 349), ("Potato Salad", "", 349),
+        ]),
+        ("Extras", [
+            ("Cookie", "", 150), ("Extra BBQ Sauce", "", 75),
         ]),
     ],
     "stephens": [
@@ -163,7 +183,30 @@ SEED_MENUS = {
 }
 
 
+def migrate_split_burgerboys():
+    """One-time repair: burgerboys was seeded as a combined 'Burger Boys & Friends
+    BBQ' partner. They are two separate restaurants. Renames the partner, moves the
+    BBQ category to friendsbbq, and lets seed_menus fill the rest. Idempotent."""
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, "burgerboys")
+        if p and "Friends" in p.display_name:
+            p.display_name = "Burger Boys"
+            if db.get(Partner, "friendsbbq") is None:
+                db.add(Partner(code="friendsbbq", display_name="Friends BBQ", status="pilot"))
+            moved = (db.query(MenuItem)
+                     .filter(MenuItem.partner_code == "burgerboys",
+                             MenuItem.category == "BBQ").all())
+            for item in moved:
+                item.partner_code = "friendsbbq"
+                item.category = "Sandwiches & Plates"
+            db.commit()
+    finally:
+        db.close()
+
+
 def seed_menus():
+    migrate_split_burgerboys()
     db: Session = SessionLocal()
     try:
         for code, name in SEED_PARTNERS:

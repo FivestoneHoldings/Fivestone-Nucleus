@@ -12,11 +12,11 @@ K = "/api/board/test-key"
 
 
 def test_seeded_partners_and_menus():
-    assert client.get("/v0/partners/burgerboys").json()["display_name"] == "Burger Boys & Friends BBQ"
+    assert client.get("/v0/partners/burgerboys").json()["display_name"] == "Burger Boys"
     assert client.get("/v0/partners/stephens").json()["display_name"] == "Stephen's Pizzeria"
     m = client.get("/v0/partners/burgerboys/menu").json()
     names = [i["name"] for c in m["categories"] for i in c["items"]]
-    assert "Kobe Burger" in names and "Pulled Pork Sandwich" in names and "Sweet Potato Pie" in names
+    assert "Kobe Burger" in names and "Sweet Potato Pie" in names
     m2 = client.get("/v0/partners/stephens/menu").json()
     names2 = [i["name"] for c in m2["categories"] for i in c["items"]]
     assert 'Pepperoni Pizza 16"' in names2 and "Philly Cheesesteak" in names2

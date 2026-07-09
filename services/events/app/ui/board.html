@@ -55,7 +55,14 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
   <div class="tab" id="t-partners" onclick="show('partners')">Partners</div>
   <div class="tab" id="t-log" onclick="show('log')">Log</div>
 </div>
-<div id="orders"><div class="empty">Loading…</div></div>
+<div id="orders-tab">
+  <div class="row" style="margin-bottom:12px">
+    <input id="findOrd" placeholder="Find order: ORD-XXXXXXXX" autocapitalize="characters" style="font-family:'IBM Plex Mono',monospace">
+    <button onclick="findOrder()">Find</button>
+  </div>
+  <div id="orderDetail"></div>
+  <div id="orders"><div class="empty">Loading…</div></div>
+</div>
 <div id="drivers" style="display:none"></div>
 <div id="partners" style="display:none"></div>
 <div id="log" style="display:none"></div>
@@ -67,7 +74,8 @@ let DRIVERS = [], VIEW = 'orders';
 function show(v){
   VIEW = v;
   for(const x of ['orders','drivers','partners','log']){
-    document.getElementById(x).style.display = x===v?'':'none';
+    const el = document.getElementById(x==='orders'?'orders-tab':x);
+    el.style.display = x===v?'':'none';
     document.getElementById('t-'+x).classList.toggle('on', x===v);
   }
   if(v==='drivers') loadDrivers();
@@ -141,6 +149,35 @@ function copyOrderLink(code){
   alert('Branded order link copied — send it to the partner.');
 }
 
+async function findOrder(){
+  let v = document.getElementById('findOrd').value.trim().toUpperCase();
+  if(!v) { document.getElementById('orderDetail').innerHTML=''; return; }
+  if(!v.startsWith('ORD-') && v.length===8) v = 'ORD-' + v;
+  const r = await fetch(api('/order-detail/' + encodeURIComponent(v)));
+  const box = document.getElementById('orderDetail');
+  if(!r.ok){ box.innerHTML = `<div class="card"><div class="empty" style="padding:14px">No order found for ${v}.</div></div>`; return; }
+  const d = await r.json(); const f = d.fields;
+  const stampRow = (label, val) => val?`<div class="line"><b>${label}</b><span style="font-family:'IBM Plex Mono',monospace;font-size:.72rem">${val.replace('T',' ').slice(0,19)} UTC</span></div>`:'';
+  box.innerHTML = `<div class="card" style="border-color:#1f4d3a">
+    <span class="chip ${f.status}">${(f.status||'').replace('_',' ')}</span>
+    <div class="oid">${f.order_id}</div>
+    ${f.partner_code?`<div class="line"><b>Partner</b>${f.partner_code}</div>`:''}
+    ${f.customer_name_raw?`<div class="line"><b>Customer</b>${f.customer_name_raw} ${f.customer_phone_raw||''}</div>`:''}
+    <div class="line"><b>Pickup</b>${f.pickup_address||'—'}</div>
+    <div class="line"><b>Drop</b>${f.dropoff_address||'—'} ${f.dropoff_contact_name?('· '+f.dropoff_contact_name):''}</div>
+    ${f.items_description?`<div class="line"><b>Items</b>${f.items_description}</div>`:''}
+    ${f.special_instructions?`<div class="line"><b>Notes</b>${f.special_instructions}</div>`:''}
+    ${f.cancel_reason?`<div class="line"><b>Cancel reason</b>${f.cancel_reason}</div>`:''}
+    ${stampRow('Received', f.received_at)}${stampRow('Confirmed', f.confirmed_at)}
+    ${stampRow('Assigned', f.assigned_at)}${stampRow('Picked up', f.in_transit_at)}
+    ${stampRow('Delivered', f.delivered_at)}${stampRow('Closed', f.closed_at)}
+    ${stampRow('Cancelled', f.cancelled_at)}${stampRow('Failed', f.failed_at)}
+    ${d.has_proof?`<div class="line"><b>Proof</b><a href="/proof/${f.order_id}" target="_blank" style="color:#3ecf8e">📷 view photo</a></div>`:''}
+    ${d.events.length?`<div class="line" style="margin-top:10px"><b>Event trail</b></div>` +
+      d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join(''):''}
+    <div class="row"><button class="ghost" onclick="document.getElementById('orderDetail').innerHTML='';document.getElementById('findOrd').value=''">Close ✕</button></div>
+  </div>`;
+}
 async function loadStats(){
   try{
     const d = await (await fetch(api('/stats'))).json();
