@@ -40,7 +40,7 @@ def test_home_serves_launcher():
     r = client.get("/")
     assert r.status_code == 200
     for needle in ("Place an order", "Track an order", "Driver day code", "Dispatch key",
-                   "manifest.json"):
+                   "Kitchen code", "manifest.json"):
         assert needle in r.text
 
 

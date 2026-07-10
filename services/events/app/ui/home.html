@@ -91,6 +91,10 @@ body{padding-top:76px !important}
     <button onclick="go('driver','drv')">Drive</button>
   </div>
   <div class="row">
+    <input id="kit" placeholder="Kitchen code">
+    <button onclick="go('kitchen','kit')">Kitchen</button>
+  </div>
+  <div class="row">
     <input id="brd" placeholder="Dispatch key">
     <button onclick="go('board','brd')">Board</button>
   </div>
@@ -128,7 +132,7 @@ function go(path, id){
   location.href = '/' + path + '/' + encodeURIComponent(v);
 }
 try{
-  for(const id of ['drv','brd']){
+  for(const id of ['drv','kit','brd']){
     const saved = localStorage.getItem('gw_'+id);
     if(saved) document.getElementById(id).value = saved;
   }

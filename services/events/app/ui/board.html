@@ -95,7 +95,7 @@ select,input{border-radius:11px}
     <button onclick="findOrder()">Find</button>
   </div>
   <div id="orderDetail"></div>
-  <div id="orders"><div class="empty">Loading…</div></div>
+  <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
 </div>
 <div id="drivers" style="display:none"></div>
 <div id="partners" style="display:none"></div>
@@ -135,8 +135,16 @@ async function loadPartners(){
       <div class="row"><input id="pa-${x.code}" placeholder="Pickup address" value="${(x.address||'').replace(/"/g,'&quot;')}">
         <input id="pf-${x.code}" placeholder="Fee $" style="max-width:76px" value="${((x.delivery_fee_cents||0)/100).toFixed(2)}">
         <button class="ghost" onclick="savePartnerMeta('${x.code}')">Save</button></div>
-      <div class="line"><b>Order link</b><span class="copy" onclick="copyOrderLink('${x.code}')">copy branded link</span></div>
-      <div class="line"><b>Kitchen screen</b><span class="copy" onclick="copyKitchen('${x.portal_token}')">copy kitchen link</span></div>
+      <div class="line" style="margin-top:10px"><b>Customer order page</b></div>
+      <div class="row">
+        <button class="ghost" onclick="openLink('/order?partner=${x.code}')">Open ↗</button>
+        <button class="ghost" onclick="shareLink('Order from ${esc(x.display_name)} — GateWay Delivery','/order?partner=${x.code}')">Share / copy</button>
+      </div>
+      <div class="line"><b>Kitchen screen</b> <span class="oid">(the restaurant's dinging orders tablet)</span></div>
+      <div class="row">
+        <button onclick="openLink('/kitchen/${x.portal_token}')">Open ↗</button>
+        <button class="ghost" onclick="shareLink('${esc(x.display_name)} — your GateWay Kitchen Screen','/kitchen/${x.portal_token}')">Share / copy</button>
+      </div>
       <div class="row"><button class="${x.accepting_orders?'warn':''}" onclick="setAccepting('${x.code}',${!x.accepting_orders})">${x.accepting_orders?'Pause orders ⏸':'Resume orders ▶'}</button></div>
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button>
         <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button></div>
@@ -212,6 +220,15 @@ async function savePartnerMeta(code){
   const cur = (await (await fetch(api('/partners'))).json()).partners.find(p=>p.code===code);
   if(await post('/partners', {code, display_name: cur?cur.display_name:code,
       address, delivery_fee_cents: fee})) loadPartners();
+}
+function openLink(path){ window.open(location.origin + path, '_blank'); }
+async function shareLink(title, path){
+  const url = location.origin + path;
+  if(navigator.share){
+    try{ await navigator.share({title, url}); return; }catch(e){ if(e.name==='AbortError') return; }
+  }
+  navigator.clipboard.writeText(url);
+  alert('Link copied — paste it into a text.');
 }
 function copyKitchen(tok){
   navigator.clipboard.writeText(location.origin + '/kitchen/' + tok);
@@ -363,9 +380,12 @@ async function loadDrivers(){
       <span class="chip ${x.status}">${x.status||'—'}</span>
       <div class="oid">${x.driver_id}</div>
       <div class="line" style="font-weight:600">${x.name}</div>
-      <div class="line"><b>Day link</b><span class="copy" onclick="copyLink('${x.day_token}')">copy link</span>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#555">/driver/${x.day_token}</span></div>
-      <div class="row"><button class="ghost" onclick="rotate('${x.id}')">Rotate token ↻</button></div>
+      <div class="line"><b>Day sheet</b> <span class="oid">/driver/${x.day_token}</span></div>
+      <div class="row">
+        <button class="ghost" onclick="openLink('/driver/${x.day_token}')">Open ↗</button>
+        <button class="ghost" onclick="shareLink('Your GateWay day sheet — ${esc(x.name)}','/driver/${x.day_token}')">Share / copy</button>
+        <button class="warn" onclick="rotate('${x.id}')">Rotate ↻</button>
+      </div>
     </div>`).join('');
 }
 async function addDriver(){
