@@ -38,7 +38,7 @@ text-align:center;margin-bottom:14px;font-size:.85rem}
 <button id="gateBtn" onclick="toggleGate()" style="width:auto;padding:10px 18px;margin-bottom:14px;border-radius:20px;font-size:.82rem;background:transparent;border:1.5px solid #16337a;color:#16337a;font-weight:800;display:none"></button>
 <div id="list"><div class="empty">Loading…</div></div>
 <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;text-align:center;margin-top:24px;text-transform:uppercase;letter-spacing:.08em">
-Tap READY when the order is bagged. GateWay Dispatch · Fivestone Holdings</div>
+Tap READY when the order is bagged. GateWay Dispatch · Fivestone Holdings · <a href="/guide/kitchen" style="color:#16337a">How it works</a></div>
 <script>
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/kitchen/${token}` + p;
