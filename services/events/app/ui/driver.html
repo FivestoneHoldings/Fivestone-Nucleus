@@ -73,6 +73,7 @@ box-shadow:0 6px 18px rgba(22,51,122,.3)}
 </div>
 <div id="list"><div class="empty">Loading your route…</div></div>
 <p class="note">Tap Picked Up when you have it. Tap Delivered when it's done.<br>GateWay Dispatch · Fivestone Holdings · <a href="/guide/driver" style="color:#16337a">How it works</a></p>
+<script src="/static/gw-ui.js"></script>
 <script>
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/driver/${token}` + p;
@@ -140,14 +141,18 @@ async function act(id, action, body){
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({...(body||{}), ...loc})});
   if(r.ok){ const c=document.getElementById(id); c.classList.add('done');
     setTimeout(load, 700); }
-  else alert('Could not update — try again or call dispatch.');
+  else {
+    let d=''; try{ d=(await r.json()).detail||''; }catch(e){}
+    gwToast(d || 'Could not update — try again or call dispatch.', false);
+  }
 }
 async function addNote(id){
-  const text = prompt('Note for dispatch (e.g. "gate code 4412 worked", "customer asked for 6pm"):');
+  const text = await gwPrompt({title:'Note for dispatch', multiline:true,
+    placeholder:'e.g. gate code 4412 worked · customer asked for 6pm', confirm:'Log note'});
   if(!text) return;
   const r = await fetch(api(`/orders/${id}/note`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
-  alert(r.ok ? 'Note logged ✓' : 'Could not save note.');
+  gwToast(r.ok ? 'Note logged ✓' : 'Could not save note.', r.ok);
 }
 function deliver(id, orderId){
   // Offer proof photo; skipping is allowed (v0 grace)
@@ -183,8 +188,9 @@ function shrink(file){
     img.src = URL.createObjectURL(file);
   });
 }
-function fail(id){
-  const reason = prompt('What happened? (no answer, wrong address, refused…)');
+async function fail(id){
+  const reason = await gwPrompt({title:'What happened?', multiline:true,
+    placeholder:'No answer · wrong address · refused…', confirm:'Report problem', danger:true});
   if(reason!==null) act(id, 'failed', {reason});
 }
 function netDown(){

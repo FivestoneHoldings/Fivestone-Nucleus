@@ -10,6 +10,7 @@ import pytest
 
 UI = os.path.join(os.path.dirname(__file__), "..", "app", "ui")
 PAGES = ["board.html", "driver.html", "kitchen.html", "order-form.html", "home.html"]
+STATIC_JS = ["static/gw-ui.js", "static/sw.js"]
 
 node = shutil.which("node")
 
@@ -29,6 +30,14 @@ def test_inline_scripts_parse(page):
             assert r.returncode == 0, f"{page} script #{i} syntax error:\n{r.stderr[:500]}"
         finally:
             os.unlink(path)
+
+
+@pytest.mark.skipif(node is None, reason="node not installed")
+@pytest.mark.parametrize("path", STATIC_JS)
+def test_static_js_parses(path):
+    r = subprocess.run([node, "--check", os.path.join(UI, path)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[:500]
 
 
 @pytest.mark.skipif(node is None, reason="node not installed")

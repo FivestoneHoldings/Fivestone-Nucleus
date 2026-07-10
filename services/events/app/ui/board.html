@@ -71,6 +71,12 @@ body{padding-top:76px !important}
 button{border-radius:11px}
 select,input{border-radius:11px}
 .chip{font-weight:500}
+
+.card{padding:16px}
+.line{font-size:.87rem;margin:7px 0}
+.line b{font-size:.64rem;letter-spacing:.09em}
+.oid{letter-spacing:.04em}
+.chip{letter-spacing:.05em}
 </style>
 </head>
 \1
@@ -100,6 +106,7 @@ select,input{border-radius:11px}
 <div id="drivers" style="display:none"></div>
 <div id="partners" style="display:none"></div>
 <div id="log" style="display:none"></div>
+<script src="/static/gw-ui.js"></script>
 <script>
 const key = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/board/${key}` + p;
@@ -188,10 +195,10 @@ async function menuAdd(code){
     { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
 async function menuPrice(code, id, current){
-  const v = prompt('New price ($):', (current/100).toFixed(2));
+  const v = await gwPrompt({title:'New price', value:(current/100).toFixed(2), inputmode:'decimal', confirm:'Save price'});
   if(v === null) return;
   const cents = Math.round(parseFloat(v)*100);
-  if(isNaN(cents) || cents < 0) return alert('Enter a valid price.');
+  if(isNaN(cents) || cents < 0) return gwToast('Enter a valid price.', false);
   if(await post(`/partners/${code}/menu`, {id, price_cents: cents}))
     { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
@@ -200,7 +207,8 @@ async function menuAvail(code, id, avail){
     { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
 async function menuDel(code, id){
-  if(!confirm('Remove this item from the menu?')) return;
+  if(!await gwConfirm({title:'Remove this item?', body:'It disappears from the menu immediately. You can add it back later.',
+    confirm:'Remove', danger:true})) return;
   const r = await fetch(api(`/menu-items/${id}`), {method:'DELETE'});
   if(r.ok){ document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
 }
@@ -228,28 +236,28 @@ async function shareLink(title, path){
     try{ await navigator.share({title, url}); return; }catch(e){ if(e.name==='AbortError') return; }
   }
   navigator.clipboard.writeText(url);
-  alert('Link copied — paste it into a text.');
+  gwToast('Link copied — paste it into a text.');
 }
 function copyKitchen(tok){
   navigator.clipboard.writeText(location.origin + '/kitchen/' + tok);
-  alert('Kitchen Screen link copied — send it to the restaurant. It dings on new orders.');
+  gwToast('Kitchen link copied — send it to the restaurant.');
 }
 async function setAccepting(code, on){
   if(await post(`/partners/${code}/accepting`, {on})) loadPartners();
 }
 function copyOrderLink(code){
   navigator.clipboard.writeText(location.origin + '/order?partner=' + code);
-  alert('Branded order link copied — send it to the partner.');
+  gwToast('Order link copied — send it to the partner.');
 }
 
 async function editField(recordId, field, current){
   const labels = {pickup_address:'Pickup address', dropoff_address:'Dropoff address',
     items_description:'Items', special_instructions:'Notes', customer_phone_raw:'Customer phone'};
-  const v = prompt('Edit ' + (labels[field]||field) + ':', current);
+  const v = await gwPrompt({title:'Edit ' + (labels[field]||field), value: current, confirm:'Save'});
   if(v === null || v === current) return;
   const r = await fetch(api(`/orders/${recordId}/edit`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: v})});
-  if(r.ok){ findOrder(); load(); } else alert('Edit failed.');
+  if(r.ok){ gwToast('Saved ✓'); findOrder(); load(); } else gwToast('Edit failed.', false);
 }
 async function toggleTrend(){
   const el = document.getElementById('trend');
@@ -348,7 +356,10 @@ async function load(){
 async function post(path, body){
   const r = await fetch(api(path),{method:'POST',headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body||{})});
-  if(!r.ok) alert('Action failed — try again.');
+  if(!r.ok){
+    let d=''; try{ d=(await r.json()).detail||''; }catch(e){}
+    gwToast(d || 'Action failed — try again.', false);
+  }
   return r.ok;
 }
 async function assign(id){ if(await post(`/orders/${id}/assign`,{driver_id:document.getElementById('d-'+id).value})) load(); }
@@ -356,17 +367,19 @@ async function confirmO(id){ if(await post(`/orders/${id}/confirm`)) load(); }
 async function closeO(id){ if(await post(`/orders/${id}/close`)) load(); }
 async function requeueO(id){ if(await post(`/orders/${id}/requeue`)) load(); }
 async function notifyO(id){
-  const message = prompt('Text to send the customer:');
+  const message = await gwPrompt({title:'Text the customer', multiline:true,
+    placeholder:'e.g. Running about 10 minutes late — sorry!', confirm:'Send text'});
   if(!message) return;
   const r = await fetch(api(`/orders/${id}/notify`),{method:'POST',
     headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});
   const d = await r.json().catch(()=>({}));
-  alert(r.ok ? ('SMS: ' + (d.sms_status||'queued')) : 'Failed to send.');
+  gwToast(r.ok ? ('Text ' + (d.sms_status==='sent'?'sent ✓':'recorded ('+(d.sms_status||'queued')+')')) : 'Failed to send.', r.ok);
 }
 async function cancelO(id){
-  const reason = prompt('Cancel reason? (optional)');
+  const reason = await gwPrompt({title:'Cancel this order', body:'The customer will not be charged or delivered.',
+    placeholder:'Reason (optional)', confirm:'Cancel order', cancel:'Keep it', danger:true});
   if(reason===null) return;
-  if(await post(`/orders/${id}/cancel`,{reason})) load();
+  if(await post(`/orders/${id}/cancel`,{reason})){ gwToast('Order cancelled'); load(); }
 }
 
 async function loadDrivers(){
@@ -394,12 +407,13 @@ async function addDriver(){
   if(await post('/drivers',{name})) loadDrivers();
 }
 async function rotate(id){
-  if(!confirm("Rotate this driver's day token? Their old link stops working.")) return;
-  if(await post(`/drivers/${id}/rotate`)) loadDrivers();
+  if(!await gwConfirm({title:'Rotate day token?', body:'Their old link stops working instantly. Share the new one after.',
+    confirm:'Rotate', danger:true})) return;
+  if(await post(`/drivers/${id}/rotate`)){ gwToast('Token rotated — share the new link'); loadDrivers(); }
 }
 function copyLink(tok){
   navigator.clipboard.writeText(location.origin + '/driver/' + tok);
-  alert('Day-sheet link copied — text it to the driver.');
+  gwToast('Day-sheet link copied — text it to the driver.');
 }
 
 let LOGMODE = 'events';
