@@ -83,6 +83,11 @@ async def kitchen_ready(token: str, record_id: str, request: Request):
     order_id = recs[0]["fields"].get("order_id", record_id)
     db: Session = SessionLocal()
     try:
+        already = (db.query(Event)
+                   .filter(Event.event_type == "order.kitchen_ready",
+                           Event.entity_ref == order_id).count() > 0)
+        if already:
+            return {"ok": True, "idempotent": True, "order_id": order_id}
         db.add(Event(event_type="order.kitchen_ready", entity_ref=order_id,
                      tenant="gateway", actor=f"kitchen:{p.code}", payload=json.dumps({})))
         db.commit()

@@ -40,6 +40,12 @@ import app.dispatch as dp
 
 
 @pytest.fixture(autouse=True)
+def _reset_state():
+    FAKE_ORDER["fields"]["status"] = "assigned"
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _patched_airtable(monkeypatch):
     for mod in (at, dp.at):
         monkeypatch.setattr(mod, "list_records", fake_list)
@@ -80,6 +86,7 @@ def test_board_requires_key():
 
 
 def test_assign_flow():
+    FAKE_ORDER["fields"]["status"] = "confirmed"  # assign requires received/confirmed
     r = client.post("/api/board/test-key/orders/recORD1/assign",
                     json={"driver_id": "recDRV1"})
     assert r.status_code == 200

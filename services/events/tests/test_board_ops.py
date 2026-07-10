@@ -48,9 +48,11 @@ def _patched(monkeypatch):
 
 
 def test_close_and_cancel():
+    FAKE_ORDER_FIELDS["status"] = "delivered"
     r = client.post(f"{K}/orders/recO1/close")
     assert r.status_code == 200
     assert PATCHES[-1][2]["status"] == "closed" and "closed_at" in PATCHES[-1][2]
+    FAKE_ORDER_FIELDS["status"] = "confirmed"  # delivered orders can't be cancelled (state machine)
     r = client.post(f"{K}/orders/recO1/cancel", json={"reason": "customer changed mind"})
     assert r.status_code == 200
     f = PATCHES[-1][2]

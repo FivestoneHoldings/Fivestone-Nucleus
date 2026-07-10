@@ -18,6 +18,30 @@ from .models import Event, Proof, DriverLocation
 
 router = APIRouter()
 
+# Legal transitions: {target_action: (allowed_from, idempotent_when)}
+TRANSITIONS = {
+    "confirm":   ({"received"}, {"confirmed"}),
+    "assign":    ({"received", "confirmed"}, set()),
+    "picked_up": ({"assigned"}, {"in_transit"}),
+    "delivered": ({"in_transit"}, {"delivered", "closed"}),
+    "failed":    ({"assigned", "in_transit"}, {"failed"}),
+    "close":     ({"delivered"}, {"closed"}),
+    "cancel":    ({"received", "confirmed", "assigned", "in_transit", "failed"}, {"cancelled"}),
+    "requeue":   ({"failed"}, {"confirmed"}),
+}
+
+
+def _guard(action: str, current: str):
+    """Returns 'proceed' | 'idempotent' or raises 409 with a human message."""
+    allowed, idem = TRANSITIONS[action]
+    if current in allowed:
+        return "proceed"
+    if current in idem:
+        return "idempotent"
+    raise HTTPException(409, f"Can't {action.replace('_', ' ')} an order that is "
+                             f"'{current.replace('_', ' ')}' — refresh and try again.")
+
+
 ACTION_MAP = {
     "picked_up": {"status": "in_transit", "stamp": "in_transit_at", "event": "order.picked_up"},
     "delivered": {"status": "delivered", "stamp": "delivered_at", "event": "order.delivered"},
@@ -258,6 +282,11 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
         raise HTTPException(404, "No such order")
     if drv["id"] not in (owned[0]["fields"].get("driver") or []):
         raise HTTPException(403, "This order is not on your sheet")
+    current = owned[0]["fields"].get("status", "")
+    if _guard(action, current) == "idempotent":
+        return {"ok": True, "idempotent": True,
+                "order_id": owned[0]["fields"].get("order_id", record_id),
+                "new_status": current}
     spec = ACTION_MAP[action]
     fields = {"status": spec["status"], spec["stamp"]: _now()}
     body = {}
@@ -357,6 +386,8 @@ async def assign_order(key: str, record_id: str, request: Request):
     driver_rec = body.get("driver_id")
     if not driver_rec:
         raise HTTPException(400, "driver_id required")
+    cur = await _order_state(record_id)
+    _guard("assign", cur)
     updated = await at.patch_record(at.ORDERS, record_id, {
         "driver": [driver_rec], "status": "assigned", "assigned_at": _now(),
     })
@@ -369,6 +400,9 @@ async def assign_order(key: str, record_id: str, request: Request):
 @router.post("/api/board/{key}/orders/{record_id}/confirm")
 async def confirm_order(key: str, record_id: str):
     _check_key(key)
+    cur = await _order_state(record_id)
+    if _guard("confirm", cur) == "idempotent":
+        return {"ok": True, "idempotent": True}
     updated = await at.patch_record(at.ORDERS, record_id, {
         "status": "confirmed", "confirmed_at": _now(),
     })
@@ -378,11 +412,22 @@ async def confirm_order(key: str, record_id: str):
     return {"ok": True, "order_id": order_id}
 
 
+async def _order_state(record_id: str) -> str:
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'",
+                                 max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    return recs[0]["fields"].get("status", "")
+
+
 # ---------- BOARD: LIFECYCLE COMPLETION ----------
 
 @router.post("/api/board/{key}/orders/{record_id}/close")
 async def close_order(key: str, record_id: str):
     _check_key(key)
+    cur = await _order_state(record_id)
+    if _guard("close", cur) == "idempotent":
+        return {"ok": True, "idempotent": True}
     updated = await at.patch_record(at.ORDERS, record_id,
                                     {"status": "closed", "closed_at": _now()})
     order_id = updated.get("fields", {}).get("order_id", record_id)
@@ -400,6 +445,9 @@ async def cancel_order(key: str, record_id: str, request: Request):
     except Exception:
         pass
     reason = str(body.get("reason", ""))[:200]
+    cur = await _order_state(record_id)
+    if _guard("cancel", cur) == "idempotent":
+        return {"ok": True, "idempotent": True}
     fields = {"status": "cancelled", "cancelled_at": _now()}
     if reason:
         fields["cancel_reason"] = reason
@@ -570,6 +618,9 @@ async def order_detail(key: str, order_id: str):
 async def requeue_order(key: str, record_id: str):
     """Recover a failed delivery: return it to 'confirmed' so it can be reassigned."""
     _check_key(key)
+    cur = await _order_state(record_id)
+    if _guard("requeue", cur) == "idempotent":
+        return {"ok": True, "idempotent": True}
     updated = await at.patch_record(at.ORDERS, record_id,
                                     {"status": "confirmed", "failed_at": ""})
     order_id = updated.get("fields", {}).get("order_id", record_id)

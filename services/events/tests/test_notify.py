@@ -28,8 +28,8 @@ async def fake_list(table, formula="", fields=None, max_records=100):
 
 
 async def fake_patch(table, record_id, fields):
-    merged = dict(ORDER_FIELDS); merged.update(fields)
-    return {"id": record_id, "fields": merged}
+    ORDER_FIELDS.update(fields)  # stateful: transitions persist like production
+    return {"id": record_id, "fields": dict(ORDER_FIELDS)}
 
 
 async def fake_create(table, fields):
@@ -39,6 +39,12 @@ async def fake_create(table, fields):
 async def fake_twilio(sid, token, from_, to, body):
     SENT.append((to, body))
     return True, "SM_fake"
+
+
+@pytest.fixture(autouse=True)
+def _reset_status():
+    ORDER_FIELDS["status"] = "assigned"
+    yield
 
 
 @pytest.fixture(autouse=True)
