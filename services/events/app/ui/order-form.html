@@ -110,6 +110,7 @@ letter-spacing:.01em}
 .cartbar{background:linear-gradient(135deg,#0e1526,#16337a);box-shadow:0 10px 26px rgba(10,20,50,.35);
 border-radius:18px}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#5a5e64}
+.opt{color:#9a9ea5;font-weight:400;font-size:.8em}
 </style>
 </head>
 \1
@@ -133,6 +134,34 @@ border-radius:18px}
     <input type="hidden" name="tip_cents" id="tipField" value="">
     <div id="menuZone" style="display:none"></div>
     <div id="pausedBanner" style="display:none;background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem"></div>
+    <fieldset id="itemsFs">
+      <legend id="itemsLeg">The delivery</legend>
+      <label class="req" for="items" id="itemsLabel">What are we delivering?</label>
+      <textarea id="items" name="items_description" required placeholder="2 catering trays, 1 cooler"></textarea>
+      <label for="si">Special instructions</label>
+      <textarea id="si" name="special_instructions" placeholder="Gate code, allergies, call on arrival…"></textarea>
+    </fieldset>
+
+    <fieldset id="deliverFs">
+      <legend>Deliver to</legend>
+      <label class="req" for="da">Your delivery address</label>
+      <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"></textarea>
+      <div id="recipientRow">
+        <label for="dcn">Recipient name <span class="opt">(if not you)</span></label>
+        <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it">
+        <label for="dcp">Recipient phone <span class="opt">(optional)</span></label>
+        <input id="dcp" name="dropoff_contact_phone" type="tel" placeholder="865-555-0199">
+      </div>
+    </fieldset>
+
+    <fieldset id="whoFs">
+      <legend id="whoLeg">Your contact info</legend>
+      <label class="req" for="cn" id="cnLabel">Your name</label>
+      <input id="cn" name="customer_name" required placeholder="Alex Johnson">
+      <label class="req" for="cp">Phone <span class="opt" id="cpOpt">(for delivery updates)</span></label>
+      <input id="cp" name="customer_phone" type="tel" required placeholder="865-555-0100">
+    </fieldset>
+
     <fieldset id="whenFs">
       <legend>When</legend>
       <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -141,36 +170,11 @@ border-radius:18px}
       </div>
       <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
     </fieldset>
-    <fieldset>
-      <legend>Who's ordering</legend>
-      <label class="req" for="cn">Your name / business</label>
-      <input id="cn" name="customer_name" required placeholder="Friends BBQ">
-      <label class="req" for="cp">Phone</label>
-      <input id="cp" name="customer_phone" type="tel" required placeholder="865-555-0100">
-    </fieldset>
 
     <fieldset id="pickupFs">
       <legend>Pickup</legend>
       <label class="req" for="pa">Pickup address</label>
       <textarea id="pa" name="pickup_address" required placeholder="Street, City, TN"></textarea>
-    </fieldset>
-
-    <fieldset>
-      <legend>Deliver to</legend>
-      <label class="req" for="da">Your delivery address</label>
-      <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"></textarea>
-      <label for="dcn">Recipient name</label>
-      <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it">
-      <label for="dcp">Recipient phone</label>
-      <input id="dcp" name="dropoff_contact_phone" type="tel" placeholder="865-555-0199">
-    </fieldset>
-
-    <fieldset>
-      <legend>The delivery</legend>
-      <label class="req" for="items">What are we delivering?</label>
-      <textarea id="items" name="items_description" required placeholder="2 catering trays, 1 cooler"></textarea>
-      <label for="si">Special instructions</label>
-      <textarea id="si" name="special_instructions" placeholder="Gate code, fragile, call on arrival…"></textarea>
     </fieldset>
 
     <button type="submit">Send Order to GateWay</button>
@@ -222,6 +226,13 @@ function applyPartnerMeta(d){
     const fs = document.getElementById('pickupFs');
     if(fs) fs.style.display = 'none';  // restaurant pickup is known
   }
+  // Menu mode: food-first labels, drop redundant recipient fields
+  document.getElementById('itemsLeg').textContent = 'Your order';
+  document.getElementById('itemsLabel').textContent = 'Your items appear here as you tap the menu';
+  document.getElementById('items').readOnly = true;
+  document.getElementById('items').style.opacity = '.85';
+  document.getElementById('whoLeg').textContent = 'Almost done — who is this for?';
+  const rr = document.getElementById('recipientRow'); if(rr) rr.style.display = 'none';
 }
 try{
   document.querySelector('form').addEventListener('submit', ()=>{

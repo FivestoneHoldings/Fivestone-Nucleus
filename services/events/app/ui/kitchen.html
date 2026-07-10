@@ -128,7 +128,7 @@ async function load(){
         ? '<div class="done-label">✓ READY — driver notified</div>'
         : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`}
     </div>`).join('') :
-    '<div class="empty">No open orders right now.<br>New ones will ring in automatically. 🔔</div>';
+    `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">Kitchen's quiet</div><div style="font-size:.82rem;margin-top:4px">No open orders. New tickets ring in here automatically. 🔔</div></div>`;
 }
 async function markReady(id){
   const r = await fetch(api(`/orders/${id}/ready`), {method:'POST',

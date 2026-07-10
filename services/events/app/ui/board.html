@@ -327,7 +327,7 @@ async function load(){
   }
   const d = await r.json(); DRIVERS = d.drivers;
   if(!d.orders.length){ document.getElementById('orders').innerHTML =
-    '<div class="empty">No open orders. The board is clear. 🕊️</div>'; }
+    `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;color:#c9cdd3;font-size:1rem">All clear</div><div style="font-size:.82rem;margin-top:4px">No open orders right now. New orders land here the moment they come in.</div></div>`; }
   else document.getElementById('orders').innerHTML = d.orders.map(o => `
     <div class="card">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>

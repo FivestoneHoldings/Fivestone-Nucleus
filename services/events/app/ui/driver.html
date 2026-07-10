@@ -91,7 +91,7 @@ async function load(){
   const d = await r.json();
   document.getElementById('who').textContent = d.driver;
   if(!d.orders.length){ document.getElementById('list').innerHTML =
-    '<div class="empty">No deliveries on your sheet right now.<br>Pull down to refresh.</div>'; return; }
+    `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">You're all caught up</div><div style="font-size:.82rem;margin-top:4px">No deliveries assigned yet. When dispatch sends you one, your phone will buzz.</div></div>`; return; }
   document.getElementById('list').innerHTML = d.orders.map((o, i) => `
     <div class="card" id="${o.id}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
