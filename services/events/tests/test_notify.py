@@ -22,6 +22,8 @@ SENT = []
 async def fake_list(table, formula="", fields=None, max_records=100):
     if table == at.DRIVERS:
         return [FAKE_DRIVER] if "tok123" in formula else []
+    if "RECORD_ID()" in formula:
+        return [{"id": "recO", "fields": dict(ORDER_FIELDS, driver=["recDRV1"])}]
     return []
 
 

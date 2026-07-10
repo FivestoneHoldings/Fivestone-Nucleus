@@ -72,9 +72,15 @@ async def kitchen_orders(token: str):
 
 @router.post("/api/kitchen/{token}/orders/{record_id}/ready")
 async def kitchen_ready(token: str, record_id: str, request: Request):
+    import re as _re
     p = _partner_by_token(token)
-    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
-    order_id = recs[0]["fields"].get("order_id", record_id) if recs else record_id
+    safe_rec = _re.sub(r"[^A-Za-z0-9]", "", record_id)[:40]
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{safe_rec}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    if recs[0]["fields"].get("partner_code", "") != p.code:
+        raise HTTPException(403, "That order belongs to a different kitchen")
+    order_id = recs[0]["fields"].get("order_id", record_id)
     db: Session = SessionLocal()
     try:
         db.add(Event(event_type="order.kitchen_ready", entity_ref=order_id,

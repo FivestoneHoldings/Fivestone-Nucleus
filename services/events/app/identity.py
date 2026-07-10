@@ -36,7 +36,7 @@ def seed_partners():
 
 def _check_key(key: str):
     admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or key != admin:
+    if not admin or not secrets.compare_digest(str(key), admin):
         raise HTTPException(403, "Bad board key")
 
 
@@ -96,10 +96,11 @@ def list_partners(key: str):
 async def upsert_partner(key: str, request: Request):
     _check_key(key)
     body = await request.json()
-    code = str(body.get("code", "")).lower().strip().replace(" ", "")
+    import re
+    code = re.sub(r"[^a-z0-9-]", "", str(body.get("code", "")).lower().strip().replace(" ", ""))
     name = str(body.get("display_name", "")).strip()
     if not code or not name:
-        raise HTTPException(400, "code and display_name required")
+        raise HTTPException(400, "code and display_name required (code: a-z, 0-9, dash)")
     db: Session = SessionLocal()
     try:
         p = db.get(Partner, code)

@@ -4,6 +4,7 @@ Seeded menus are DRAFTS grounded in each restaurant's published menus;
 prices are confirmed/corrected by the partner via the board editor.
 """
 import os
+import secrets
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -15,7 +16,7 @@ router = APIRouter()
 
 def _check_key(key: str):
     admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or key != admin:
+    if not admin or not secrets.compare_digest(str(key), admin):
         raise HTTPException(403, "Bad board key")
 
 

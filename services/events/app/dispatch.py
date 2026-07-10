@@ -57,11 +57,20 @@ async def _driver_by_token(day_token: str) -> dict:
     if cached is not None:
         return cached
     drivers = await at.list_records(
-        at.DRIVERS, formula=f"{{day_token}}='{day_token}'", max_records=1)
+        at.DRIVERS, formula=f"{{day_token}}='{_fq(day_token)}'", max_records=1)
     if not drivers:
         raise HTTPException(404, "Unknown day token")
     _cput(f"drv:{day_token}", drivers[0], 30)
     return drivers[0]
+
+
+import re as _re
+
+
+def _fq(v: str) -> str:
+    """Formula-quote sanitizer: strips anything that could escape an Airtable
+    filterByFormula single-quoted string. IDs/tokens/codes only ever contain these."""
+    return _re.sub(r"[^A-Za-z0-9 _.@+\-]", "", str(v or ""))[:120]
 
 
 # ---------- TTL CACHE (slow-changing lookups only; mutations bust it) ----------
@@ -162,7 +171,7 @@ async def driver_note(day_token: str, record_id: str, request: Request):
     text = str(body.get("text", "")).strip()[:400]
     if not text:
         raise HTTPException(400, "text required")
-    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'", max_records=1)
     order_id = recs[0]["fields"].get("order_id", record_id) if recs else record_id
     actor = f"driver:{drv['fields'].get('display_name','?')}"
     _log_event("order.driver_note", order_id, actor, {"note": text})
@@ -191,15 +200,27 @@ async def toggle_shift(day_token: str, request: Request):
 @router.post("/api/driver/{day_token}/orders/{record_id}/proof")
 async def upload_proof(day_token: str, record_id: str, request: Request):
     drv = await _driver_by_token(day_token)
+    owned = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'",
+                                  max_records=1)
+    if owned and drv["id"] not in (owned[0]["fields"].get("driver") or []):
+        raise HTTPException(403, "This order is not on your sheet")
     body = await request.json()
     img = body.get("image_b64", "")
     if not img or len(img) > 6_000_000:
         raise HTTPException(400, "image_b64 required (max ~4MB)")
+    import base64 as _b64
+    try:
+        _b64.b64decode(img, validate=True)
+    except Exception:
+        raise HTTPException(400, "image_b64 is not valid base64")
+    ctype = str(body.get("content_type", "image/jpeg")).lower()
+    if ctype not in ("image/jpeg", "image/png", "image/webp"):
+        ctype = "image/jpeg"
     order_id = body.get("order_id", record_id)
     db: Session = SessionLocal()
     try:
         db.add(Proof(order_id=order_id, content_b64=img,
-                     content_type=body.get("content_type", "image/jpeg"),
+                     content_type=ctype,
                      lat=str(body.get("lat", ""))[:30], lng=str(body.get("lng", ""))[:30]))
         db.commit()
     finally:
@@ -231,6 +252,12 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
     if action not in ACTION_MAP:
         raise HTTPException(400, "Action must be picked_up, delivered, or failed")
     drv = await _driver_by_token(day_token)
+    owned = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'",
+                                  max_records=1)
+    if not owned:
+        raise HTTPException(404, "No such order")
+    if drv["id"] not in (owned[0]["fields"].get("driver") or []):
+        raise HTTPException(403, "This order is not on your sheet")
     spec = ACTION_MAP[action]
     fields = {"status": spec["status"], spec["stamp"]: _now()}
     body = {}
@@ -275,7 +302,7 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
 
 def _check_key(key: str):
     admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or key != admin:
+    if not admin or not secrets.compare_digest(str(key), admin):
         raise HTTPException(403, "Bad board key")
 
 
@@ -510,7 +537,7 @@ def board_notifications(key: str, limit: int = 50):
 async def order_detail(key: str, order_id: str):
     _check_key(key)
     oid = order_id.upper().strip()
-    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{_fq(oid)}'", max_records=1)
     if not recs:
         raise HTTPException(404, "No order with that ID")
     f = recs[0]["fields"]
@@ -559,7 +586,7 @@ async def manual_notify(key: str, record_id: str, request: Request):
     text = str(body.get("message", "")).strip()[:320]
     if not text:
         raise HTTPException(400, "message required")
-    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'", max_records=1)
     phone = ""
     order_id = record_id
     if recs:
@@ -597,7 +624,7 @@ async def track_location(order_id: str):
     """Public: last-known driver location for an in-transit order. Coarse, time-boxed.
     Returns nothing unless the order is actively in transit (privacy)."""
     oid = order_id.upper().strip()
-    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{_fq(oid)}'", max_records=1)
     if not recs:
         return {"live": False}
     f = recs[0]["fields"]
@@ -610,7 +637,7 @@ async def track_location(order_id: str):
         ref = _cget(f"dref:{driver_refs[0]}")
         if ref is None:
             drecs = await at.list_records(at.DRIVERS,
-                                          formula=f"RECORD_ID()='{driver_refs[0]}'", max_records=1)
+                                          formula=f"RECORD_ID()='{_fq(driver_refs[0])}'", max_records=1)
             if drecs:
                 ref = drecs[0]["fields"].get("driver_id", drecs[0]["id"])
                 _cput(f"dref:{driver_refs[0]}", ref, 600)
@@ -641,7 +668,7 @@ async def day_summary(key: str, date: str = "", partner: str = ""):
     day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{day}'"
     if partner:
-        formula = f"AND({formula},{{partner_code}}='{partner}')"
+        formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
     delivered = [r for r in records if r["fields"].get("status") in ("delivered", "closed")]
     revenue = sum(int(r["fields"].get("total_cents") or 0) for r in delivered)
@@ -692,7 +719,7 @@ async def weekly_digest(key: str, partner: str = "", days: int = 7):
     start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
     formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}'"
     if partner:
-        formula = f"AND({formula},{{partner_code}}='{partner}')"
+        formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
     by_day: dict = {}
     for r in records:
@@ -722,7 +749,7 @@ async def edit_order(key: str, record_id: str, request: Request):
     changes = {k: str(v)[:600] for k, v in body.items() if k in EDITABLE_FIELDS}
     if not changes:
         raise HTTPException(400, "No editable fields provided")
-    before = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{record_id}'", max_records=1)
+    before = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'", max_records=1)
     old = {k: before[0]["fields"].get(k, "") for k in changes} if before else {}
     updated = await at.patch_record(at.ORDERS, record_id, changes)
     order_id = updated.get("fields", {}).get("order_id", record_id)

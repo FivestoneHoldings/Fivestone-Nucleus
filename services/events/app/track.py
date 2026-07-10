@@ -5,9 +5,15 @@ driver map. No addresses, no names, no phones. Live location is time-boxed & coa
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
+import re as _re
+
 from . import airtable_client as at
 
 router = APIRouter()
+
+
+def _fq(v: str) -> str:
+    return _re.sub(r"[^A-Za-z0-9 _.@+\-]", "", str(v or ""))[:120]
 
 STEPS = [("received_at", "Order received"),
          ("confirmed_at", "Confirmed by dispatch"),
@@ -93,7 +99,7 @@ def _esc(x: str) -> str:
 @router.get("/track/{order_id}", response_class=HTMLResponse)
 async def track(order_id: str):
     oid = order_id.upper().strip()
-    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{_fq(oid)}'", max_records=1)
     if not recs:
         body = (f'<body data-oid="{_esc(oid)}"><div class="mark">GateWay <span>Delivery</span></div>'
                 f'<div class="oid">{_esc(oid)}</div>'
