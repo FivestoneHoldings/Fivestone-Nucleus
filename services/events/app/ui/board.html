@@ -43,10 +43,41 @@ button.warn{background:transparent;color:#e07b6d;border:1px solid #4a2622}
 .ev{font-family:'IBM Plex Mono',monospace;font-size:.68rem;padding:9px 4px;border-bottom:1px solid var(--line);line-height:1.6;word-break:break-word}
 .ev b{color:var(--green)}.ev span{color:var(--dim)}
 .copy{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:#6db3e8;cursor:pointer;text-decoration:underline}
+
+/* ===== GateWay design core v0.26 ===== */
+*{-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overscroll-behavior-y:contain}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 1px 0 #1d2946}
+.gw-bar img{height:34px;display:block}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
+text-transform:uppercase;letter-spacing:.14em}
+.gw-dash{display:inline-flex;gap:3px;vertical-align:middle}
+.gw-dash i{width:14px;height:5px;border-radius:2px;transform:skewX(-18deg)}
+.gw-dash i:nth-child(1){background:#2f6fe0}.gw-dash i:nth-child(2){background:#e8eaf0}.gw-dash i:nth-child(3){background:#d81f2a}
+button, .tile, a{transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease}
+button:active{transform:scale(.97)}
+:focus-visible{outline:3px solid #2f6fe0;outline-offset:2px;border-radius:8px}
+.skel{background:linear-gradient(100deg,#18213a 40%,#1f2a48 50%,#18213a 60%);background-size:200% 100%;
+animation:gwsh 1.2s infinite linear;border-radius:14px}
+@keyframes gwsh{to{background-position:-200% 0}}
+body{padding-top:76px !important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+.card{border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.28)}
+.stat{border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.tabs .tab{border-radius:10px}
+.tab.on{box-shadow:0 4px 14px rgba(47,111,224,.25)}
+button{border-radius:11px}
+select,input{border-radius:11px}
+.chip{font-weight:500}
 </style>
 </head>
-<body>
-<div class="mark">GateWay <span>Command Board</span></div>
+\1
+<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
+<span class="surf">Command <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+
+<div class="mark" style="display:none">GateWay <span>Command Board</span></div>
 <div class="sub">Live · Fivestone infrastructure</div>
 <div class="stats" id="stats"></div>
 <div style="margin:-6px 0 12px"><a id="csvLink" href="#" style="font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#6db3e8;text-decoration:underline">⬇ export today (CSV)</a>

@@ -66,4 +66,4 @@ def test_throttle_branded_html(monkeypatch):
 def test_offline_assets_served():
     assert client.get("/static/offline.html").status_code == 200
     sw = client.get("/static/sw.js").text
-    assert "offline.html" in sw and "gw-v2" in sw
+    assert "offline.html" in sw and "logo-bar.png" in sw

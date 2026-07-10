@@ -35,8 +35,16 @@ _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>body{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
-max-width:480px;margin:0 auto;padding:28px 20px 60px}
+<style>*{-webkit-tap-highlight-color:transparent}
+body{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
+max-width:480px;margin:0 auto;padding:88px 20px 60px;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;
+align-items:center;justify-content:space-between;padding:12px 16px;
+padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28)}
+.gw-bar img{height:34px;display:block}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
+text-transform:uppercase;letter-spacing:.14em}
+.items{box-shadow:0 3px 16px rgba(20,30,60,.06);border-radius:14px !important;border:1px solid #e4e8f2 !important}
 .mark{font-weight:800;font-size:1.15rem}.mark span{color:#16337a}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
 .status{font-size:1.5rem;font-weight:800;margin-bottom:4px}
@@ -101,7 +109,9 @@ async def track(order_id: str):
     oid = order_id.upper().strip()
     recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{_fq(oid)}'", max_records=1)
     if not recs:
-        body = (f'<body data-oid="{_esc(oid)}"><div class="mark">GateWay <span>Delivery</span></div>'
+        body = (f'<body data-oid="{_esc(oid)}">'
+            f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
+            f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
                 f'<div class="oid">{_esc(oid)}</div>'
                 f'<div class="status">Order not found</div>'
                 f'<div class="items">Double-check the tracking link, or call GateWay.</div>')
@@ -132,7 +142,9 @@ async def track(order_id: str):
         proof_html = (f'<img src="/proof/{_esc(oid)}" alt="Delivery photo" '
                       f'style="width:100%;border-radius:14px;border:1.5px solid #d9deea;'
                       f'margin:6px 0 14px" onerror="this.style.display=\'none\'">')
-    body = (f'<body data-oid="{_esc(oid)}"><div class="mark">GateWay <span>Delivery</span></div>'
+    body = (f'<body data-oid="{_esc(oid)}">'
+            f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
+            f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
             f'<div class="oid">{_esc(oid)}</div>'
             f'<div class="status">{HEADLINES.get(status, _esc(status))}</div>'
             f'<div class="items">{items_line}</div>'

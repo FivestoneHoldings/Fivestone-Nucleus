@@ -18,10 +18,10 @@ max-width:460px;margin:0 auto;padding:40px 22px 60px;min-height:100vh}
 .mark span{color:#d81f2a}
 .sub{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--dim);
 text-transform:uppercase;letter-spacing:.1em;margin:4px 0 34px}
-.tile{display:block;background:#fff;border:1.5px solid var(--line);border-radius:16px;
+.tile{display:block;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 3px 16px rgba(20,30,60,.07);
 padding:20px;margin-bottom:14px;text-decoration:none;color:var(--ink);transition:transform .06s}
 .tile:active{transform:scale(.985)}
-.tile.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.tile.primary{background:linear-gradient(135deg,#16337a,#1e4292);color:#fff;border-color:#16337a;box-shadow:0 8px 22px rgba(22,51,122,.32)}
 .tile h2{font-size:1.15rem;font-weight:800;margin-bottom:3px}
 .tile p{font-size:.82rem;color:var(--dim);line-height:1.45}
 .tile.primary p{color:#c3d0f0}
@@ -35,11 +35,38 @@ button{padding:12px 18px;border-radius:10px;border:none;background:var(--green);
 color:#fff;font-weight:800;font-family:'Archivo';cursor:pointer}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:34px;
 text-transform:uppercase;letter-spacing:.08em;text-align:center}
+
+/* ===== GateWay design core v0.26 ===== */
+*{-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overscroll-behavior-y:contain}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28)}
+.gw-bar img{height:34px;display:block}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
+text-transform:uppercase;letter-spacing:.14em}
+.gw-dash{display:inline-flex;gap:3px;vertical-align:middle}
+.gw-dash i{width:14px;height:5px;border-radius:2px;transform:skewX(-18deg)}
+.gw-dash i:nth-child(1){background:#2f6fe0}.gw-dash i:nth-child(2){background:#e8eaf0}.gw-dash i:nth-child(3){background:#d81f2a}
+button, .tile, a{transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease}
+button:active{transform:scale(.97)}
+:focus-visible{outline:3px solid #2f6fe0;outline-offset:2px;border-radius:8px}
+.skel{background:linear-gradient(100deg,#e9edf5 40%,#f6f8fc 50%,#e9edf5 60%);background-size:200% 100%;
+animation:gwsh 1.2s infinite linear;border-radius:14px}
+@keyframes gwsh{to{background-position:-200% 0}}
+body{padding-top:76px !important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body>
-<div class="mark">Gate<span>Way</span></div>
-<div class="sub">Delivery · Blount &amp; Knox County TN</div>
+\1
+<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
+<span class="surf">Delivery <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+
+<div style="background:#0e1526;margin:-76px -22px 22px;padding:88px 22px 30px;text-align:center">
+  <img src="/static/logo.png" alt="GateWay Dispatch" style="width:78%;max-width:340px;display:block;margin:0 auto">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#8b93a7;
+    text-transform:uppercase;letter-spacing:.16em;margin-top:14px">
+    Blount &amp; Knox County · Tennessee <span class="gw-dash"><i></i><i></i><i></i></span></div>
+</div>
 
 <a class="tile primary" href="/order">
   <span class="arrow">→</span>
