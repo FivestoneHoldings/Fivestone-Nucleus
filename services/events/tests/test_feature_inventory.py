@@ -31,8 +31,9 @@ CHECKS = {
    "HAS_ACTIVE = (d.orders", "/guide/driver", "netDown", "skel",
  ],
  "app/ui/kitchen.html": [
-   "gateBtn", "pickchip", "DRIVER COMING", "AudioContext", "slidein",
+   "gateBtn", "DRIVER COMING", "AudioContext", "slidein",
    "markReady", "/guide/kitchen", "netDown", "skel", "esc(o.items)",
+   "pride", "in_kitchen_now",
  ],
  "app/ui/board.html": [
    "gwPrompt", "paintFilters", "ageChip", "o.partner?", "URGENCY", "/snapshot",
@@ -45,7 +46,8 @@ CHECKS = {
  "app/ui/static/offline.html": ["logo-bar.png", "refresh"],
  "app/main.py": ["branded_http_errors", "branded_server_errors", "system.error", "guides_router"],
  "app/kitchen.py": ["requested_for", "ACTIVE", "picked_up_today",
-                     "kitchen_accepting", "different kitchen"],
+                     "kitchen_accepting", "different kitchen",
+                     "delivered_today", "peak_hour", "revenue_today"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
                       "stripe_configured", "retention_sweep", "demo-order"],

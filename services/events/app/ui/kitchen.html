@@ -62,6 +62,14 @@ box-shadow:0 8px 22px rgba(22,51,122,.3);font-size:1.05rem !important}
 #pickchip{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:#7a7f87;
 letter-spacing:.08em;text-transform:uppercase;margin:-10px 0 14px}
 @media (prefers-reduced-motion: reduce){.card.new{animation:none}}
+
+.pride{display:flex;gap:8px;margin:2px 0 16px;flex-wrap:wrap}
+.pride .p{flex:1;min-width:72px;background:#fff;border:1px solid #e4e8f2;border-radius:14px;
+padding:12px 10px;text-align:center;box-shadow:0 2px 10px rgba(20,30,60,.05)}
+.pride .p b{display:block;font-size:1.5rem;color:#16337a;line-height:1.1}
+.pride .p span{font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:#7a7f87;
+text-transform:uppercase;letter-spacing:.08em}
+.pride .p.accent b{color:#d81f2a}
 </style>
 </head>
 \1
@@ -70,7 +78,8 @@ letter-spacing:.08em;text-transform:uppercase;margin:-10px 0 14px}
 
 <div class="mark" style="display:none">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
-<div id="pickchip"></div>
+<div id="pride" class="pride"></div>
+<div id="pickchip" style="display:none"></div>
 <div id="pauseBanner"></div>
 <button id="gateBtn" onclick="toggleGate()" style="width:auto;padding:10px 18px;margin-bottom:14px;border-radius:20px;font-size:.82rem;background:transparent;border:1.5px solid #16337a;color:#16337a;font-weight:800;display:none"></button>
 <div id="list"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -118,8 +127,13 @@ async function load(){
     document.getElementById('who').textContent = '—'; return; }
   const d = await r.json();
   document.getElementById('who').textContent = d.kitchen.toUpperCase() + ' · TODAY';
-  document.getElementById('pickchip').textContent =
-    d.picked_up_today ? `🚗 PICKED UP TODAY · ${d.picked_up_today}` : '';
+  const rev = d.revenue_today_cents ? '$' + (d.revenue_today_cents/100).toFixed(0) : '$0';
+  const peak = d.peak_hour !== '' ? (((+d.peak_hour%12)||12) + (d.peak_hour<12?'a':'p')) : '—';
+  document.getElementById('pride').innerHTML =
+    `<div class="p"><b>${d.in_kitchen_now||0}</b><span>In kitchen now</span></div>
+     <div class="p accent"><b>${d.delivered_today||0}</b><span>Delivered today</span></div>
+     <div class="p"><b>${rev}</b><span>Food sales today</span></div>
+     <div class="p"><b>${peak}</b><span>Busiest hour</span></div>`;
   ACCEPTING = d.accepting; paintGate();
   document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
     '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';

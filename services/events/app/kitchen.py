@@ -49,8 +49,19 @@ async def kitchen_orders(token: str):
     # the kitchen's active rail: tickets still in the kitchen's hands.
     # picked-up and delivered tickets leave the rail (counted instead).
     ACTIVE = ("received", "confirmed", "assigned")
-    picked_up_today = sum(1 for r in records
+    # pride stats — the kitchen's whole day, computed before we filter to the active rail
+    day_all = records
+    picked_up_today = sum(1 for r in day_all
                           if r["fields"].get("status") in ("in_transit", "delivered"))
+    delivered_today = sum(1 for r in day_all
+                          if r["fields"].get("status") in ("delivered", "closed"))
+    revenue_today = sum(int(r["fields"].get("subtotal_cents") or 0) for r in day_all
+                        if r["fields"].get("status") in ("in_transit", "delivered", "closed"))
+    # busiest hour (by received_at) — a little insight the big dashboards bury
+    from collections import Counter
+    hours = Counter((r["fields"].get("received_at") or "")[11:13]
+                    for r in day_all if r["fields"].get("received_at"))
+    peak_hour = hours.most_common(1)[0][0] if hours else ""
     records = [r for r in records if r["fields"].get("status") in ACTIVE]
     records.sort(key=lambda r: (r["fields"].get("requested_for")
                                 or r["fields"].get("received_at") or "9999"))
@@ -69,6 +80,10 @@ async def kitchen_orders(token: str):
         "kitchen": p.display_name,
         "accepting": p.accepting_orders,
         "picked_up_today": picked_up_today,
+        "delivered_today": delivered_today,
+        "revenue_today_cents": revenue_today,
+        "peak_hour": peak_hour,
+        "in_kitchen_now": len(records),
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),
