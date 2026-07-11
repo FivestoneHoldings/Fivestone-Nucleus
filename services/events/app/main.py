@@ -120,7 +120,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "0.34"
+NUCLEUS_VERSION = "0.35"
 
 
 @app.get("/healthz")
