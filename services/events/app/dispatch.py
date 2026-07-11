@@ -737,29 +737,44 @@ async def day_summary(key: str, date: str = "", partner: str = ""):
             "avg_minutes": round(sum(times) / len(times), 1) if times else None}
 
 
+def _dollars(cents) -> str:
+    try:
+        return f"{int(cents) / 100:.2f}"
+    except (TypeError, ValueError):
+        return ""
+
+
 @router.get("/api/board/{key}/export.csv")
-async def export_day_csv(key: str, date: str = ""):
+async def export_day_csv(key: str, date: str = "", partner: str = "", days: int = 1):
+    """Ledger export. ?date= single day (default today), ?days=N back from date,
+    ?partner= isolates one restaurant (never hand one partner another's ledger)."""
     _check_key(key)
     import csv
     import io
+    from datetime import timedelta
     day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    records = await at.list_records(
-        at.ORDERS,
-        formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{day}'",
-        max_records=100)
+    days = max(1, min(days, 31))
+    start = (datetime.fromisoformat(day) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    formula = (f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
+               f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')<='{day}')")
+    if partner:
+        formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
+    records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records.sort(key=lambda r: r["fields"].get("received_at", ""))
     cols = ["order_id", "status", "partner_code", "customer_name_raw",
             "pickup_address", "dropoff_address", "items_description",
-            "subtotal_cents", "fee_cents", "tip_cents", "total_cents",
             "received_at", "delivered_at", "cancel_reason"]
+    money = ["subtotal_cents", "fee_cents", "tip_cents", "total_cents"]
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(cols)
+    w.writerow(cols + ["subtotal_usd", "delivery_fee_usd", "tip_usd", "total_usd"])
     for r in records:
         f = r["fields"]
-        w.writerow([f.get(c, "") for c in cols])
+        w.writerow([f.get(c, "") for c in cols] + [_dollars(f.get(m)) for m in money])
+    tag = f"-{partner}" if partner else ""
+    name = f"gateway{tag}-{start}_to_{day}.csv" if days > 1 else f"gateway{tag}-{day}.csv"
     return Response(content=buf.getvalue(), media_type="text/csv",
-                    headers={"Content-Disposition":
-                             f'attachment; filename="gateway-{day}.csv"'})
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @router.get("/api/board/{key}/digest")
@@ -899,3 +914,89 @@ async def track_status(order_id: str):
     oid = _fq(order_id.upper().strip())
     recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
     return {"status": recs[0]["fields"].get("status", "unknown") if recs else "unknown"}
+
+
+@router.get("/api/board/{key}/statement/{partner}")
+async def partner_statement(key: str, partner: str, days: int = 7):
+    """The settle-up artifact: branded printable statement for one partner.
+    Factual money columns only — settlement terms are the founder's domain."""
+    _check_key(key)
+    from datetime import timedelta
+    from fastapi.responses import HTMLResponse
+    days = max(1, min(days, 31))
+    end = datetime.now(timezone.utc)
+    start = (end - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    end_s = end.strftime("%Y-%m-%d")
+    p = _fq(partner.lower())
+    formula = (f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
+               f"{{partner_code}}='{p}')")
+    records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records.sort(key=lambda r: r["fields"].get("received_at", ""))
+    def esc(x):
+        return (str(x or "").replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace('"', "&quot;"))
+    rows = ""
+    tot = {"sub": 0, "fee": 0, "tip": 0, "all": 0, "n": 0, "delivered": 0}
+    for r in records:
+        f = r["fields"]
+        st = f.get("status", "")
+        counted = st in ("delivered", "closed")
+        tot["n"] += 1
+        if counted:
+            tot["delivered"] += 1
+            for k, fld in (("sub", "subtotal_cents"), ("fee", "fee_cents"),
+                           ("tip", "tip_cents"), ("all", "total_cents")):
+                tot[k] += int(f.get(fld) or 0)
+        mark = "" if counted else ' class="void"'
+        rows += (f"<tr{mark}><td>{esc(f.get('received_at',''))[:10]}</td>"
+                 f"<td class=mono>{esc(f.get('order_id',''))}</td>"
+                 f"<td>{esc(f.get('items_description',''))[:80]}</td>"
+                 f"<td>{esc(st)}</td>"
+                 f"<td class=r>{_dollars(f.get('subtotal_cents'))}</td>"
+                 f"<td class=r>{_dollars(f.get('fee_cents'))}</td>"
+                 f"<td class=r>{_dollars(f.get('tip_cents'))}</td>"
+                 f"<td class=r><b>{_dollars(f.get('total_cents'))}</b></td></tr>")
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statement — {esc(p)} — GateWay</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>body{{font-family:'Archivo',sans-serif;color:#14181f;max-width:760px;margin:0 auto;padding:26px 20px 60px;background:#fff}}
+.head{{background:#0e1526;margin:-26px -20px 24px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between}}
+.head img{{height:44px}}
+.head .t{{color:#e8eaf0;text-align:right}}.head .t b{{font-size:1.05rem}}
+.head .t div{{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#8b93a7;letter-spacing:.1em;text-transform:uppercase}}
+h1{{font-size:1.2rem;margin:0 0 2px}}.per{{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#5a5e64;margin-bottom:20px}}
+table{{width:100%;border-collapse:collapse;font-size:.78rem}}
+th{{font-family:'IBM Plex Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:#5a5e64;text-align:left;border-bottom:2px solid #16337a;padding:7px 6px}}
+td{{padding:8px 6px;border-bottom:1px solid #e8ecf4;vertical-align:top}}
+.mono{{font-family:'IBM Plex Mono',monospace;font-size:.68rem}}.r{{text-align:right}}
+th.r{{text-align:right}}
+tr.void td{{color:#b6bac2;text-decoration:line-through}}
+.tots{{margin-top:18px;border-top:3px solid #0e1526;padding-top:12px;display:flex;gap:26px;flex-wrap:wrap}}
+.tots div b{{display:block;font-size:1.15rem}}
+.tots div span{{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#5a5e64;text-transform:uppercase;letter-spacing:.08em}}
+.note{{margin-top:20px;font-size:.74rem;color:#5a5e64;line-height:1.6}}
+.foot{{margin-top:28px;font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#9a9ea5;text-transform:uppercase;letter-spacing:.1em;text-align:center}}
+.printbtn{{position:fixed;bottom:20px;right:20px;background:#16337a;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-weight:800;font-family:'Archivo';box-shadow:0 8px 22px rgba(22,51,122,.35)}}
+@media print{{.printbtn{{display:none}}body{{padding:0}}}}
+</style></head><body>
+<div class="head"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
+<div class="t"><b>PARTNER STATEMENT</b><div>GateWay Delivery · Fivestone Holdings</div></div></div>
+<h1>{esc(p)}</h1>
+<div class="per">PERIOD {start} — {end_s} · GENERATED {end.strftime('%Y-%m-%d %H:%M')} UTC</div>
+<table><tr><th>Date</th><th>Order</th><th>Items</th><th>Status</th>
+<th class=r>Subtotal $</th><th class=r>Fee $</th><th class=r>Tip $</th><th class=r>Total $</th></tr>
+{rows if rows else '<tr><td colspan=8 style="text-align:center;color:#9a9ea5;padding:24px">No orders in this period.</td></tr>'}</table>
+<div class="tots">
+<div><b>{tot['delivered']}</b><span>Delivered</span></div>
+<div><b>${tot['sub']/100:.2f}</b><span>Food subtotal</span></div>
+<div><b>${tot['fee']/100:.2f}</b><span>Delivery fees</span></div>
+<div><b>${tot['tip']/100:.2f}</b><span>Tips (to drivers)</span></div>
+<div><b>${tot['all']/100:.2f}</b><span>Total collected</span></div>
+</div>
+<div class="note">Struck-through rows were cancelled or failed and are excluded from totals.
+Tips pass through 100% to drivers. Settlement of food subtotal and delivery fees per your GateWay partner agreement.</div>
+<div class="foot">GateWay Dispatch · The record never pretends</div>
+<button class="printbtn" onclick="window.print()">Print / Save PDF</button>
+</body></html>"""
+    return HTMLResponse(html)

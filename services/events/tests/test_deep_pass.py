@@ -127,7 +127,7 @@ def test_csv_export():
     r = client.get(f"{K}/export.csv")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/csv")
-    assert "ORD-A" in r.text and "total_cents" in r.text.splitlines()[0]
+    assert "ORD-A" in r.text and "total_usd" in r.text.splitlines()[0]
 
 
 def test_public_partner_directory():

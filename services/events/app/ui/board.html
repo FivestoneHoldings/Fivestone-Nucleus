@@ -155,7 +155,8 @@ async function loadPartners(){
       </div>
       <div class="row"><button class="${x.accepting_orders?'warn':''}" onclick="setAccepting('${x.code}',${!x.accepting_orders})">${x.accepting_orders?'Pause orders ⏸':'Resume orders ▶'}</button></div>
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button>
-        <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button></div>
+        <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button>
+        <button class="ghost" onclick="openLink(api('/statement/${x.code}').replace(location.origin,''))">Statement ↗</button></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
