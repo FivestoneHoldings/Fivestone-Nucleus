@@ -100,6 +100,7 @@ select,input{border-radius:11px}
     <input id="findOrd" placeholder="Find order: ORD-XXXXXXXX" autocapitalize="characters" style="font-family:'IBM Plex Mono',monospace">
     <button onclick="findOrder()">Find</button>
   </div>
+  <div id="dayopen"></div>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -331,8 +332,64 @@ async function load(){
   paintFilters();
   renderOrders();
   paintStats(d.stats);
+  maybeDayOpen();
 }
 let SNAP = [], FILTER = 'all';
+
+// ---- Day open: yesterday's scorecard + carryover, once per day ----
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+async function maybeDayOpen(){
+  const key = 'gw_dayopen_' + todayStr();
+  try{ if(localStorage.getItem(key)) return; }catch(e){ return; }
+  if(document.getElementById('dayopenCard')) return;
+  const y = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  let sum = null;
+  try{ sum = await (await fetch(api('/summary?date=' + y))).json(); }catch(e){}
+  const carry = SNAP.filter(o => (o.received_at||'').slice(0,10) < todayStr());
+  const deliveredOpen = carry.filter(o => o.status === 'delivered');
+  if((!sum || !sum.orders) && !carry.length){ try{ localStorage.setItem(key,'1'); }catch(e){} return; }
+  const yLine = sum && sum.orders
+    ? `Yesterday: <b>${sum.orders}</b> orders · <b>${sum.delivered}</b> delivered · <b>$${(sum.revenue_cents/100).toFixed(2)}</b>${sum.avg_minutes?` · avg ${sum.avg_minutes}m`:''}`
+    : 'No orders yesterday.';
+  const carryHtml = carry.length
+    ? `<div style="margin-top:8px">Carryover needing attention:</div>` +
+      carry.slice(0,6).map(o=>`<div class="ev" style="border:none;padding:4px 0">
+        <span class="copy" onclick="jumpTo('${esc(o.order_id)}')">${esc(o.order_id)}</span>
+        <span>· ${esc(o.status)}${o.partner?` · ${esc(o.partner)}`:''}</span></div>`).join('') +
+      (carry.length > 6 ? `<div class="ev" style="border:none;padding:4px 0"><span>…and ${carry.length-6} more</span></div>` : '')
+    : `<div style="margin-top:8px;color:#57c68f">Board carried nothing over. Clean start. ✓</div>`;
+  document.getElementById('dayopen').innerHTML = `
+    <div class="card" id="dayopenCard" style="border-left:4px solid #6fa0ff">
+      <div style="font-weight:800;margin-bottom:6px">☀️ Day open</div>
+      <div style="font-size:.85rem">${yLine}</div>
+      ${carryHtml}
+      <div class="row" style="margin-top:10px">
+        ${deliveredOpen.length?`<button onclick="closeAllDelivered()">Close ${deliveredOpen.length} delivered ✓</button>`:''}
+        <button class="ghost" onclick="dismissDayOpen()">Got it ✓</button>
+      </div>
+    </div>`;
+}
+function jumpTo(oid){
+  document.getElementById('findOrd').value = oid;
+  findOrder();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function dismissDayOpen(){
+  try{ localStorage.setItem('gw_dayopen_' + todayStr(), '1'); }catch(e){}
+  document.getElementById('dayopen').innerHTML = '';
+}
+async function closeAllDelivered(){
+  const targets = SNAP.filter(o => o.status === 'delivered'
+    && (o.received_at||'').slice(0,10) < todayStr());
+  if(!targets.length) return;
+  if(!await gwConfirm({title:`Close ${targets.length} delivered order${targets.length>1?'s':''}?`,
+    body:'They move to the permanent ledger and leave the board.', confirm:'Close all'})) return;
+  let ok = 0;
+  for(const o of targets){ if(await post(`/orders/${o.id}/close`)) ok++; }
+  gwToast(`Closed ${ok} of ${targets.length} ✓`);
+  dismissDayOpen();
+  load();
+}
 const FILTERS = [
   ['all','All', o=>true],
   ['action','⚠ Action', o=>['failed','received'].includes(o.status)],

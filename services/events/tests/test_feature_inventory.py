@@ -35,7 +35,7 @@ CHECKS = {
    "gwPrompt", "paintFilters", "ageChip", "o.partner?", "URGENCY", "/snapshot",
    "editField", "Statement", "shareLink", "showDigest", "toggleTrend",
    "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO",
-   "netDown", "skel",
+   "netDown", "skel", "maybeDayOpen", "closeAllDelivered", "gw_dayopen_",
  ],
  "app/ui/static/sw.js": ["offline.html", "logo-bar.png"],
  "app/ui/static/offline.html": ["logo-bar.png", "refresh"],

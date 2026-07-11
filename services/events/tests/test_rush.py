@@ -92,3 +92,10 @@ def test_rush_driver_run_payload():
         # everything the card needs to render the run experience
         for k in ("pickup", "dropoff", "status", "kitchen_ready", "requested_for"):
             assert k in o
+
+
+def test_summary_honors_explicit_past_date():
+    """Day-open fetches yesterday's scorecard via /summary?date= — pin the param."""
+    y = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
+    d = client.get(f"{K}/summary", params={"date": y}).json()
+    assert d["date"] == y            # not silently coerced to today
