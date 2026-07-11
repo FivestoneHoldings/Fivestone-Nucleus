@@ -55,6 +55,13 @@ body{padding-top:76px !important}
 button{background:linear-gradient(135deg,#16337a,#1e4292) !important;border-radius:14px !important;
 box-shadow:0 8px 22px rgba(22,51,122,.3);font-size:1.05rem !important}
 #gateBtn{background:transparent !important;box-shadow:none !important;font-size:.82rem !important}
+
+.items{font-size:1.18rem !important}
+.card.new{animation:slidein .4s ease-out}
+@keyframes slidein{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+#pickchip{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:#7a7f87;
+letter-spacing:.08em;text-transform:uppercase;margin:-10px 0 14px}
+@media (prefers-reduced-motion: reduce){.card.new{animation:none}}
 </style>
 </head>
 \1
@@ -63,6 +70,7 @@ box-shadow:0 8px 22px rgba(22,51,122,.3);font-size:1.05rem !important}
 
 <div class="mark" style="display:none">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
+<div id="pickchip"></div>
 <div id="pauseBanner"></div>
 <button id="gateBtn" onclick="toggleGate()" style="width:auto;padding:10px 18px;margin-bottom:14px;border-radius:20px;font-size:.82rem;background:transparent;border:1.5px solid #16337a;color:#16337a;font-weight:800;display:none"></button>
 <div id="list"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -110,16 +118,21 @@ async function load(){
     document.getElementById('who').textContent = '—'; return; }
   const d = await r.json();
   document.getElementById('who').textContent = d.kitchen.toUpperCase() + ' · TODAY';
+  document.getElementById('pickchip').textContent =
+    d.picked_up_today ? `🚗 PICKED UP TODAY · ${d.picked_up_today}` : '';
   ACCEPTING = d.accepting; paintGate();
   document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
     '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';
   const fresh = d.orders.filter(o=>!KNOWN.has(o.order_id));
   if(!FIRST && fresh.length) beep();
+  const freshIds = new Set(fresh.map(o=>o.order_id));
   d.orders.forEach(o=>KNOWN.add(o.order_id));
+  const KLABEL = {received:'NEW', confirmed:'CONFIRMED', assigned:'DRIVER COMING'};
+  const wasFirst = FIRST;
   FIRST = false;
   document.getElementById('list').innerHTML = d.orders.length ? d.orders.map(o=>`
-    <div class="card ${o.ready?'ready':''}" id="${o.id}">
-      <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+    <div class="card ${o.ready?'ready':''} ${!wasFirst && freshIds.has(o.order_id)?'new':''}" id="${o.id}">
+      <span class="chip ${o.status}">${KLABEL[o.status]||o.status.replace('_',' ')}</span>
       <div class="oid">${o.order_id}</div>
       <div class="items">${esc(o.items)||'—'}</div>
       ${o.notes?`<div class="notes">📝 ${esc(o.notes)}</div>`:''}

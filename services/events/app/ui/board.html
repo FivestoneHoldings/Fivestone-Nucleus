@@ -448,22 +448,56 @@ function copyLink(tok){
 }
 
 let LOGMODE = 'events';
+function relTime(iso){
+  const s = Math.round((Date.now() - new Date(iso).getTime())/1000);
+  if(isNaN(s)) return '';
+  if(s < 60) return 'just now';
+  if(s < 3600) return Math.round(s/60) + 'm ago';
+  if(s < 86400) return Math.round(s/3600) + 'h ago';
+  return Math.round(s/86400) + 'd ago';
+}
+const EVICON = [['order.kitchen','🍳'],['order.','📦'],['driver.','🚗'],['partner.','🏪'],['system.','⚠️'],['menu.','🍽']];
+function evIcon(t){ const hit = EVICON.find(([p])=>t.startsWith(p)); return hit ? hit[1] : '·'; }
+const ACTORCOL = a => a.startsWith('kitchen') ? '#f0a04b' : a.startsWith('driver') ? '#57c68f'
+  : a === 'system' ? '#e07b6d' : '#6fa0ff';
+function editSummary(e){
+  if(e.event_type !== 'order.edited') return '';
+  try{
+    const ch = JSON.parse(e.payload).changed;
+    return '<br><span style="color:#8b93a7">' + Object.entries(ch).map(([k,v])=>
+      `${esc(k)}: ${esc(String(v.from).slice(0,40))} → ${esc(String(v.to).slice(0,40))}`).join(' · ') + '</span>';
+  }catch(err){ return ''; }
+}
+let LOGDATA = [];
+function renderLog(){
+  const q = (document.getElementById('logq')?.value || '').toLowerCase();
+  const rows = LOGDATA.filter(e =>
+    !q || (e.event_type + ' ' + e.entity_ref + ' ' + e.actor).toLowerCase().includes(q));
+  document.getElementById('logrows').innerHTML = rows.length
+    ? rows.map(e=>`<div class="ev">${evIcon(e.event_type)} <b>${esc(e.event_type)}</b> ${esc(e.entity_ref)}
+        <span style="color:${ACTORCOL(e.actor)}">· ${esc(e.actor)}</span>
+        <span>· ${relTime(e.occurred_at)}</span>${editSummary(e)}</div>`).join('')
+    : '<div class="empty">Nothing matches.</div>';
+}
 async function loadLog(){
   const toggle = `<div class="tabs" style="margin-bottom:10px">
     <div class="tab ${LOGMODE==='events'?'on':''}" onclick="LOGMODE='events';loadLog()">Events</div>
     <div class="tab ${LOGMODE==='texts'?'on':''}" onclick="LOGMODE='texts';loadLog()">Texts</div></div>`;
   if(LOGMODE==='events'){
     const d = await (await fetch(api('/events'))).json();
-    document.getElementById('log').innerHTML = toggle + (d.events.length
-      ? d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> ${e.entity_ref}
-          <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join('')
-      : '<div class="empty">The log is empty.</div>');
+    LOGDATA = d.events;
+    document.getElementById('log').innerHTML = toggle +
+      `<input id="logq" placeholder="Filter: order id, event, actor…" oninput="renderLog()"
+        style="width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px;border-radius:11px">` +
+      `<div id="logrows"></div>`;
+    if(!LOGDATA.length) document.getElementById('logrows').innerHTML = '<div class="empty">The log is empty.</div>';
+    else renderLog();
   } else {
     const d = await (await fetch(api('/notifications'))).json();
     document.getElementById('log').innerHTML = toggle + (d.notifications.length
-      ? d.notifications.map(n=>`<div class="ev"><b>${n.status}</b> ${n.order_id} → ${n.to}
-          <span>· ${n.at.replace('T',' ').slice(0,19)} UTC</span><br>
-          <span>${n.body}</span>${n.detail?`<br><span style="color:#e07b6d">${n.detail}</span>`:''}</div>`).join('')
+      ? d.notifications.map(n=>`<div class="ev"><b>${esc(n.status)}</b> ${esc(n.order_id)} → ${esc(n.to)}
+          <span>· ${relTime(n.at)}</span><br>
+          <span>${esc(n.body)}</span>${n.detail?`<br><span style="color:#e07b6d">${esc(n.detail)}</span>`:''}</div>`).join('')
       : '<div class="empty">No texts yet. (SMS engine idles until Twilio is wired.)</div>');
   }
 }

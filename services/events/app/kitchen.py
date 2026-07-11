@@ -37,12 +37,23 @@ def kitchen_page(token: str):
 async def kitchen_orders(token: str):
     p = _partner_by_token(token)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # scheduled-order fix: an order placed Wednesday FOR Friday must appear Friday —
+    # match on received today OR requested_for today.
     records = await at.list_records(
         at.ORDERS,
         formula=(f"AND({{partner_code}}='{p.code}',"
-                 f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
+                 f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
+                 f"DATETIME_FORMAT({{requested_for}},'YYYY-MM-DD')='{today}'),"
                  f"NOT(OR({{status}}='closed',{{status}}='cancelled')))"),
         max_records=100)
+    # the kitchen's active rail: tickets still in the kitchen's hands.
+    # picked-up and delivered tickets leave the rail (counted instead).
+    ACTIVE = ("received", "confirmed", "assigned")
+    picked_up_today = sum(1 for r in records
+                          if r["fields"].get("status") in ("in_transit", "delivered"))
+    records = [r for r in records if r["fields"].get("status") in ACTIVE]
+    records.sort(key=lambda r: (r["fields"].get("requested_for")
+                                or r["fields"].get("received_at") or "9999"))
     order_ids = [r["fields"].get("order_id", "") for r in records]
     ready: set = set()
     if order_ids:
@@ -57,6 +68,7 @@ async def kitchen_orders(token: str):
     return {
         "kitchen": p.display_name,
         "accepting": p.accepting_orders,
+        "picked_up_today": picked_up_today,
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),
