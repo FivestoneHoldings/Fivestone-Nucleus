@@ -1074,3 +1074,30 @@ async def create_demo_order(key: str, code: str):
     _log_event("order.received", oid, "founder:demo", {"demo": True, "partner": p.code})
     return {"ok": True, "order_id": oid, "record_id": created["id"],
             "total_cents": total, "partner": p.code}
+
+
+@router.get("/v0/local-impact")
+async def local_impact():
+    """Public, no-PII community stat: this week's delivered orders + food dollars
+    kept in local kitchens. Cached 10 min — it powers a home-screen banner."""
+    cached = _cget("local_impact")
+    if cached is not None:
+        return cached
+    from datetime import timedelta
+    start = (datetime.now(timezone.utc) - timedelta(days=6)).strftime("%Y-%m-%d")
+    try:
+        records = await at.list_records(
+            at.ORDERS,
+            formula=(f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
+                     f"OR({{status}}='delivered',{{status}}='closed'))"),
+            max_records=100)
+    except Exception:
+        records = []
+    delivered = len(records)
+    food_cents = sum(int(r["fields"].get("subtotal_cents") or 0) for r in records)
+    kitchens = len({r["fields"].get("partner_code", "") for r in records
+                    if r["fields"].get("partner_code")})
+    out = {"days": 7, "delivered": delivered, "food_cents": food_cents,
+           "kitchens": kitchens}
+    _cput("local_impact", out, 600)
+    return out

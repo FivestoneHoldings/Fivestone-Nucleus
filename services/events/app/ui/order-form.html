@@ -131,7 +131,7 @@ border-radius:18px}
   </header>
 
   <h1>Place a Delivery Order</h1>
-  <p class="sub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
+  <p class="sub" id="orderSub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
 
   <form method="GET" action="/v0/intake">
     <input type="hidden" name="partner" id="partnerField" value="">
@@ -252,6 +252,13 @@ function applyPartnerMeta(d){
   const rr = document.getElementById('recipientRow'); if(rr) rr.style.display = 'none';
 }
 try{
+  const gp = gwProfile.get();
+  if(gp.name){
+    const h = new Date().getHours();
+    const meal = h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'a late bite';
+    const sub = document.getElementById('orderSub');
+    if(sub) sub.textContent = `${gp.name.split(' ')[0]}, let's get you ${meal}.`;
+  }
   // profile autofill: the form already knows you
   const prof = gwProfile.get();
   if(prof.name && !document.getElementById('cn').value) document.getElementById('cn').value = prof.name;

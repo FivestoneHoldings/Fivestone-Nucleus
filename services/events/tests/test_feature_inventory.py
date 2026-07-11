@@ -12,7 +12,7 @@ CHECKS = {
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
    "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
-   "YOUR USUAL", "og:title",
+   "YOUR USUAL", "og:title", "localImpact",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
@@ -50,7 +50,7 @@ CHECKS = {
                      "delivered_today", "peak_hour", "revenue_today"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
-                      "stripe_configured", "retention_sweep", "demo-order"],
+                      "stripe_configured", "retention_sweep", "demo-order", "local_impact"],
  "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
  "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting"],
  "app/payments.py": ["configured", "normalize_method", "cod"],

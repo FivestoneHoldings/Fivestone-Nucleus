@@ -79,6 +79,7 @@ body{padding-top:76px !important}
     font-size:.62rem;color:#8b93a7;text-decoration:none;border:1px solid #26304a;
     border-radius:20px;padding:6px 14px;letter-spacing:.1em">MY GATEWAY ▸</a>
 </div>
+<div id="localImpact" style="display:none"></div>
 
 <div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
 
@@ -134,6 +135,19 @@ try{
   const g = gwProfile.greeting();
   if(g) document.getElementById('greet').textContent = g + ' — hungry?';
 }catch(e){}
+fetch('/v0/local-impact').then(r=>r.json()).then(li=>{
+  if(!li || !li.delivered) return;
+  const el = document.getElementById('localImpact');
+  el.style.display = 'block';
+  el.innerHTML = `<div style="background:#fff;border:1px solid #dfe4ee;border-radius:16px;
+    padding:14px 18px;margin-bottom:16px;box-shadow:0 3px 16px rgba(20,30,60,.06);
+    display:flex;align-items:center;gap:14px">
+    <div style="font-size:1.5rem">🧡</div>
+    <div style="font-size:.86rem;line-height:1.45">
+      <b>$${(li.food_cents/100).toFixed(0)}</b> kept in <b>${li.kitchens}</b> local ${li.kitchens===1?'kitchen':'kitchens'} this week
+      <div style="color:#7a7f87;font-size:.76rem">${li.delivered} neighbor ${li.delivered===1?'delivery':'deliveries'} · powered by GateWay</div>
+    </div></div>`;
+}).catch(()=>{});
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
   if(!d.partners || !d.partners.length) return;
   document.getElementById('restaurants').innerHTML =
