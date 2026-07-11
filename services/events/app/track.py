@@ -26,6 +26,15 @@ HEADLINES = {"received": "We've got your order 👍", "confirmed": "Confirmed �
              "delivered": "Delivered ✓", "closed": "Delivered ✓",
              "cancelled": "This order was cancelled", "failed": "Delivery issue — we're on it"}
 
+MICRO = {"received": "Hang tight — dispatch is on it.",
+         "confirmed": "The kitchen has your ticket.",
+         "assigned": "Your driver is heading to pick it up.",
+         "in_transit": "Watch the map — your driver is moving.",
+         "delivered": "Enjoy! Thanks for choosing GateWay.",
+         "closed": "Enjoy! Thanks for choosing GateWay.",
+         "cancelled": "Questions? Call GateWay and we'll make it right.",
+         "failed": "We hit a snag — dispatch is already working it. Call us anytime."}
+
 _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Track your order — GateWay Delivery</title>
@@ -58,11 +67,27 @@ border-radius:10px;padding:10px 14px;margin:14px 0 26px}
 .lbl{font-weight:600;font-size:.95rem}
 .time{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#9a9ea5}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:26px;
-text-transform:uppercase;letter-spacing:.08em;text-align:center}</style></head>"""
+text-transform:uppercase;letter-spacing:.08em;text-align:center}
+.step.now .dot{background:#fff;border:5px solid #2f6fe0;box-sizing:border-box;animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,111,224,.45)}70%{box-shadow:0 0 0 12px rgba(47,111,224,0)}100%{box-shadow:0 0 0 0 rgba(47,111,224,0)}}
+.micro{font-size:.88rem;color:#5a5e64;margin:2px 0 6px}
+.elapsed{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#9a9ea5;margin-bottom:16px}
+.celebrate{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#16337a,#1e4292);
+color:#fff;font-size:2.4rem;line-height:84px;text-align:center;margin:8px auto 14px;
+box-shadow:0 10px 30px rgba(22,51,122,.35);animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.again{display:block;text-align:center;background:linear-gradient(135deg,#16337a,#1e4292);color:#fff;
+text-decoration:none;font-weight:800;padding:15px;border-radius:14px;margin:18px 0 8px;
+box-shadow:0 8px 22px rgba(22,51,122,.3)}
+.livebadge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
+font-size:.62rem;color:#d81f2a;font-weight:700;letter-spacing:.1em}
+.livebadge i{width:8px;height:8px;border-radius:50%;background:#d81f2a;animation:pulse 1.4s infinite}
+@media (prefers-reduced-motion: reduce){.step.now .dot,.livebadge i,.celebrate{animation:none}}</style></head>"""
 
 _MAP_SCRIPT = """
 <div id="mapwrap" style="display:none;margin:20px 0">
-  <div style="font-weight:800;font-size:.9rem;margin-bottom:8px">Your driver is on the way \U0001F69A</div>
+  <div style="font-weight:800;font-size:.9rem;margin-bottom:8px">Your driver is on the way \U0001F69A
+    <span class="livebadge" style="float:right;margin-top:3px"><i></i>LIVE</span></div>
   <div id="map" style="height:260px;border-radius:14px;overflow:hidden;border:1.5px solid #d9deea"></div>
 </div>
 <div class="foot">Updates automatically \u00b7 GateWay Delivery \u00b7 Fivestone Holdings</div>
@@ -88,10 +113,36 @@ async function pollLoc(){
 }
 try{ localStorage.setItem('gw_last_order', OID); }catch(e){}
 pollLoc(); setInterval(pollLoc, 20000);
-setInterval(async ()=>{
-  const d = await (await fetch('/v0/track/' + encodeURIComponent(OID) + '/location')).json().catch(()=>({live:false}));
-  if(!d.live) location.reload();
-}, 90000);
+// live status: reload the page the moment the order advances
+let CUR = null;
+async function pollStatus(){
+  try{
+    const d = await (await fetch('/v0/track/' + encodeURIComponent(OID) + '/status')).json();
+    if(CUR === null) CUR = d.status;
+    else if(d.status !== CUR) location.reload();
+  }catch(e){}
+}
+pollStatus(); setInterval(pollStatus, 15000);
+// elapsed ticker
+const el = document.getElementById('elapsed');
+if(el && el.dataset.rcv){
+  const t0 = new Date(el.dataset.rcv).getTime();
+  const tick = ()=>{
+    const m = Math.max(0, Math.round((Date.now() - t0) / 60000));
+    el.textContent = 'Placed ' + (m < 1 ? 'just now' : m + ' min ago');
+  };
+  tick(); setInterval(tick, 30000);
+}
+// reorder button from remembered partner
+try{
+  const lp = JSON.parse(localStorage.getItem('gw_last_partner') || 'null');
+  const btn = document.getElementById('againBtn');
+  if(btn && lp && lp.code){
+    btn.href = '/order?partner=' + encodeURIComponent(lp.code);
+    btn.textContent = 'Order again — ' + (lp.name || 'same kitchen');
+    btn.style.display = 'block';
+  } else if(btn){ btn.style.display = 'block'; }
+}catch(e){}
 </script>
 </body></html>"""
 
@@ -119,10 +170,16 @@ async def track(order_id: str):
 
     f = recs[0]["fields"]
     status = f.get("status", "received")
+    active = status in ("received", "confirmed", "assigned", "in_transit")
     steps_html = ""
+    now_marked = False
     for field, label in STEPS:
         ts = f.get(field, "")
-        steps_html += (f'<div class="step {"done" if ts else ""}"><div class="dot"></div>'
+        cls = "done" if ts else ""
+        if not ts and active and not now_marked:
+            cls = "now"
+            now_marked = True
+        steps_html += (f'<div class="step {cls}"><div class="dot"></div>'
                        f'<div><div class="lbl">{label}</div>'
                        f'<div class="time">{_fmt(ts) if ts else "—"}</div></div></div>')
 
@@ -138,16 +195,29 @@ async def track(order_id: str):
             pass
 
     proof_html = ""
+    celebrate_html = ""
+    again_html = ""
     if status in ("delivered", "closed"):
-        proof_html = (f'<img src="/proof/{_esc(oid)}" alt="Delivery photo" '
+        celebrate_html = '<div class="celebrate">✓</div>'
+        proof_html = (f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.62rem;'
+                      f'color:#9a9ea5;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">'
+                      f'Photo from your driver</div>'
+                      f'<img src="/proof/{_esc(oid)}" alt="Delivery photo" '
                       f'style="width:100%;border-radius:14px;border:1.5px solid #d9deea;'
-                      f'margin:6px 0 14px" onerror="this.style.display=\'none\'">')
+                      f'margin:0 0 14px" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'none\'">')
+        again_html = '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>'
+    micro_html = f'<div class="micro">{MICRO.get(status, "")}</div>'
+    received_ts = f.get("received_at", "")
+    elapsed_html = (f'<div class="elapsed" id="elapsed" data-rcv="{_esc(received_ts)}"></div>'
+                    if received_ts and active else "")
     body = (f'<body data-oid="{_esc(oid)}">'
             f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
             f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
             f'<div class="oid">{_esc(oid)}</div>'
-            f'<div class="status">{HEADLINES.get(status, _esc(status))}</div>'
+            f'{celebrate_html}'
+            f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
+            f'{micro_html}{elapsed_html}'
             f'<div class="items">{items_line}</div>'
-            f'{proof_html}'
+            f'{proof_html}{again_html}'
             f'{steps_html}')
     return HTMLResponse(_HEAD + body + _MAP_SCRIPT, status_code=200)

@@ -882,3 +882,11 @@ async def board_snapshot(key: str):
         } for d in drivers],
         "stats": _stats_from(today_records),
     }
+
+
+@router.get("/v0/track/{order_id}/status")
+async def track_status(order_id: str):
+    """Public, minimal: current status string only. Powers live page updates."""
+    oid = _fq(order_id.upper().strip())
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    return {"status": recs[0]["fields"].get("status", "unknown") if recs else "unknown"}
