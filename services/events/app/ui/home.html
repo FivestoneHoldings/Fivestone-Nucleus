@@ -66,14 +66,17 @@ body{padding-top:76px !important}
   <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#8b93a7;
     text-transform:uppercase;letter-spacing:.16em;margin-top:14px">
     Blount &amp; Knox County · Tennessee <span class="gw-dash"><i></i><i></i><i></i></span></div>
+  <div style="color:#c7cede;font-size:.92rem;margin-top:10px;font-weight:600">
+    Local kitchens, delivered by your neighbors.</div>
 </div>
 
-<a class="tile primary" href="/order">
-  <span class="arrow">→</span>
-  <h2>Place an order</h2>
-  <p>Pickup and delivery, straight from us — no middleman.</p>
+<div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
+
+<a class="tile" href="/order" style="padding:15px 20px">
+  <span class="arrow" style="margin-top:2px">→</span>
+  <h2 style="font-size:1rem">Place an order — custom delivery</h2>
+  <p style="margin:0">Anything else, picked up and delivered locally.</p>
 </a>
-<div id="restaurants"></div>
 
 <div class="tile" style="padding-bottom:14px">
   <h2>Track an order</h2>
@@ -84,8 +87,8 @@ body{padding-top:76px !important}
   </div>
 </div>
 
-<div class="gate">
-  <h3>GateWay team</h3>
+<details class="gate" style="border:none">
+  <summary style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#9a9ea5;font-weight:800;cursor:pointer;list-style:none;padding:6px 0">GateWay team ▸</summary>
   <div class="row">
     <input id="drv" placeholder="Driver day code">
     <button onclick="go('driver','drv')">Drive</button>
@@ -98,7 +101,7 @@ body{padding-top:76px !important}
     <input id="brd" placeholder="Dispatch key">
     <button onclick="go('board','brd')">Board</button>
   </div>
-</div>
+</details>
 
 <div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
 <script>
@@ -120,10 +123,20 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
   if(!d.partners || !d.partners.length) return;
   document.getElementById('restaurants').innerHTML =
     '<h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#5a5e64;margin:4px 0 10px;font-weight:800">Order from a local kitchen</h3>' +
-    d.partners.map(p=>`<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:15px 20px">
-      <span class="arrow" style="margin-top:2px">→</span>
-      <h2 style="font-size:1rem">${p.display_name.replace(/</g,'&lt;')}</h2>
-      <p style="margin:0">Browse the menu · delivered by GateWay</p></a>`).join('');
+    d.partners.map(p=>{
+      const name = p.display_name.replace(/</g,'&lt;');
+      const area = (p.address||'').split(',')[0].replace(/</g,'&lt;');
+      const fee = p.delivery_fee_cents ? `$${(p.delivery_fee_cents/100).toFixed(2)} delivery` : '';
+      const line = [area, fee].filter(Boolean).join(' · ') || 'Browse the menu · delivered by GateWay';
+      if(p.accepting_orders === false)
+        return `<div class="tile" style="padding:15px 20px;opacity:.55">
+          <h2 style="font-size:1rem">${name}</h2>
+          <p style="margin:0;color:#d81f2a;font-weight:700">Paused right now — check back soon</p></div>`;
+      return `<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:15px 20px">
+        <span class="arrow" style="margin-top:2px">→</span>
+        <h2 style="font-size:1rem">${name}</h2>
+        <p style="margin:0">${line}</p></a>`;
+    }).join('');
 }).catch(()=>{});
 function go(path, id){
   const v = document.getElementById(id).value.trim();

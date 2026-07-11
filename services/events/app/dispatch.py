@@ -124,6 +124,7 @@ def _cbust():
 async def diag():
     return {
         "airtable_pat_set": at.configured(),
+        "stripe_configured": __import__("app.payments", fromlist=["configured"]).configured(),
         "admin_key_set": bool(os.environ.get("ADMIN_KEY")),
         "service": "nucleus-dispatch",
         "note": "If either is false, the Railway Variable did not save or the service has not redeployed since it was added.",

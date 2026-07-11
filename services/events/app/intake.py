@@ -99,6 +99,8 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
             form = await request.form()
             data = dict(form)
 
+    from . import payments
+    payment_method = payments.normalize_method(data.get("payment_method", ""))
     data = {k: str(data.get(k, "")).strip()[:CAPS[k]] for k in FIELDS}
     wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
     client_ip = (request.headers.get("x-forwarded-for", "") or
@@ -169,6 +171,7 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                     except (ValueError, TypeError):
                         pass
             await at.create_record(at.ORDERS, fields)
+            _log_owned("order.payment_method", order_id, {"method": payment_method})
             _log_owned("order.received", order_id,
                        {"partner": data["partner"], "customer": data["customer_name"],
                         "dropoff": data["dropoff_address"], "items": data["items_description"],

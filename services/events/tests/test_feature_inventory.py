@@ -11,10 +11,12 @@ CHECKS = {
  "app/ui/home.html": [
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
+   "Local kitchens", "Paused right now", "<details",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
    "Almost done", "recipientRow", "gw_last_partner", "total_cents",
+   "payment_method", "Pay at the door",
  ],
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
@@ -41,7 +43,10 @@ CHECKS = {
  "app/kitchen.py": ["requested_for", "ACTIVE", "picked_up_today",
                      "kitchen_accepting", "different kitchen"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
-                      "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd"],
+                      "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
+                      "stripe_configured"],
+ "app/payments.py": ["configured", "normalize_method", "cod"],
+ "app/intake.py": ["order.payment_method", "payments.normalize_method"],
 }
 
 

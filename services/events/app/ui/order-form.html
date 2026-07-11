@@ -171,6 +171,15 @@ border-radius:18px}
       <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
     </fieldset>
 
+    <fieldset id="payFs">
+      <legend>Payment</legend>
+      <input type="hidden" name="payment_method" value="cod">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#16337a;color:#fff;font-weight:800;text-align:center">Pay at the door</div>
+        <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d9deea;background:#f2f4fa;color:#9a9ea5;font-weight:800;text-align:center">Pay online<br><span style="font-size:.62rem;font-weight:500;letter-spacing:.06em">COMING SOON</span></div>
+      </div>
+    </fieldset>
+
     <fieldset id="pickupFs">
       <legend>Pickup</legend>
       <label class="req" for="pa">Pickup address</label>
