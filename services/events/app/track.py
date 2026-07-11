@@ -38,6 +38,11 @@ MICRO = {"received": "Hang tight — dispatch is on it.",
 _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Track your order — GateWay Delivery</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta property="og:site_name" content="GateWay Delivery">
+<meta property="og:title" content="Track your GateWay delivery">
+<meta property="og:description" content="Live tracking, delivered by your neighbors.">
+<meta property="og:image" content="https://fivestone-nucleus-production.up.railway.app/static/logo.png">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="theme-color" content="#0e1526">
@@ -120,6 +125,19 @@ try{
   if(tm) cents = Math.round(parseFloat(tm)*100);
   if(window.gwProfile) gwProfile.recordOrder({oid: OID, partner: lp.code||'',
     partnerName: lp.name||'', total_cents: cents, at: new Date().toISOString()});
+  // milestone: your Nth order with this kitchen
+  if(window.gwProfile && lp.code && document.querySelector('.celebrate')){
+    const n = (gwProfile.get().history||[]).filter(h=>h.partner===lp.code).length;
+    if(n > 1){
+      const ord = n===2?'2nd':n===3?'3rd':n+'th';
+      const big = [5,10,25,50].includes(n);
+      const el = document.createElement('div');
+      el.id = 'milestone';
+      el.style.cssText = 'text-align:center;font-weight:800;color:#16337a;margin:-6px 0 12px;font-size:'+(big?'1rem':'.88rem');
+      el.textContent = `Your ${ord} order with ${lp.name||'this kitchen'}${big?' — thank you for showing up for local 🧡':' 🧡'}`;
+      document.querySelector('.celebrate').after(el);
+    }
+  }
 }catch(e){}
 pollLoc(); setInterval(pollLoc, 20000);
 // live status: reload the page the moment the order advances

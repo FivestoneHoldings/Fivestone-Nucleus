@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GateWay Delivery</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta property="og:site_name" content="GateWay Delivery">
+<meta property="og:image" content="https://fivestone-nucleus-production.up.railway.app/static/logo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:title" content="GateWay Delivery">
+<meta property="og:description" content="Local kitchens, delivered by your neighbors. Blount & Knox County, Tennessee.">
+<meta name="description" content="Local kitchens, delivered by your neighbors. Blount & Knox County, Tennessee.">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -131,7 +138,13 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
   if(!d.partners || !d.partners.length) return;
   document.getElementById('restaurants').innerHTML =
     '<h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#5a5e64;margin:4px 0 10px;font-weight:800">Order from a local kitchen</h3>' +
-    d.partners.map(p=>{
+    (()=>{ try{
+      const hist = (gwProfile.get().history||[]);
+      const counts = {};
+      hist.forEach(h=>{ if(h.partner) counts[h.partner]=(counts[h.partner]||0)+1; });
+      d.partners.sort((a,b)=>(counts[b.code]||0)-(counts[a.code]||0));
+      d.partners.forEach(p=>{ p._usual = (counts[p.code]||0) >= 2; });
+    }catch(e){} return d.partners; })().map(p=>{
       const name = p.display_name.replace(/</g,'&lt;');
       const area = (p.address||'').split(',')[0].replace(/</g,'&lt;');
       const fee = p.delivery_fee_cents ? `$${(p.delivery_fee_cents/100).toFixed(2)} delivery` : '';
@@ -142,7 +155,7 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
           <p style="margin:0;color:#d81f2a;font-weight:700">Paused right now — check back soon</p></div>`;
       return `<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:15px 20px">
         <span class="arrow" style="margin-top:2px">→</span>
-        <h2 style="font-size:1rem">${name}</h2>
+        <h2 style="font-size:1rem">${name}${p._usual?' <span style="font-family:\'IBM Plex Mono\',monospace;font-size:.5rem;background:#16337a;color:#fff;border-radius:10px;padding:3px 8px;vertical-align:middle;letter-spacing:.1em">YOUR USUAL</span>':''}</h2>
         <p style="margin:0">${line}</p></a>`;
     }).join('');
 }).catch(()=>{});

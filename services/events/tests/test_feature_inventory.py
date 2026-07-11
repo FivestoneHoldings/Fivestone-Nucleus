@@ -12,16 +12,18 @@ CHECKS = {
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
    "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
+   "YOUR USUAL", "og:title",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
    "Almost done", "recipientRow", "gw_last_partner", "total_cents",
    "payment_method", "Pay at the door", "gw-profile.js", "gwProfile.addAddress",
+   "Place order ·", "og:title",
  ],
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
    "Photo from your driver", "livebadge", "pollStatus", "gw_last_order", "subtotal",
-   "recordOrder", "thank_you_note", "driver_first",
+   "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title",
  ],
  "app/ui/driver.html": [
    "gw-ui.js", "runline", "maps.apple.com", "esc(o.pickup)", "Kitchen says READY",

@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GateWay Delivery — Place an Order</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta property="og:site_name" content="GateWay Delivery">
+<meta property="og:image" content="https://fivestone-nucleus-production.up.railway.app/static/logo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:title" content="Order — GateWay Delivery">
+<meta property="og:description" content="Order from a local kitchen, delivered by your neighbors.">
+<meta name="description" content="Order from a local kitchen, delivered by your neighbors.">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -307,12 +314,20 @@ function compose(){
   document.getElementById('feeField').value = entries.length ? FEE_CENTS : '';
   document.getElementById('tipField').value = entries.length ? TIP_CENTS : '';
   document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS + TIP_CENTS) : '';
-  if(!entries.length){ if(itemsField) itemsField.value=''; bar.style.display='none'; return; }
+  if(!entries.length){
+    if(itemsField) itemsField.value='';
+    bar.style.display='none';
+    const sb = document.querySelector('button[type="submit"]');
+    if(sb && !sb.disabled) sb.textContent = 'Send Order to GateWay';
+    return;
+  }
   if(itemsField) itemsField.value =
     entries.map(e=>`${e.qty}× ${e.name} (${money(e.cents*e.qty)})`).join(', ') +
     ` — subtotal ${money(sub)}`;
   bar.style.display = 'block';
   const total = sub + FEE_CENTS + TIP_CENTS;
+  const sendBtn = document.querySelector('button[type="submit"]');
+  if(sendBtn && !sendBtn.disabled) sendBtn.textContent = `Place order · ${money(total)}`;
   bar.innerHTML =
     `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85"><span>Subtotal</span><span class="tot">${money(sub)}</span></div>` +
     `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Delivery fee</span><span class="tot">${money(FEE_CENTS)}</span></div>` +

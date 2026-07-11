@@ -59,7 +59,8 @@
         ov.classList.remove('on');
         setTimeout(()=>{ ov.remove(); resolve(val); }, 180);
       }
-      ov.querySelector('#gwdGo').onclick = ()=> close(withInput ? (inp.value ?? '') : true);
+      ov.querySelector('#gwdGo').onclick = ()=>{ try{ navigator.vibrate && navigator.vibrate(12); }catch(e){}
+        close(withInput ? (inp.value ?? '') : true); };
       ov.querySelector('#gwdNo').onclick = ()=> close(withInput ? null : false);
       ov.addEventListener('click', e => { if(e.target === ov) close(withInput ? null : false); });
       if(inp && !multiline) inp.addEventListener('keydown', e => { if(e.key === 'Enter') close(inp.value ?? ''); });
@@ -72,6 +73,7 @@
   window.gwPrompt = opts => sheet(opts, true);
   window.gwConfirm = opts => sheet(opts, false);
   window.gwToast = (msg, ok=true) => {
+    try{ if(!ok && navigator.vibrate) navigator.vibrate([30,40,30]); }catch(e){}
     const t = document.createElement('div');
     t.className = 'gwt' + (ok ? '' : ' bad');
     t.textContent = msg;

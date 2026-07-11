@@ -84,3 +84,18 @@ def test_me_page_serves_profile_experience():
     for needle in ("only on this device", "kept in local kitchens", "Erase my profile",
                    "gw-profile.js", "Saved addresses"):
         assert needle in html
+
+
+def test_link_previews_and_favicons():
+    for path in ("/", "/order", "/me"):
+        html = client.get(path).text
+        assert 'property="og:title"' in html and 'rel="icon"' in html
+    t = client.get("/track/ORD-XP-DONE").text
+    assert "Track your GateWay delivery" in t
+
+
+def test_milestone_and_usual_hooks_present():
+    assert "milestone" in client.get("/track/ORD-XP-DONE").text
+    assert "YOUR USUAL" in client.get("/").text
+    form = client.get("/order").text
+    assert "Place order ·" in form  # live CTA total hook
