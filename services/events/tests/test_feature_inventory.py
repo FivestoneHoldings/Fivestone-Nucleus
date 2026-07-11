@@ -23,7 +23,7 @@ CHECKS = {
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
    "Photo from your driver", "livebadge", "pollStatus", "gw_last_order", "subtotal",
-   "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp",
+   "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp", "anticipation",
  ],
  "app/ui/driver.html": [
    "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "esc(o.pickup)", "Kitchen says READY",
@@ -38,7 +38,7 @@ CHECKS = {
  "app/ui/board.html": [
    "gwPrompt", "paintFilters", "ageChip", "o.partner?", "URGENCY", "/snapshot",
    "editField", "Statement", "shareLink", "showDigest", "toggleTrend",
-   "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO",
+   "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO", "editAbout",
    "netDown", "skel", "maybeDayOpen", "closeAllDelivered", "gw_dayopen_",
    "demoOrder", "editThanks",
  ],

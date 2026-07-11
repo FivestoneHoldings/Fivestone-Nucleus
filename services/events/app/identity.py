@@ -73,7 +73,8 @@ def partner_lookup(code: str):
         raise HTTPException(404, "Unknown partner")
     return {"code": p.code, "display_name": p.display_name, "status": p.status,
             "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
-            "accepting_orders": p.accepting_orders}
+            "accepting_orders": p.accepting_orders,
+            "about_blurb": p.about_blurb}
 
 
 @router.get("/api/board/{key}/partners")
@@ -89,7 +90,8 @@ def list_partners(key: str):
                           "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
                           "accepting_orders": p.accepting_orders,
                           "portal_token": p.portal_token,
-                          "thank_you_note": p.thank_you_note}
+                          "thank_you_note": p.thank_you_note,
+                          "about_blurb": p.about_blurb}
                          for p in rows]}
 
 
@@ -157,6 +159,24 @@ async def set_thanks(key: str, code: str, request: Request):
         if not p:
             raise HTTPException(404, "Unknown partner")
         p.thank_you_note = note
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.post("/api/board/{key}/partners/{code}/about")
+async def set_about(key: str, code: str, request: Request):
+    """The kitchen's short story, shown to customers while they wait for a driver."""
+    _check_key(key)
+    body = await request.json()
+    blurb = str(body.get("blurb", "")).strip()[:280]
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.about_blurb = blurb
         db.commit()
     finally:
         db.close()

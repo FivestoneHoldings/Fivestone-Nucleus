@@ -231,6 +231,27 @@ async def track(order_id: str):
             driver_first = cached
         except Exception:
             driver_first = ""
+    anticipation = ""
+    if status in ("received", "confirmed") and f.get("partner_code"):
+        try:
+            from .db import SessionLocal as _SL2
+            from .models import Partner as _P2
+            _db2 = _SL2(); _pp = _db2.get(_P2, f["partner_code"]); _db2.close()
+            kname = _esc(_pp.display_name) if _pp else "your kitchen"
+            blurb = (f'<div style="font-size:.9rem;line-height:1.55;color:#3a3f47;margin:6px 0 12px">'
+                     f'{_esc(_pp.about_blurb)}</div>') if (_pp and _pp.about_blurb) else ""
+            nxt = "confirming your order" if status == "received" else "preparing your food"
+            anticipation = (
+                f'<div style="background:#fff;border:1px solid #e4e8f2;border-radius:16px;'
+                f'padding:16px 18px;margin:0 0 14px;box-shadow:0 3px 16px rgba(20,30,60,.06)">'
+                f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.58rem;'
+                f'letter-spacing:.12em;text-transform:uppercase;color:#16337a;margin-bottom:6px">'
+                f'From {kname}</div>{blurb}'
+                f'<div style="font-size:.82rem;color:#7a7f87">Right now: {nxt}. '
+                f'We\'ll assign a neighbor to drive it the moment it\'s ready — '
+                f'you\'ll see them on the map here.</div></div>')
+        except Exception:
+            anticipation = ""
     thanks = ""
     if status in ("delivered", "closed") and f.get("partner_code"):
         try:
@@ -300,7 +321,7 @@ async def track(order_id: str):
             f'<div class="oid">{_esc(oid)}</div>'
             f'{celebrate_html}'
             f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
-            f'{micro_html}{elapsed_html}'
+            f'{micro_html}{elapsed_html}{anticipation}'
             f'<div class="items">{items_line}</div>'
             f'{thanks}{proof_html}{again_html}'
             f'{steps_html}')

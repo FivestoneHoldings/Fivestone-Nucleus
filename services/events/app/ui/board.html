@@ -160,7 +160,8 @@ async function loadPartners(){
         <button class="ghost" onclick="openLink(api('/statement/${x.code}').replace(location.origin,''))">Statement ↗</button></div>
       <div class="row">
         <button class="ghost" onclick="demoOrder('${x.code}')">＋ Demo order</button>
-        <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button></div>
+        <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button>
+        <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
@@ -262,6 +263,15 @@ async function editThanks(code, current){
   const r = await fetch(api(`/partners/${code}/thanks`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({note})});
   if(r.ok){ gwToast('Note saved ✓'); loadPartners(); }
+}
+async function editAbout(code, current){
+  const blurb = await gwPrompt({title:'This kitchen\'s story', multiline:true, value: current,
+    placeholder:'Family-owned since 1998. Hand-tossed dough, sauce from Nonna\'s recipe.',
+    confirm:'Save story', body:'Shown to customers while they wait for a driver. A sentence or two about who they are.'});
+  if(blurb === null) return;
+  const r = await fetch(api(`/partners/${code}/about`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({blurb})});
+  if(r.ok){ gwToast('Story saved ✓'); loadPartners(); }
 }
 async function setAccepting(code, on){
   if(await post(`/partners/${code}/accepting`, {on})) loadPartners();
