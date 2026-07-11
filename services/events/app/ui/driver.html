@@ -159,7 +159,10 @@ async function headsUp(id){
   gwToast(r.ok ? 'Sent to the customer ✓' : 'Could not send.', r.ok);
 }
 let SHIFT = false; let LASTN;
+let LAST_STATS = {done_today:0, tips_today_cents:0};
 function doneText(d){
+  LAST_STATS = {done_today: d.done_today||0, tips_today_cents: d.tips_today_cents||0,
+                driver: d.driver||''};
   let t = '✓ ' + d.done_today + ' delivered today';
   if(d.tips_today_cents > 0) t += ' · $' + (d.tips_today_cents/100).toFixed(2) + ' tips';
   return t;
@@ -172,9 +175,31 @@ function paintShift(){
   b.style.color = SHIFT ? '#fff' : '#16337a';
 }
 async function toggleShift(){
+  const ending = SHIFT;
   const r = await fetch(api('/shift'), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({on: !SHIFT})});
-  if(r.ok){ SHIFT = !SHIFT; paintShift(); }
+  if(r.ok){ SHIFT = !SHIFT; paintShift(); if(ending) showShiftSummary(); }
+}
+function showShiftSummary(){
+  const s = LAST_STATS;
+  const now = new Date();
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(8,12,24,.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:22px';
+  ov.innerHTML = `<div style="background:linear-gradient(150deg,#0e1526,#16337a);color:#fff;border-radius:24px;padding:30px 26px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center">
+    <img src="/static/logo-bar.png" alt="GateWay" style="height:34px;margin-bottom:16px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#8fb0ec;margin-bottom:18px">Shift complete · ${now.toLocaleDateString()}</div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-bottom:18px">
+      <div><div style="font-size:2.6rem;font-weight:900;line-height:1">${s.done_today}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:#a8c0ee">Deliveries</div></div>
+      <div><div style="font-size:2.6rem;font-weight:900;line-height:1">$${(s.tips_today_cents/100).toFixed(0)}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:#a8c0ee">Tips earned</div></div>
+    </div>
+    <div style="font-size:.92rem;color:#dbe4f6;margin-bottom:22px">${s.done_today?`Nice work${s.driver?', '+esc(s.driver.split(' ')[0]):''} — that's ${s.done_today} neighbor${s.done_today>1?'s':''} fed. 🧡`:'Thanks for being on call today. 🧡'}</div>
+    <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:14px;border-radius:13px;border:none;background:#fff;color:#16337a;font-weight:800;font-family:inherit">Done for the day ✓</button>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:#6b82b4;margin-top:12px;letter-spacing:.08em">SCREENSHOT TO REMEMBER TODAY · GATEWAY</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
 }
 function gps(){
   return new Promise(res=>{

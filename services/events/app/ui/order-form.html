@@ -278,10 +278,16 @@ try{
     gwProfile.set({name: document.getElementById('cn').value.trim() || prof.name,
                    phone: document.getElementById('cp').value.trim() || prof.phone});
     gwProfile.addAddress(document.getElementById('da').value);
+    // stash the exact cart so this order can be repeated line-for-line
+    try{
+      const lines = Object.entries(CART).map(([id,e])=>({id, name:e.name, cents:e.cents, qty:e.qty}));
+      if(lines.length) localStorage.setItem('gw_cart_' + p, JSON.stringify(lines));
+    }catch(e){}
   });
 }catch(e){}
 function renderMenu(m){
   if(!m || !m.categories || !m.categories.length) return;
+  window._MENU = m;
   const z = document.getElementById('menuZone');
   z.style.display = '';
   z.innerHTML = '<div class="mcat" style="margin-top:4px">Tap + to build your order</div>' +
@@ -308,6 +314,28 @@ function renderMenu(m){
   // items field becomes the composed summary (still editable for special requests)
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
+  maybeReorder();
+}
+function maybeReorder(){
+  try{
+    const params = new URLSearchParams(location.search);
+    if(!params.get('reorder') || !p) return;
+    const stashed = JSON.parse(localStorage.getItem('gw_cart_' + p) || '[]');
+    if(!stashed.length) return;
+    // only re-add items that still exist & are available on the live menu
+    const live = {};
+    (window._MENU.categories||[]).forEach(c=>c.items.forEach(i=>{ live[i.id] = i; }));
+    let added = 0;
+    stashed.forEach(line=>{
+      if(live[line.id]){
+        CART[line.id] = {name: live[line.id].name, cents: live[line.id].price_cents, qty: line.qty};
+        const q = document.getElementById('q-'+line.id); if(q) q.textContent = line.qty;
+        added += line.qty;
+      }
+    });
+    if(added){ compose(); if(window.gwToast) gwToast(`Your usual is in the cart — ${added} item${added>1?'s':''} ✓`);
+      window.scrollTo({top: document.getElementById('menuZone').offsetTop - 80, behavior:'smooth'}); }
+  }catch(e){}
 }
 function bump(id, name, cents, d){
   const e = CART[id] || {name, cents, qty:0};

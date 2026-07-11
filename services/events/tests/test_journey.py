@@ -66,3 +66,12 @@ def test_order_to_track_records_and_milestones_hook():
     page = client.get(f"/track/{oid}").text
     assert "milestone" in page          # milestone logic present on the page
     assert "gw-profile.js" in page      # history capture wired
+
+
+def test_exact_reorder_and_shift_summary_hooks():
+    form = client.get("/order?partner=stephens&reorder=1").text
+    assert "maybeReorder" in form and "gw_cart_" in form
+    driver = client.get("/driver/whatever").text
+    assert "showShiftSummary" in driver and "Shift complete" in driver
+    home = client.get("/").text
+    assert "reorder=1" in home or "gw_cart_" in home

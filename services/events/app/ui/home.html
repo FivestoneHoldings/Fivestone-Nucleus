@@ -140,13 +140,16 @@ try{
     const el = document.getElementById('quickReorder');
     el.style.display = 'block';
     const fav = (gwProfile.get().favorite && gwProfile.get().favorite.code === top.code);
-    el.innerHTML = `<a href="/order?partner=${encodeURIComponent(top.code)}"
+    let hasCart = false;
+    try{ hasCart = !!JSON.parse(localStorage.getItem('gw_cart_'+top.code)||'[]').length; }catch(e){}
+    const href = '/order?partner=' + encodeURIComponent(top.code) + (hasCart ? '&reorder=1' : '');
+    el.innerHTML = `<a href="${href}"
       style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#16337a,#1e4292);
       color:#fff;text-decoration:none;border-radius:18px;padding:16px 18px;margin-bottom:16px;
       box-shadow:0 8px 24px rgba(22,51,122,.3)">
-      <span style="font-size:1.5rem">${fav?'⭐':'↻'}</span>
+      <span style="font-size:1.5rem">${hasCart?'🍽':(fav?'⭐':'↻')}</span>
       <span><b style="font-size:1rem">Order again from ${(top.name||'').replace(/</g,'&lt;')}</b>
-      <div style="font-size:.76rem;opacity:.85">${fav?'Your favorite':'Your most-ordered kitchen'} · one tap away</div></span></a>`;
+      <div style="font-size:.76rem;opacity:.85">${hasCart ? 'Reorder your usual · one tap' : (fav?'Your favorite':'Your most-ordered kitchen') + ' · one tap away'}</div></span></a>`;
   }
 }catch(e){}
 fetch('/v0/local-impact').then(r=>r.json()).then(li=>{

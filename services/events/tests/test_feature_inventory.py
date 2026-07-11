@@ -16,7 +16,7 @@ CHECKS = {
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
-   "Almost done", "recipientRow", "gw_last_partner", "total_cents",
+   "Almost done", "recipientRow", "gw_last_partner", "total_cents", "maybeReorder", "gw_cart_",
    "payment_method", "Pay at the door", "gw-profile.js", "gwProfile.addAddress",
    "Place order ·", "og:title", "Welcome to GateWay",
  ],
@@ -26,7 +26,7 @@ CHECKS = {
    "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp",
  ],
  "app/ui/driver.html": [
-   "gw-ui.js", "runline", "maps.apple.com", "headsUp", "esc(o.pickup)", "Kitchen says READY",
+   "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "esc(o.pickup)", "Kitchen says READY",
    "SCHEDULED", "tel:", "tips_today_cents", "shiftBtn", "navigator.vibrate",
    "HAS_ACTIVE = (d.orders", "/guide/driver", "netDown", "skel",
  ],
