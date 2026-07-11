@@ -300,6 +300,24 @@ def get_proof(order_id: str):
 
 
 
+@router.post("/api/driver/{day_token}/orders/{record_id}/heads-up")
+async def driver_heads_up(day_token: str, record_id: str, request: Request):
+    """Driver's one-tap personal note to the customer (e.g. 'Running 5 late, sorry!').
+    Recorded in the owned log; surfaced on the customer's tracking page while in transit."""
+    drv = await _driver_by_token(day_token)
+    owned = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'",
+                                  max_records=1)
+    if not owned:
+        raise HTTPException(404, "No such order")
+    if drv["id"] not in (owned[0]["fields"].get("driver") or []):
+        raise HTTPException(403, "This order is not on your sheet")
+    body = await request.json()
+    note = str(body.get("note", "")).strip()[:160]
+    order_id = owned[0]["fields"].get("order_id", record_id)
+    _log_event("order.heads_up", order_id, f"driver:{drv['id']}", {"note": note})
+    return {"ok": True}
+
+
 @router.post("/api/driver/{day_token}/orders/{record_id}/{action}")
 async def driver_action(day_token: str, record_id: str, action: str, request: Request,
                         background_tasks: BackgroundTasks):
@@ -1101,3 +1119,27 @@ async def local_impact():
            "kitchens": kitchens}
     _cput("local_impact", out, 600)
     return out
+
+
+@router.get("/v0/track/{order_id}/heads-up")
+async def track_heads_up(order_id: str):
+    """Public: the latest driver heads-up note for an order that is still in transit."""
+    oid = _fq(order_id.upper().strip())
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs or recs[0]["fields"].get("status") != "in_transit":
+        return {"note": ""}
+    db: Session = SessionLocal()
+    try:
+        row = (db.query(Event)
+               .filter(Event.event_type == "order.heads_up", Event.entity_ref == oid)
+               .order_by(Event.occurred_at.desc()).first())
+        note = ""
+        if row:
+            import json as _j
+            try:
+                note = _j.loads(row.payload).get("note", "")
+            except Exception:
+                note = ""
+    finally:
+        db.close()
+    return {"note": note[:160]}

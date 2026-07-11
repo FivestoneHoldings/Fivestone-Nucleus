@@ -139,6 +139,7 @@ async function load(){
         ${dest?`<button class="b-nav" data-d="${esc(dest)}" onclick="nav(this.dataset.d)">Navigate ▸<span class="navsub">${toKitchen?'to the kitchen':'to the customer'}</span></button>`:''}
         ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
         ${o.status==='in_transit'?`<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`:''}
+        ${o.status==='in_transit'?`<button class="b-note" onclick="headsUp('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Heads-up ▸</button>`:''}
         <button class="b-note" onclick="addNote('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Note</button>
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
@@ -146,6 +147,16 @@ async function load(){
 }
 function nav(addr){
   window.open('https://maps.apple.com/?daddr=' + encodeURIComponent(addr), '_blank');
+}
+async function headsUp(id){
+  const presets = ['On my way now 🚗','About 5 minutes out','Running a few minutes late, sorry!','I\'m outside 👋'];
+  const pick = await gwPrompt({title:'Send the customer a heads-up', multiline:true,
+    placeholder: presets.join('  ·  '), confirm:'Send',
+    body:'They\'ll see this on their tracking page. Tap a suggestion or write your own:\n\n• ' + presets.join('\n• ')});
+  if(!pick) return;
+  const r = await fetch(api(`/orders/${id}/heads-up`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({note: pick})});
+  gwToast(r.ok ? 'Sent to the customer ✓' : 'Could not send.', r.ok);
 }
 let SHIFT = false; let LASTN;
 function doneText(d){

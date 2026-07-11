@@ -150,6 +150,24 @@ async function pollStatus(){
   }catch(e){}
 }
 pollStatus(); setInterval(pollStatus, 15000);
+// driver heads-up bubble (in-transit only)
+async function pollHeadsUp(){
+  try{
+    const d = await (await fetch('/v0/track/' + encodeURIComponent(OID) + '/heads-up')).json();
+    let el = document.getElementById('headsup');
+    if(d.note){
+      if(!el){
+        el = document.createElement('div'); el.id = 'headsup';
+        el.style.cssText = 'background:#eef2fc;border:1.5px solid #c3d0f0;border-radius:14px;padding:12px 16px;margin:0 0 14px;font-size:.9rem';
+        const anchor = document.querySelector('.items');
+        if(anchor) anchor.before(el); else document.body.prepend(el);
+      }
+      el.innerHTML = '<div style="font-family:monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:#16337a;margin-bottom:4px">Message from your driver</div>' + esc(d.note);
+    } else if(el){ el.remove(); }
+  }catch(e){}
+}
+function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
+pollHeadsUp(); setInterval(pollHeadsUp, 15000);
 // elapsed ticker
 const el = document.getElementById('elapsed');
 if(el && el.dataset.rcv){

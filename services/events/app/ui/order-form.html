@@ -253,6 +253,11 @@ function applyPartnerMeta(d){
 }
 try{
   const gp = gwProfile.get();
+  const firstEver = !(gp.history||[]).length && !gp.name && !gp.welcomed;
+  if(firstEver){
+    gwProfile.set({welcomed: true});
+    setTimeout(()=>{ if(window.gwToast) gwToast('Welcome to GateWay — glad you\'re here 🧡'); }, 700);
+  }
   if(gp.name){
     const h = new Date().getHours();
     const meal = h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'a late bite';
