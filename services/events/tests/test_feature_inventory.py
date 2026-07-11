@@ -11,16 +11,17 @@ CHECKS = {
  "app/ui/home.html": [
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
-   "Local kitchens", "Paused right now", "<details",
+   "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
    "Almost done", "recipientRow", "gw_last_partner", "total_cents",
-   "payment_method", "Pay at the door",
+   "payment_method", "Pay at the door", "gw-profile.js", "gwProfile.addAddress",
  ],
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
    "Photo from your driver", "livebadge", "pollStatus", "gw_last_order", "subtotal",
+   "recordOrder", "thank_you_note", "driver_first",
  ],
  "app/ui/driver.html": [
    "gw-ui.js", "runline", "maps.apple.com", "esc(o.pickup)", "Kitchen says READY",
@@ -36,6 +37,7 @@ CHECKS = {
    "editField", "Statement", "shareLink", "showDigest", "toggleTrend",
    "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO",
    "netDown", "skel", "maybeDayOpen", "closeAllDelivered", "gw_dayopen_",
+   "demoOrder", "editThanks",
  ],
  "app/ui/static/sw.js": ["offline.html", "logo-bar.png"],
  "app/ui/static/offline.html": ["logo-bar.png", "refresh"],
@@ -44,7 +46,9 @@ CHECKS = {
                      "kitchen_accepting", "different kitchen"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
-                      "stripe_configured"],
+                      "stripe_configured", "retention_sweep", "demo-order"],
+ "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
+ "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting"],
  "app/payments.py": ["configured", "normalize_method", "cod"],
  "app/intake.py": ["order.payment_method", "payments.normalize_method"],
 }

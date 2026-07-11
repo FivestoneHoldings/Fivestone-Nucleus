@@ -67,7 +67,10 @@ body{padding-top:76px !important}
     text-transform:uppercase;letter-spacing:.16em;margin-top:14px">
     Blount &amp; Knox County · Tennessee <span class="gw-dash"><i></i><i></i><i></i></span></div>
   <div style="color:#c7cede;font-size:.92rem;margin-top:10px;font-weight:600">
-    Local kitchens, delivered by your neighbors.</div>
+    <span id="greet">Local kitchens, delivered by your neighbors.</span></div>
+  <a href="/me" style="display:inline-block;margin-top:12px;font-family:'IBM Plex Mono',monospace;
+    font-size:.62rem;color:#8b93a7;text-decoration:none;border:1px solid #26304a;
+    border-radius:20px;padding:6px 14px;letter-spacing:.1em">MY GATEWAY ▸</a>
 </div>
 
 <div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
@@ -104,6 +107,7 @@ body{padding-top:76px !important}
 </details>
 
 <div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
+<script src="/static/gw-profile.js"></script>
 <script>
 try{
   const lastO = localStorage.getItem('gw_last_order');
@@ -118,6 +122,10 @@ try{
     <h2 style="font-size:1rem">Track my last order</h2>
     <p style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:.72rem">${lastO.replace(/</g,'&lt;')}</p></a>`;
   if(quick) document.getElementById('restaurants').insertAdjacentHTML('beforebegin', quick);
+}catch(e){}
+try{
+  const g = gwProfile.greeting();
+  if(g) document.getElementById('greet').textContent = g + ' — hungry?';
 }catch(e){}
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
   if(!d.partners || !d.partners.length) return;

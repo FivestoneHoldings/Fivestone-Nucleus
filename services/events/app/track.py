@@ -43,6 +43,7 @@ _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="theme-color" content="#0e1526">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="/static/gw-profile.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>*{-webkit-tap-highlight-color:transparent}
 body{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
@@ -112,6 +113,14 @@ async function pollLoc(){
   }catch(e){}
 }
 try{ localStorage.setItem('gw_last_order', OID); }catch(e){}
+try{
+  const lp = JSON.parse(localStorage.getItem('gw_last_partner')||'null') || {};
+  let cents = 0;
+  const tm = (document.body.textContent.match(/Total [$]([0-9]+[.][0-9]{2})/)||[])[1];
+  if(tm) cents = Math.round(parseFloat(tm)*100);
+  if(window.gwProfile) gwProfile.recordOrder({oid: OID, partner: lp.code||'',
+    partnerName: lp.name||'', total_cents: cents, at: new Date().toISOString()});
+}catch(e){}
 pollLoc(); setInterval(pollLoc, 20000);
 // live status: reload the page the moment the order advances
 let CUR = null;
@@ -170,6 +179,40 @@ async def track(order_id: str):
 
     f = recs[0]["fields"]
     status = f.get("status", "received")
+    # the human layer: driver first name + the kitchen's own thank-you
+    driver_first = ""
+    if status in ("assigned", "in_transit") and (f.get("driver") or []):
+        try:
+            from .dispatch import _cget, _cput, _fq as _dfq
+            _dref = f["driver"][0]
+            cached = _cget(f"dname:{_dref}")
+            if cached is None:
+                _dr = await at.list_records(at.DRIVERS,
+                                            formula=f"RECORD_ID()='{_dfq(_dref)}'", max_records=1)
+                cached = (_dr[0]["fields"].get("display_name", "").split(" ")[0]
+                          if _dr else "")
+                _cput(f"dname:{_dref}", cached, 600)
+            driver_first = cached
+        except Exception:
+            driver_first = ""
+    thanks = ""
+    if status in ("delivered", "closed") and f.get("partner_code"):
+        try:
+            from .db import SessionLocal as _SL
+            from .models import Partner as _P
+            _db = _SL()
+            _p = _db.get(_P, f["partner_code"])
+            _db.close()
+            if _p and _p.thank_you_note:
+                thanks = (f'<div style="background:#fdf9ee;border:1.5px solid #eadfae;'
+                          f'border-radius:14px;padding:14px 16px;margin:0 0 14px;'
+                          f'font-size:.9rem;line-height:1.55">'
+                          f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.6rem;'
+                          f'text-transform:uppercase;letter-spacing:.1em;color:#a8894a;margin-bottom:4px">'
+                          f'A note from {_esc(_p.display_name)}</div>'
+                          f'{_esc(_p.thank_you_note)}</div>')
+        except Exception:
+            thanks = ""
     active = status in ("received", "confirmed", "assigned", "in_transit")
     steps_html = ""
     now_marked = False
@@ -206,7 +249,12 @@ async def track(order_id: str):
                       f'style="width:100%;border-radius:14px;border:1.5px solid #d9deea;'
                       f'margin:0 0 14px" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'none\'">')
         again_html = '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>'
-    micro_html = f'<div class="micro">{MICRO.get(status, "")}</div>'
+    micro_text = MICRO.get(status, "")
+    if driver_first and status == "assigned":
+        micro_text = f"Your neighbor {_esc(driver_first)} is heading to pick it up."
+    elif driver_first and status == "in_transit":
+        micro_text = f"{_esc(driver_first)} is on the way — watch the map."
+    micro_html = f'<div class="micro">{micro_text}</div>'
     received_ts = f.get("received_at", "")
     elapsed_html = (f'<div class="elapsed" id="elapsed" data-rcv="{_esc(received_ts)}"></div>'
                     if received_ts and active else "")
@@ -218,6 +266,6 @@ async def track(order_id: str):
             f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
             f'{micro_html}{elapsed_html}'
             f'<div class="items">{items_line}</div>'
-            f'{proof_html}{again_html}'
+            f'{thanks}{proof_html}{again_html}'
             f'{steps_html}')
     return HTMLResponse(_HEAD + body + _MAP_SCRIPT, status_code=200)

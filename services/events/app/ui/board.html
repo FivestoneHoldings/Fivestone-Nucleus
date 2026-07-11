@@ -158,6 +158,9 @@ async function loadPartners(){
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button>
         <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button>
         <button class="ghost" onclick="openLink(api('/statement/${x.code}').replace(location.origin,''))">Statement ↗</button></div>
+      <div class="row">
+        <button class="ghost" onclick="demoOrder('${x.code}')">＋ Demo order</button>
+        <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
@@ -244,6 +247,21 @@ async function shareLink(title, path){
 function copyKitchen(tok){
   navigator.clipboard.writeText(location.origin + '/kitchen/' + tok);
   gwToast('Kitchen link copied — send it to the restaurant.');
+}
+async function demoOrder(code){
+  const r = await fetch(api(`/partners/${code}/demo-order`), {method:'POST'});
+  if(r.ok){ const d = await r.json();
+    gwToast(`Demo order ${d.order_id} placed — $${(d.total_cents/100).toFixed(2)}`); load(); }
+  else gwToast('Demo order failed.', false);
+}
+async function editThanks(code, current){
+  const note = await gwPrompt({title:'Thank-you note from this kitchen', multiline:true,
+    value: current, placeholder:'Thanks for supporting our family kitchen! — Stephen',
+    confirm:'Save note', body:'Customers see this on their delivered screen. Their food, their neighborhood, their kitchen\'s own words.'});
+  if(note === null) return;
+  const r = await fetch(api(`/partners/${code}/thanks`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({note})});
+  if(r.ok){ gwToast('Note saved ✓'); loadPartners(); }
 }
 async function setAccepting(code, on){
   if(await post(`/partners/${code}/accepting`, {on})) loadPartners();

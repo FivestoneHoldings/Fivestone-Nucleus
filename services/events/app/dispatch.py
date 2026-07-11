@@ -97,6 +97,35 @@ def _fq(v: str) -> str:
     return _re.sub(r"[^A-Za-z0-9 _.@+\-]", "", str(v or ""))[:120]
 
 
+# ---------- DATA RETENTION ----------
+_LAST_SWEEP = {"t": 0.0}
+
+
+def retention_sweep(force: bool = False):
+    """Age out operational exhaust: driver locations >24h, proof photos >60d.
+    Cheap, opportunistic (at most hourly), never blocks a request path."""
+    import time as _t
+    if not force and _t.time() - _LAST_SWEEP["t"] < 3600:
+        return {"swept": False}
+    _LAST_SWEEP["t"] = _t.time()
+    from datetime import timedelta
+    from .models import Proof
+    db: Session = SessionLocal()
+    try:
+        cut_loc = datetime.now(timezone.utc) - timedelta(hours=24)
+        cut_proof = datetime.now(timezone.utc) - timedelta(days=60)
+        n_loc = (db.query(DriverLocation)
+                 .filter(DriverLocation.updated_at < cut_loc.replace(tzinfo=None))
+                 .delete(synchronize_session=False))
+        n_proof = (db.query(Proof)
+                   .filter(Proof.created_at < cut_proof.replace(tzinfo=None))
+                   .delete(synchronize_session=False))
+        db.commit()
+    finally:
+        db.close()
+    return {"swept": True, "locations_purged": n_loc, "proofs_purged": n_proof}
+
+
 # ---------- TTL CACHE (slow-changing lookups only; mutations bust it) ----------
 import time as _time
 
@@ -656,6 +685,7 @@ async def driver_ping(day_token: str, request: Request):
     lat, lng = str(body.get("lat", ""))[:30], str(body.get("lng", ""))[:30]
     if not lat or not lng:
         return {"ok": False, "reason": "no coords"}
+    retention_sweep()
     ref = drv["fields"].get("driver_id", drv["id"])
     db: Session = SessionLocal()
     try:
@@ -1001,3 +1031,46 @@ Tips pass through 100% to drivers. Settlement of food subtotal and delivery fees
 <button class="printbtn" onclick="window.print()">Print / Save PDF</button>
 </body></html>"""
     return HTMLResponse(html)
+
+
+@router.post("/api/board/{key}/partners/{code}/demo-order")
+async def create_demo_order(key: str, code: str):
+    """Founder demo tool: seeds one realistic order for this kitchen, priced from
+    its live menu, flowing the normal record path. Marked as demo in the owned log."""
+    _check_key(key)
+    import hashlib
+    from .models import MenuItem, Partner as P
+    db: Session = SessionLocal()
+    try:
+        p = db.get(P, _fq(code.lower()))
+        items = (db.query(MenuItem).filter(MenuItem.partner_code == p.code,
+                                           MenuItem.available == True)  # noqa: E712
+                 .limit(2).all()) if p else []
+    finally:
+        db.close()
+    if not p:
+        raise HTTPException(404, "Unknown partner")
+    if items:
+        lines = ", ".join(f"1× {i.name} (${i.price_cents/100:.2f})" for i in items)
+        subtotal = sum(i.price_cents for i in items)
+    else:
+        lines, subtotal = "1× Demo plate ($12.00)", 1200
+    fee = p.delivery_fee_cents or 399
+    tip = 300
+    total = subtotal + fee + tip
+    now = _now()
+    oid = "ORD-" + hashlib.md5(f"demo{p.code}{now}".encode()).hexdigest()[:8].upper()
+    fields = {
+        "order_id": oid, "status": "received", "source_channel": "demo",
+        "partner_code": p.code, "pickup_address": p.address or "",
+        "dropoff_address": "123 Demo Lane, Maryville TN",
+        "items_description": f"{lines} — subtotal ${subtotal/100:.2f}",
+        "customer_name_raw": "Demo Customer", "customer_phone_raw": "",
+        "fingerprint": hashlib.md5(f"demo{now}".encode()).hexdigest(),
+        "received_at": now, "subtotal_cents": subtotal, "fee_cents": fee,
+        "tip_cents": tip, "total_cents": total,
+    }
+    created = await at.create_record(at.ORDERS, fields)
+    _log_event("order.received", oid, "founder:demo", {"demo": True, "partner": p.code})
+    return {"ok": True, "order_id": oid, "record_id": created["id"],
+            "total_cents": total, "partner": p.code}

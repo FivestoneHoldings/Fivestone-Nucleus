@@ -88,7 +88,8 @@ def list_partners(key: str):
                           "status": p.status, "contact": p.contact,
                           "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
                           "accepting_orders": p.accepting_orders,
-                          "portal_token": p.portal_token}
+                          "portal_token": p.portal_token,
+                          "thank_you_note": p.thank_you_note}
                          for p in rows]}
 
 
@@ -142,3 +143,21 @@ async def set_accepting(key: str, code: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "accepting_orders": on}
+
+
+@router.post("/api/board/{key}/partners/{code}/thanks")
+async def set_thanks(key: str, code: str, request: Request):
+    """The kitchen's personal thank-you, shown to customers on delivery."""
+    _check_key(key)
+    body = await request.json()
+    note = str(body.get("note", "")).strip()[:300]
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.thank_you_note = note
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}

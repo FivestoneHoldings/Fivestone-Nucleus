@@ -191,6 +191,7 @@ border-radius:18px}
 
   <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
 </div>
+<script src="/static/gw-profile.js"></script>
 <script>
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
@@ -244,9 +245,20 @@ function applyPartnerMeta(d){
   const rr = document.getElementById('recipientRow'); if(rr) rr.style.display = 'none';
 }
 try{
+  // profile autofill: the form already knows you
+  const prof = gwProfile.get();
+  if(prof.name && !document.getElementById('cn').value) document.getElementById('cn').value = prof.name;
+  if(prof.phone && !document.getElementById('cp').value) document.getElementById('cp').value = prof.phone;
+  if((prof.addresses||[])[0] && !document.getElementById('da').value)
+    document.getElementById('da').value = prof.addresses[0];
+  if(typeof prof.defaultTip === 'number' && typeof setTip === 'function') setTip(prof.defaultTip);
   document.querySelector('form').addEventListener('submit', ()=>{
     if(p) localStorage.setItem('gw_last_partner', JSON.stringify(
       {code: p, name: (document.querySelector('.tag').textContent||'').split(' × ')[0]}));
+    // save-back: quietly learn for next time
+    gwProfile.set({name: document.getElementById('cn').value.trim() || prof.name,
+                   phone: document.getElementById('cp').value.trim() || prof.phone});
+    gwProfile.addAddress(document.getElementById('da').value);
   });
 }catch(e){}
 function renderMenu(m){

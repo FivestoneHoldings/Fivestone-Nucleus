@@ -36,6 +36,8 @@ app.include_router(guides_router)
 app.include_router(menu_router)
 seed_partners()
 seed_menus()
+from .dispatch import retention_sweep
+retention_sweep(force=True)
 
 _UI = Path(__file__).parent / "ui"
 def _error_page(title: str, msg: str, status: int) -> HTMLResponse:
@@ -90,6 +92,11 @@ async def branded_server_errors(request, exc):
     return JSONResponse({"detail": "internal_error"}, status_code=500)
 
 
+@app.get("/me", response_class=HTMLResponse)
+def me_page():
+    return (_UI / "me.html").read_text()
+
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     return (_UI / "home.html").read_text()
@@ -120,7 +127,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "0.37"
+NUCLEUS_VERSION = "0.38"
 
 
 @app.get("/healthz")
