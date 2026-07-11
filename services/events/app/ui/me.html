@@ -140,6 +140,12 @@ async function paintHistory(){
     }catch(e){}
   }
 }
+function toggleFav(code, name){
+  const cur = (gwProfile.get().favorite||{}).code;
+  if(cur === code){ gwProfile.clearFavorite(); gwToast('Favorite cleared'); }
+  else { gwProfile.setFavorite(code, name); gwToast('⭐ Set as your favorite'); }
+  paintHistory();
+}
 function saveProfile(){
   gwProfile.set({name: document.getElementById('pn').value.trim(),
                  phone: document.getElementById('pp').value.trim(),

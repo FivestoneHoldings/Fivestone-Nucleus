@@ -12,7 +12,7 @@ CHECKS = {
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
    "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
-   "YOUR USUAL", "og:title", "localImpact",
+   "YOUR USUAL", "og:title", "localImpact", "quickReorder",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
@@ -33,7 +33,7 @@ CHECKS = {
  "app/ui/kitchen.html": [
    "gateBtn", "DRIVER COMING", "AudioContext", "slidein",
    "markReady", "/guide/kitchen", "netDown", "skel", "esc(o.items)",
-   "pride", "in_kitchen_now",
+   "pride", "in_kitchen_now", "pauseFifteen", "loadBanner",
  ],
  "app/ui/board.html": [
    "gwPrompt", "paintFilters", "ageChip", "o.partner?", "URGENCY", "/snapshot",
@@ -47,12 +47,12 @@ CHECKS = {
  "app/main.py": ["branded_http_errors", "branded_server_errors", "system.error", "guides_router"],
  "app/kitchen.py": ["requested_for", "ACTIVE", "picked_up_today",
                      "kitchen_accepting", "different kitchen",
-                     "delivered_today", "peak_hour", "revenue_today"],
+                     "delivered_today", "peak_hour", "revenue_today", "load"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
                       "stripe_configured", "retention_sweep", "demo-order", "local_impact", "heads_up"],
  "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
- "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting"],
+ "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting", "topKitchen", "setFavorite"],
  "app/payments.py": ["configured", "normalize_method", "cod"],
  "app/intake.py": ["order.payment_method", "payments.normalize_method"],
 }

@@ -78,6 +78,7 @@ text-transform:uppercase;letter-spacing:.08em}
 
 <div class="mark" style="display:none">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
+<div id="loadBanner"></div>
 <div id="pride" class="pride"></div>
 <div id="pickchip" style="display:none"></div>
 <div id="pauseBanner"></div>
@@ -85,6 +86,7 @@ text-transform:uppercase;letter-spacing:.08em}
 <div id="list"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
 <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;text-align:center;margin-top:24px;text-transform:uppercase;letter-spacing:.08em">
 Tap READY when the order is bagged. GateWay Dispatch · Fivestone Holdings · <a href="/guide/kitchen" style="color:#16337a">How it works</a></div>
+<script src="/static/gw-ui.js"></script>
 <script>
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/kitchen/${token}` + p;
@@ -96,6 +98,29 @@ function paintGate(){
   b.style.background = ACCEPTING ? 'transparent' : '#16337a';
   b.style.color = ACCEPTING ? '#16337a' : '#fff';
 }
+async function pauseFifteen(){
+  const ok = await gwConfirm({title:'Pause new orders for 15 minutes?',
+    body:'Customers will see you\'re paused. It auto-resumes in 15 minutes so you can catch up without forgetting to turn it back on.',
+    confirm:'Pause 15 min', danger:true});
+  if(!ok) return;
+  const r = await fetch(api('/accepting'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({on:false})});
+  if(r.ok){ ACCEPTING = false; paintGate(); gwToast('Paused — auto-resumes in 15 min');
+    try{ localStorage.setItem('gw_kitchen_resume', String(Date.now()+15*60000)); }catch(e){}
+  }
+}
+// auto-resume watchdog
+setInterval(async ()=>{
+  try{
+    const t = parseInt(localStorage.getItem('gw_kitchen_resume')||'0');
+    if(t && Date.now() >= t){
+      localStorage.removeItem('gw_kitchen_resume');
+      await fetch(api('/accepting'), {method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({on:true})});
+      ACCEPTING = true; paintGate(); gwToast('Back open — orders resumed ✓'); load();
+    }
+  }catch(e){}
+}, 30000);
 async function toggleGate(){
   const r = await fetch(api('/accepting'), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({on: !ACCEPTING})});
@@ -135,6 +160,14 @@ async function load(){
      <div class="p"><b>${rev}</b><span>Food sales today</span></div>
      <div class="p"><b>${peak}</b><span>Busiest hour</span></div>`;
   ACCEPTING = d.accepting; paintGate();
+  const lb = document.getElementById('loadBanner');
+  if(d.load === 'slammed' && ACCEPTING){
+    lb.innerHTML = `<div style="background:#3a1512;color:#ffb4a8;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-weight:700;font-size:.86rem;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>🔥 Slammed — ${d.in_kitchen_now} tickets working. Pause new orders to catch up?</span>
+      <button onclick="pauseFifteen()" style="flex:0 0 auto;width:auto;padding:9px 14px;font-size:.78rem;background:#d81f2a;box-shadow:none;margin:0">Pause 15 min</button></div>`;
+  } else if(d.load === 'busy' && ACCEPTING){
+    lb.innerHTML = `<div style="background:#fdf6e3;color:#8a6d3b;border:1px solid #eadfae;border-radius:14px;padding:10px 14px;margin-bottom:14px;font-weight:600;font-size:.82rem">⏳ Busy — ${d.in_kitchen_now} tickets working. You're keeping up.</div>`;
+  } else { lb.innerHTML = ''; }
   document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
     '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';
   const fresh = d.orders.filter(o=>!KNOWN.has(o.order_id));

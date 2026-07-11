@@ -37,6 +37,21 @@
       const part = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
       return 'Good ' + part + ', ' + p.name.split(' ')[0];
     },
+    setFavorite(partnerCode, partnerName){
+      return save(Object.assign(load(), {favorite: {code: partnerCode, name: partnerName}}));
+    },
+    clearFavorite(){ const p = load(); delete p.favorite; return save(p); },
+    topKitchen(){
+      const p = load(); const h = p.history || [];
+      if(p.favorite && p.favorite.code) return p.favorite;
+      const counts = {};
+      h.forEach(x=>{ if(x.partner) counts[x.partner] = (counts[x.partner]||0)+1; });
+      let best = null, bestN = 0;
+      for(const [code, n] of Object.entries(counts)) if(n > bestN){ best = code; bestN = n; }
+      if(!best) return null;
+      const named = h.find(x=>x.partner===best);
+      return {code: best, name: named ? (named.partnerName||best) : best};
+    },
     localImpactCents(){
       const p = load();
       return (p.history||[]).reduce((a,h)=>a + (parseInt(h.total_cents)||0), 0);

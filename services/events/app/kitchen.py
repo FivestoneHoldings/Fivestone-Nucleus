@@ -84,6 +84,8 @@ async def kitchen_orders(token: str):
         "revenue_today_cents": revenue_today,
         "peak_hour": peak_hour,
         "in_kitchen_now": len(records),
+        "load": ("slammed" if len(records) >= 8 else
+                 "busy" if len(records) >= 4 else "steady"),
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),
