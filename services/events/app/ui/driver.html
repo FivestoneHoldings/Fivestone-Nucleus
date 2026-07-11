@@ -61,6 +61,19 @@ button{border-radius:12px !important;font-weight:800}
 .b-del{background:linear-gradient(135deg,#16337a,#1e4292) !important;color:#fff !important;
 box-shadow:0 6px 18px rgba(22,51,122,.3)}
 #shiftBtn{box-shadow:0 2px 10px rgba(20,30,60,.08)}
+
+.card.cur{border:2px solid #16337a !important;box-shadow:0 8px 26px rgba(22,51,122,.18) !important}
+.card:not(.cur):not(.done){opacity:.92}
+.stoptag{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+color:#7a7f87;text-transform:uppercase;margin-bottom:8px}
+.stoptag.on{color:#16337a;font-weight:700}
+.ready{color:#16337a;font-weight:800;font-size:.88rem;margin:6px 0}
+.sched{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#a8701f;
+font-weight:700;margin:4px 0}
+.b-nav{background:#0e1526;color:#fff;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.b-nav .navsub{font-size:.58rem;font-weight:500;opacity:.75;text-transform:uppercase;letter-spacing:.08em}
+#runline{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:#16337a;
+font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:-8px 0 14px}
 </style>
 </head>
 \1
@@ -71,6 +84,7 @@ box-shadow:0 6px 18px rgba(22,51,122,.3)}
   <div class="mark" style="display:none">GateWay <span>Day Sheet</span></div>
   <div class="who" id="who">…</div>
 </div>
+<div id="runline"></div>
 <div id="list"><div class="empty">Loading your route…</div></div>
 <p class="note">Tap Picked Up when you have it. Tap Delivered when it's done.<br>GateWay Dispatch · Fivestone Holdings · <a href="/guide/driver" style="color:#16337a">How it works</a></p>
 <script src="/static/gw-ui.js"></script>
@@ -92,22 +106,38 @@ async function load(){
   document.getElementById('who').textContent = d.driver;
   if(!d.orders.length){ document.getElementById('list').innerHTML =
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">You're all caught up</div><div style="font-size:.82rem;margin-top:4px">No deliveries assigned yet. When dispatch sends you one, your phone will buzz.</div></div>`; return; }
-  document.getElementById('list').innerHTML = d.orders.map((o, i) => `
-    <div class="card" id="${o.id}">
+  let curIdx = d.orders.findIndex(o=>o.status==='in_transit');
+  if(curIdx < 0) curIdx = 0;
+  const N = d.orders.length;
+  document.getElementById('runline').textContent =
+    N > 1 ? `RUN · ${N} STOPS · NOW ON STOP ${curIdx+1}` : '';
+  document.getElementById('list').innerHTML = d.orders.map((o, i) => {
+    const cur = (i === curIdx) && N > 0;
+    const toKitchen = o.status === 'assigned';
+    const dest = toKitchen ? o.pickup : o.dropoff;
+    return `
+    <div class="card ${cur?'cur':''}" id="${o.id}">
+      ${N>1?`<div class="stoptag ${cur?'on':''}">${cur?'▶ CURRENT · ':''}STOP ${i+1} OF ${N}</div>`:''}
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
-      <div class="oid">${d.orders.length>1?`<b style="color:#16337a">STOP ${i+1} · </b>`:''}${o.order_id}</div>
-      <div class="addr"><b>Pickup</b>${o.pickup||'—'}</div>
-      <div class="addr"><b>Dropoff</b>${o.dropoff||'—'}</div>
-      ${o.items?`<div class="items">${o.items}</div>`:''}
-      ${o.contact?`<div class="contact">${o.contact}${o.phone?` · <a href="tel:${o.phone}">${o.phone}</a>`:''}</div>`:''}
-      ${o.notes?`<div class="items">📝 ${o.notes}</div>`:''}
+      <div class="oid">${esc(o.order_id)}</div>
+      ${o.kitchen_ready?`<div class="ready">🍳 Kitchen says READY</div>`:''}
+      ${o.requested_for?`<div class="sched">SCHEDULED · ${esc(o.requested_for).replace('T',' ').slice(0,16)}</div>`:''}
+      <div class="addr"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
+      <div class="addr"><b>Dropoff</b>${esc(o.dropoff)||'—'}</div>
+      ${o.items?`<div class="items">${esc(o.items)}</div>`:''}
+      ${(o.contact||o.phone)?`<div class="contact">${esc(o.contact)||'Customer'}${o.phone?` · <a href="tel:${esc(o.phone).replace(/[^0-9+]/g,'')}">${esc(o.phone)}</a>`:''}</div>`:''}
+      ${o.notes?`<div class="items">📝 ${esc(o.notes)}</div>`:''}
       <div class="row">
+        ${dest?`<button class="b-nav" data-d="${esc(dest)}" onclick="nav(this.dataset.d)">Navigate ▸<span class="navsub">${toKitchen?'to the kitchen':'to the customer'}</span></button>`:''}
         ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
         ${o.status==='in_transit'?`<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`:''}
         <button class="b-note" onclick="addNote('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Note</button>
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
-    </div>`).join('');
+    </div>`}).join('');
+}
+function nav(addr){
+  window.open('https://maps.apple.com/?daddr=' + encodeURIComponent(addr), '_blank');
 }
 let SHIFT = false; let LASTN;
 function doneText(d){

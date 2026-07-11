@@ -80,3 +80,15 @@ def test_rush_stats_math():
     assert st["by_status"]["failed"] == 2
     assert st["by_partner"]["friendsbbq"] == 4
     assert st["delivered_today"] == 1
+
+
+def test_rush_driver_run_payload():
+    """Driver 0 carries in_transit + assigned: run must be sorted, complete, and navigable."""
+    d = client.get("/api/driver/tokR0/orders").json()
+    assert len(d["orders"]) == 2
+    # server sort: FIFO by received_at (no scheduled here) — 12:10 in_transit before 12:12 assigned
+    assert [o["order_id"] for o in d["orders"]] == ["ORD-RUSH00", "ORD-RUSH10"]
+    for o in d["orders"]:
+        # everything the card needs to render the run experience
+        for k in ("pickup", "dropoff", "status", "kitchen_ready", "requested_for"):
+            assert k in o
