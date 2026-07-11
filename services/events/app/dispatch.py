@@ -833,9 +833,14 @@ def _stats_from(records: list) -> dict:
     }
 
 
+STATUS_PRIORITY = {"failed": 0, "received": 1, "confirmed": 2,
+                   "assigned": 3, "in_transit": 4, "delivered": 5}
+
+
 @router.get("/api/board/{key}/snapshot")
 async def board_snapshot(key: str):
-    """One round-trip board load: open orders + drivers + today's stats."""
+    """One round-trip board load: open orders + drivers + today's stats.
+    Orders arrive urgency-sorted: needs-attention first, oldest first within a group."""
     _check_key(key)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     records = await at.list_records(
@@ -849,6 +854,8 @@ async def board_snapshot(key: str):
     if drivers is None:
         drivers = await at.list_records(at.DRIVERS)
         _cput("drivers:list", drivers, 45)
+    records.sort(key=lambda r: (STATUS_PRIORITY.get(r["fields"].get("status", ""), 9),
+                                r["fields"].get("received_at", "9999")))
     all_ids = [r["fields"].get("order_id", "") for r in records]
     ready_ids: set = set()
     if all_ids:
@@ -870,6 +877,8 @@ async def board_snapshot(key: str):
             "dropoff": r["fields"].get("dropoff_address", ""),
             "items": r["fields"].get("items_description", ""),
             "requested_for": r["fields"].get("requested_for", ""),
+            "partner": r["fields"].get("partner_code", ""),
+            "received_at": r["fields"].get("received_at", ""),
             "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
             "driver": (r["fields"].get("driver") or [None])[0],
         } for r in records],

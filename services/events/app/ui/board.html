@@ -100,6 +100,7 @@ select,input{border-radius:11px}
     <input id="findOrd" placeholder="Find order: ORD-XXXXXXXX" autocapitalize="characters" style="font-family:'IBM Plex Mono',monospace">
     <button onclick="findOrder()">Find</button>
   </div>
+  <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
 </div>
@@ -325,13 +326,44 @@ async function load(){
       `<div class="empty">Bad board key.<br><span style="font-size:.62rem;opacity:.55">HTTP ${r.status} ${detail}</span></div>`;
     return;
   }
-  const d = await r.json(); DRIVERS = d.drivers;
-  if(!d.orders.length){ document.getElementById('orders').innerHTML =
+  const d = await r.json(); DRIVERS = d.drivers; SNAP = d.orders;
+  paintFilters();
+  renderOrders();
+  paintStats(d.stats);
+}
+let SNAP = [], FILTER = 'all';
+const FILTERS = [
+  ['all','All', o=>true],
+  ['action','⚠ Action', o=>['failed','received'].includes(o.status)],
+  ['cooking','Cooking', o=>['confirmed','assigned'].includes(o.status)],
+  ['road','On road', o=>o.status==='in_transit'],
+  ['done','Done', o=>o.status==='delivered'],
+];
+function paintFilters(){
+  document.getElementById('filters').innerHTML = FILTERS.map(([k,label,fn])=>{
+    const n = SNAP.filter(fn).length;
+    return `<button class="tab ${FILTER===k?'on':''}" style="flex:0 0 auto;padding:8px 13px;font-size:.74rem"
+      onclick="FILTER='${k}';paintFilters();renderOrders()">${label}${n?` ${n}`:''}</button>`;
+  }).join('');
+}
+function ageChip(o){
+  if(!o.received_at || ['delivered','in_transit'].includes(o.status)) return '';
+  const m = Math.round((Date.now() - new Date(o.received_at).getTime())/60000);
+  if(isNaN(m) || m < 0) return '';
+  const col = m >= 20 ? '#e03131' : m >= 10 ? '#f0a04b' : '#7a7f87';
+  return `<span style="float:right;margin-right:8px;font-family:'IBM Plex Mono',monospace;
+    font-size:.62rem;color:${col};font-weight:700">${m}m</span>`;
+}
+const URGENCY = {failed:'#e03131', received:'#f0a04b'};
+function renderOrders(){
+  const list = SNAP.filter(FILTERS.find(f=>f[0]===FILTER)[2]);
+  if(!list.length){ document.getElementById('orders').innerHTML =
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;color:#c9cdd3;font-size:1rem">All clear</div><div style="font-size:.82rem;margin-top:4px">No open orders right now. New orders land here the moment they come in.</div></div>`; }
-  else document.getElementById('orders').innerHTML = d.orders.map(o => `
-    <div class="card">
+  else document.getElementById('orders').innerHTML = list.map(o => `
+    <div class="card" style="${URGENCY[o.status]?`border-left:4px solid ${URGENCY[o.status]}`:''}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
-      <div class="oid">${o.order_id}</div>
+      ${ageChip(o)}
+      <div class="oid">${o.order_id}${o.partner?` <span style="color:#6fa0ff">· ${esc(o.partner)}</span>`:''}</div>
       ${o.customer?`<div class="line"><b>From</b>${esc(o.customer)}</div>`:''}
       <div class="line"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
       <div class="line"><b>Drop</b>${esc(o.dropoff)||'—'}</div>
@@ -350,7 +382,6 @@ async function load(){
         ${['assigned','in_transit'].includes(o.status)?`<button class="ghost" onclick="notifyO('${o.id}')">Text update</button>`:''}
       </div>
     </div>`).join('');
-  paintStats(d.stats);
 }
 
 async function post(path, body){
