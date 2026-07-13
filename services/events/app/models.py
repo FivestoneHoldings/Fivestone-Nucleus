@@ -61,6 +61,8 @@ class Partner(Base):
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     about_blurb: Mapped[str] = mapped_column(String(280), nullable=False, default="")
     hero_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    special_text: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    special_date: Mapped[str] = mapped_column(String(10), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
@@ -102,3 +104,14 @@ class DriverLocation(Base):
     lat: Mapped[str] = mapped_column(String(30), nullable=False, default="")
     lng: Mapped[str] = mapped_column(String(30), nullable=False, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class ReopenAlert(Base):
+    """A neighbor asked to be told when a paused kitchen comes back."""
+    __tablename__ = "reopen_alerts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    notified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

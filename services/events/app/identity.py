@@ -3,15 +3,21 @@ Public: name lookup for co-branding. Key-gated: full list + create/update.
 """
 import os
 import secrets
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import Partner
+from .models import Partner, ReopenAlert
 
 router = APIRouter()
 
 SEED = [("asiacafe", "Asia Cafe"), ("asiacafexpress", "Asia Cafe Xpress")]
+
+
+def _todays_special(p) -> str:
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return p.special_text if (p.special_date == today and p.special_text) else ""
 
 
 def _new_portal_token() -> str:
@@ -55,7 +61,16 @@ def public_partner_directory():
                         .filter(MenuItem.partner_code == p.code,
                                 MenuItem.available.is_(True)).count() > 0)
             if has_menu:
-                out.append({"code": p.code, "display_name": p.display_name})
+                out.append({
+                    "code": p.code,
+                    "display_name": p.display_name,
+                    "address": p.address,
+                    "delivery_fee_cents": p.delivery_fee_cents,
+                    "accepting_orders": p.accepting_orders,
+                    "hero_url": p.hero_url,
+                    "about_blurb": p.about_blurb,
+                    "special": _todays_special(p),
+                })
     finally:
         db.close()
     return {"partners": out}
@@ -75,7 +90,8 @@ def partner_lookup(code: str):
             "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
             "accepting_orders": p.accepting_orders,
             "about_blurb": p.about_blurb,
-            "hero_url": p.hero_url}
+            "hero_url": p.hero_url,
+            "special": _todays_special(p)}
 
 
 @router.get("/api/board/{key}/partners")
@@ -93,7 +109,8 @@ def list_partners(key: str):
                           "portal_token": p.portal_token,
                           "thank_you_note": p.thank_you_note,
                           "about_blurb": p.about_blurb,
-                          "hero_url": p.hero_url}
+                          "hero_url": p.hero_url,
+                          "special": _todays_special(p)}
                          for p in rows]}
 
 
@@ -132,7 +149,8 @@ async def upsert_partner(key: str, request: Request):
 
 
 @router.post("/api/board/{key}/partners/{code}/accepting")
-async def set_accepting(key: str, code: str, request: Request):
+async def set_accepting(key: str, code: str, request: Request,
+                        background_tasks: BackgroundTasks):
     """Pause/resume ordering for a partner (kitchen slammed, closed, etc)."""
     _check_key(key)
     body = await request.json()
@@ -142,10 +160,14 @@ async def set_accepting(key: str, code: str, request: Request):
         p = db.get(Partner, code.lower().strip())
         if not p:
             raise HTTPException(404, "Unknown partner")
+        was = p.accepting_orders
         p.accepting_orders = on
+        name = p.display_name
         db.commit()
     finally:
         db.close()
+    if on and not was:
+        background_tasks.add_task(_flush_reopen_alerts, code.lower().strip(), name)
     return {"ok": True, "accepting_orders": on}
 
 
@@ -223,3 +245,49 @@ async def set_hero(key: str, code: str, request: Request):
     finally:
         db.close()
     return {"ok": True}
+
+
+@router.post("/v0/partners/{code}/notify-me")
+async def notify_me(code: str, request: Request):
+    """Public: 'text me when they're back.' A paused kitchen keeps the customer."""
+    import re as _re
+    body = await request.json()
+    phone = _re.sub(r"[^0-9+]", "", str(body.get("phone", "")))[:20]
+    if len(phone) < 10:
+        raise HTTPException(400, "A valid phone number is required")
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        dupe = (db.query(ReopenAlert)
+                .filter(ReopenAlert.partner_code == p.code,
+                        ReopenAlert.phone == phone,
+                        ReopenAlert.notified == False).count())  # noqa: E712
+        if not dupe:
+            db.add(ReopenAlert(partner_code=p.code, phone=phone))
+            db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+async def _flush_reopen_alerts(code: str, display_name: str):
+    """When a kitchen resumes, tell everyone who asked. Runs in the background."""
+    from . import notify
+    db: Session = SessionLocal()
+    try:
+        waiting = (db.query(ReopenAlert)
+                   .filter(ReopenAlert.partner_code == code,
+                           ReopenAlert.notified == False).all())  # noqa: E712
+        phones = [w.phone for w in waiting]
+        for w in waiting:
+            w.notified = True
+        db.commit()
+    finally:
+        db.close()
+    for ph in phones:
+        await notify.send_sms(f"reopen:{code}", ph,
+                              f"{display_name} is taking orders again on GateWay. "
+                              f"Order now: https://fivestone-nucleus-production.up.railway.app/order?partner={code}")
+    return len(phones)

@@ -4,7 +4,7 @@ Shows today's active orders, beeps on new ones, one button: READY FOR PICKUP.
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -84,6 +84,7 @@ async def kitchen_orders(token: str):
         "revenue_today_cents": revenue_today,
         "peak_hour": peak_hour,
         "in_kitchen_now": len(records),
+        "special": (p.special_text if p.special_date == today else ""),
         "load": ("slammed" if len(records) >= 8 else
                  "busy" if len(records) >= 4 else "steady"),
         "orders": [{
@@ -126,11 +127,13 @@ async def kitchen_ready(token: str, record_id: str, request: Request):
 
 
 @router.post("/api/kitchen/{token}/accepting")
-async def kitchen_accepting(token: str, request: Request):
+async def kitchen_accepting(token: str, request: Request,
+                            background_tasks: BackgroundTasks):
     """Kitchen self-serve pause/resume — merchants control their own gate."""
     p = _partner_by_token(token)
     body = await request.json()
     on = bool(body.get("on", True))
+    was = p.accepting_orders
     db: Session = SessionLocal()
     try:
         row = db.get(Partner, p.code)
@@ -141,4 +144,28 @@ async def kitchen_accepting(token: str, request: Request):
         db.commit()
     finally:
         db.close()
+    if on and not was:
+        from .identity import _flush_reopen_alerts
+        background_tasks.add_task(_flush_reopen_alerts, p.code, p.display_name)
     return {"ok": True, "accepting": on}
+
+
+@router.post("/api/kitchen/{token}/special")
+async def set_special(token: str, request: Request):
+    """The cook posts today's special — no corporate approval, no ad buy."""
+    p = _partner_by_token(token)
+    body = await request.json()
+    text = str(body.get("text", "")).strip()[:200]
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    db: Session = SessionLocal()
+    try:
+        row = db.get(Partner, p.code)
+        row.special_text = text
+        row.special_date = today if text else ""
+        db.add(Event(event_type="partner.special_posted", entity_ref=p.code,
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"text": text})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "special": text}

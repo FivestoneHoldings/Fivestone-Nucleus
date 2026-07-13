@@ -70,6 +70,14 @@ padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
 .gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
 letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
 .gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
+
+/* v0.49 viewport guard — nothing may exceed the phone's width */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video{max-width:100%;height:auto}
+*{min-width:0}
+.gw-bar{box-sizing:border-box;max-width:100vw}
+.catnav{max-width:100%}
+pre,code{white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 \1
@@ -125,6 +133,7 @@ letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
 
 <div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
 <script src="/static/gw-profile.js"></script>
+<script src="/static/gw-ui.js"></script>
 <script>
 try{
   const lastO = localStorage.getItem('gw_last_order');
@@ -189,9 +198,10 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
       const fee = p.delivery_fee_cents ? `$${(p.delivery_fee_cents/100).toFixed(2)} delivery` : '';
       const line = [area, fee].filter(Boolean).join(' · ') || 'Browse the menu · delivered by GateWay';
       if(p.accepting_orders === false)
-        return `<div class="tile" style="padding:15px 20px;opacity:.55">
-          <h2 style="font-size:1rem">${name}</h2>
-          <p style="margin:0;color:#d81f2a;font-weight:700">Paused right now — check back soon</p></div>`;
+        return `<div class="tile" style="padding:15px 20px">
+          <h2 style="font-size:1rem;opacity:.6">${name}</h2>
+          <p style="margin:0 0 10px;color:#d81f2a;font-weight:700">Paused right now — the kitchen is catching up</p>
+          <button onclick="notifyMe('${p.code}','${name.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;border-radius:11px;border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800;font-family:inherit;font-size:.82rem">🔔 Text me when they're back</button></div>`;
       const heroImg = p.hero_url
         ? `<img src="${p.hero_url}" alt="" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" onerror="this.parentNode.style.display='none'">`
         : `<div style="aspect-ratio:16/9;background:linear-gradient(135deg,#16337a,#0e1526);display:flex;align-items:center;justify-content:center"><img src="/static/gwd-emblem.png" alt="" style="height:58px;opacity:.9"></div>`;
@@ -199,11 +209,21 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
         <div>${heroImg}</div>
         <div style="padding:14px 18px;position:relative">
           <span class="arrow" style="position:absolute;right:18px;top:16px">→</span>
+          ${p.special?`<div style="display:inline-block;background:#fdf9ee;border:1px solid #eadfae;color:#8a6d3b;border-radius:8px;padding:4px 9px;font-size:.7rem;font-weight:700;margin-bottom:6px">✨ ${String(p.special).replace(/</g,'&lt;')}</div>`:''}
           <h2 style="font-size:1rem;margin:0 0 2px">${name}${p._usual?' <span style="font-family:\'IBM Plex Mono\',monospace;font-size:.5rem;background:#16337a;color:#fff;border-radius:10px;padding:3px 8px;vertical-align:middle;letter-spacing:.1em">YOUR USUAL</span>':''}</h2>
           <p style="margin:0">${line}</p>
         </div></a>`;
     }).join('');
 }).catch(()=>{});
+async function notifyMe(code, name){
+  const phone = await gwPrompt({title:`Text me when ${name} is back`,
+    placeholder:'865-555-0100', inputmode:'tel', confirm:'Notify me',
+    body:"We'll send one text the moment they start taking orders again. That's it — no marketing, ever."});
+  if(!phone) return;
+  const r = await fetch(`/v0/partners/${code}/notify-me`, {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone})});
+  gwToast(r.ok ? "You're on the list — we'll text you ✓" : 'Enter a valid phone number.', r.ok);
+}
 function go(path, id){
   const v = document.getElementById(id).value.trim();
   if(!v) return;

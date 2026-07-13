@@ -70,6 +70,14 @@ padding:12px 10px;text-align:center;box-shadow:0 2px 10px rgba(20,30,60,.05)}
 .pride .p span{font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:#7a7f87;
 text-transform:uppercase;letter-spacing:.08em}
 .pride .p.accent b{color:#d81f2a}
+
+/* v0.49 viewport guard — nothing may exceed the phone's width */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video{max-width:100%;height:auto}
+*{min-width:0}
+.gw-bar{box-sizing:border-box;max-width:100vw}
+.catnav{max-width:100%}
+pre,code{white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 \1
@@ -78,6 +86,7 @@ text-transform:uppercase;letter-spacing:.08em}
 
 <div class="mark" style="display:none">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
+<div id="specialBar" style="margin-bottom:14px"></div>
 <div id="loadBanner"></div>
 <div id="pride" class="pride"></div>
 <div id="pickchip" style="display:none"></div>
@@ -97,6 +106,17 @@ function paintGate(){
   b.textContent = ACCEPTING ? '⏸ Pause new orders' : '▶ Resume orders';
   b.style.background = ACCEPTING ? 'transparent' : '#16337a';
   b.style.color = ACCEPTING ? '#16337a' : '#fff';
+}
+async function editSpecial(current){
+  const text = await gwPrompt({title:"Today's special", multiline:true, value: current,
+    placeholder:'Brisket just came off the smoker — while it lasts.',
+    confirm:'Post it', cancel:'Back',
+    body:'Customers see this at the top of your menu and on the GateWay home screen — instantly. No approval, no ad buy. Leave blank to clear it.'});
+  if(text === null) return;
+  const r = await fetch(api('/special'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+  if(r.ok){ gwToast(text ? 'Special posted ✓' : 'Special cleared'); load(); }
+  else gwToast('Could not post.', false);
 }
 async function pauseFifteen(){
   const ok = await gwConfirm({title:'Pause new orders for 15 minutes?',
@@ -160,6 +180,13 @@ async function load(){
      <div class="p"><b>${rev}</b><span>Food sales today</span></div>
      <div class="p"><b>${peak}</b><span>Busiest hour</span></div>`;
   ACCEPTING = d.accepting; paintGate();
+  const sp = d.special || '';
+  document.getElementById('specialBar').innerHTML = sp
+    ? `<div style="background:#fdf9ee;border:1.5px solid #eadfae;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div><div style="font-family:monospace;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:#a8894a">Today's special — live to customers</div>
+        <div style="font-weight:800;font-size:.92rem;margin-top:2px">${esc(sp)}</div></div>
+        <button onclick="editSpecial(${JSON.stringify(sp)})" style="flex:0 0 auto;width:auto;padding:9px 13px;font-size:.75rem;margin:0;background:transparent;color:#a8894a;border:1.5px solid #eadfae;box-shadow:none">Change</button></div>`
+    : `<button onclick="editSpecial('')" style="width:100%;padding:12px;background:transparent;border:1.5px dashed #c3d0f0;color:#16337a;box-shadow:none;font-size:.84rem">✨ Post today's special</button>`;
   const lb = document.getElementById('loadBanner');
   if(d.load === 'slammed' && ACCEPTING){
     lb.innerHTML = `<div style="background:#3a1512;color:#ffb4a8;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-weight:700;font-size:.86rem;display:flex;align-items:center;justify-content:space-between;gap:10px">

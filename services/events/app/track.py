@@ -49,6 +49,7 @@ _HEAD = """<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/static/gw-profile.js"></script>
+<script src="/static/gw-ui.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>*{-webkit-tap-highlight-color:transparent}
 body{font-family:'Archivo',system-ui,sans-serif;background:#f7f8fb;color:#16181b;
@@ -82,6 +83,9 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}
 color:#fff;font-size:2.4rem;line-height:84px;text-align:center;margin:8px auto 14px;
 box-shadow:0 10px 30px rgba(22,51,122,.35);animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.tipb{flex:1;padding:12px;border-radius:11px;border:1.5px solid #c3d0f0;background:#fff;
+color:#16337a;font-weight:800;font-family:inherit;font-size:.88rem;cursor:pointer}
+.tipb:active{background:#eef2fc}
 .again{display:block;text-align:center;background:linear-gradient(135deg,#16337a,#1e4292);color:#fff;
 text-decoration:none;font-weight:800;padding:15px;border-radius:14px;margin:18px 0 8px;
 box-shadow:0 8px 22px rgba(22,51,122,.3)}
@@ -95,7 +99,15 @@ padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
 .gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
 letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
 .gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
-@media (prefers-reduced-motion: reduce){.step.now .dot,.livebadge i,.celebrate{animation:none}}</style></head>"""
+@media (prefers-reduced-motion: reduce){.step.now .dot,.livebadge i,.celebrate{animation:none}}
+/* v0.49 viewport guard — nothing may exceed the phone's width */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video{max-width:100%;height:auto}
+*{min-width:0}
+.gw-bar{box-sizing:border-box;max-width:100vw}
+.catnav{max-width:100%}
+pre,code{white-space:pre-wrap;word-break:break-word}
+</style></head>"""
 
 _MAP_SCRIPT = """
 <div id="mapwrap" style="display:none;margin:20px 0">
@@ -175,6 +187,23 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+async function addTip(cents){
+  if(!cents){
+    const v = await gwPrompt({title:'Tip your driver', inputmode:'decimal', placeholder:'5.00',
+      confirm:'Send tip', body:'100% goes to the neighbor who brought your food.'});
+    if(!v) return;
+    cents = Math.round(parseFloat(v) * 100);
+    if(isNaN(cents) || cents <= 0) return gwToast('Enter a valid amount.', false);
+  }
+  const r = await fetch('/v0/track/' + encodeURIComponent(OID) + '/tip', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({cents})});
+  const box = document.getElementById('tipBox');
+  if(r.ok){
+    const d = await r.json();
+    box.innerHTML = '<div style="text-align:center;font-weight:800;color:#16337a">' +
+      'Thank you 🧡 $' + (d.tip_cents/100).toFixed(2) + ' tipped — 100% to your driver.</div>';
+  } else gwToast('Could not add the tip.', false);
+}
 // elapsed ticker
 const el = document.getElementById('elapsed');
 if(el && el.dataset.rcv){
@@ -312,7 +341,17 @@ async def track(order_id: str):
                       f'<img src="/proof/{_esc(oid)}" alt="Delivery photo" '
                       f'style="width:100%;border-radius:14px;border:1.5px solid #d9deea;'
                       f'margin:0 0 14px" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'none\'">')
-        again_html = '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>'
+        again_html = ('<div id="tipBox" style="background:#fff;border:1px solid #e4e8f2;border-radius:16px;'
+                      'padding:16px 18px;margin:0 0 14px;box-shadow:0 3px 16px rgba(20,30,60,.06)">'
+                      '<div style="font-weight:800;font-size:.95rem;margin-bottom:3px">Add a tip for your driver?</div>'
+                      '<div style="font-size:.8rem;color:#7a7f87;margin-bottom:11px">100% goes to them. No account needed.</div>'
+                      '<div style="display:flex;gap:8px">'
+                      '<button class="tipb" onclick="addTip(200)">$2</button>'
+                      '<button class="tipb" onclick="addTip(300)">$3</button>'
+                      '<button class="tipb" onclick="addTip(500)">$5</button>'
+                      '<button class="tipb" onclick="addTip(0)">Other</button>'
+                      '</div></div>'
+                      '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>')
     micro_text = MICRO.get(status, "")
     if driver_first and status == "assigned":
         micro_text = f"Your neighbor {_esc(driver_first)} is heading to pick it up."

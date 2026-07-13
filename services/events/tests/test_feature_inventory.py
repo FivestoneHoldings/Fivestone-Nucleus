@@ -12,7 +12,7 @@ CHECKS = {
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
    "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
-   "YOUR USUAL", "og:title", "localImpact", "quickReorder",
+   "YOUR USUAL", "og:title", "localImpact", "quickReorder", "notifyMe", "viewport guard",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
@@ -23,7 +23,7 @@ CHECKS = {
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
    "Photo from your driver", "livebadge", "pollStatus", "gw_last_order", "subtotal",
-   "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp", "anticipation",
+   "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp", "anticipation", "addTip", "viewport guard",
  ],
  "app/ui/driver.html": [
    "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "esc(o.pickup)", "Kitchen says READY",
@@ -31,7 +31,7 @@ CHECKS = {
    "HAS_ACTIVE = (d.orders", "/guide/driver", "netDown", "skel",
  ],
  "app/ui/kitchen.html": [
-   "gateBtn", "DRIVER COMING", "AudioContext", "slidein",
+   "gateBtn", "DRIVER COMING", "AudioContext", "slidein", "editSpecial",
    "markReady", "/guide/kitchen", "netDown", "skel", "esc(o.items)",
    "pride", "in_kitchen_now", "pauseFifteen", "loadBanner",
  ],
@@ -50,7 +50,9 @@ CHECKS = {
                      "delivered_today", "peak_hour", "revenue_today", "load"],
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
-                      "stripe_configured", "retention_sweep", "demo-order", "local_impact", "heads_up"],
+                      "stripe_configured", "retention_sweep", "demo-order", "local_impact", "heads_up",
+                      "add_tip"],
+ "app/identity.py": ["_todays_special", "notify_me", "_flush_reopen_alerts", "hero_url"],
  "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
  "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting", "topKitchen", "setFavorite"],
  "app/payments.py": ["configured", "normalize_method", "cod"],

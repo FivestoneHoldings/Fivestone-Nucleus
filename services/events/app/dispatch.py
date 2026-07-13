@@ -1143,3 +1143,31 @@ async def track_heads_up(order_id: str):
     finally:
         db.close()
     return {"note": note[:160]}
+
+
+@router.post("/v0/track/{order_id}/tip")
+async def add_tip(order_id: str, request: Request):
+    """Public: add (or increase) a tip after delivery. 100% to the driver.
+    The big apps hide this behind an account; a neighbor should just be able to say thanks."""
+    oid = _fq(order_id.upper().strip())
+    body = await request.json()
+    try:
+        add_cents = int(body.get("cents", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "cents must be a number")
+    if add_cents <= 0 or add_cents > 20000:
+        raise HTTPException(400, "Tip must be between $0.01 and $200")
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    f = recs[0]["fields"]
+    if f.get("status") not in ("delivered", "closed"):
+        raise HTTPException(409, "You can add a tip once your order is delivered.")
+    old_tip = int(f.get("tip_cents") or 0)
+    new_tip = old_tip + add_cents
+    new_total = int(f.get("total_cents") or 0) + add_cents
+    await at.patch_record(at.ORDERS, recs[0]["id"],
+                          {"tip_cents": new_tip, "total_cents": new_total})
+    _log_event("order.tip_added", oid, "customer",
+               {"added_cents": add_cents, "tip_cents": new_tip})
+    return {"ok": True, "tip_cents": new_tip}

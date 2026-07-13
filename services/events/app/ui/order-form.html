@@ -29,7 +29,7 @@
     background: var(--paper); color: var(--ink);
     min-height: 100vh; display: flex; justify-content: center; padding: 24px 16px 64px;
   }
-  .card { width: 100%; max-width: 560px; }
+  .card { width: 100%; max-width: min(560px, calc(100vw - 24px)); box-sizing: border-box; }
   header { margin-bottom: 28px; }
   .mark {
     font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em;
@@ -168,6 +168,14 @@ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hi
 .mact{display:flex;align-items:center;padding-right:12px}
 .m86{opacity:.5}
 .m86 .mname::after{content:' · 86ʼd';color:#d81f2a;font-size:.7rem}
+
+/* v0.49 viewport guard — nothing may exceed the phone's width */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video{max-width:100%;height:auto}
+*{min-width:0}
+.gw-bar{box-sizing:border-box;max-width:100vw}
+.catnav{max-width:100%}
+pre,code{white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 \1
@@ -350,7 +358,12 @@ function renderMenu(m){
   if(meta.address) facts.push(meta.address.split(',')[0]);
   if(meta.delivery_fee_cents != null) facts.push(`$${(meta.delivery_fee_cents/100).toFixed(2)} delivery`);
   facts.push('Delivered by a neighbor');
-  const head = `<div class="rhead">
+  const spec = meta.special
+    ? `<div style="background:#fdf9ee;border:1.5px solid #eadfae;border-radius:14px;padding:13px 16px;margin-bottom:12px">
+        <div style="font-family:monospace;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:#a8894a;margin-bottom:3px">✨ Today's special — straight from the kitchen</div>
+        <div style="font-weight:800;font-size:.95rem">${String(meta.special).replace(/</g,'&lt;')}</div></div>`
+    : '';
+  const head = spec + `<div class="rhead">
     <div class="img">${heroInner}<div class="scrim"></div><div class="nm">${nm}</div></div>
     <div class="meta">
       ${meta.about_blurb?`<div class="story">${(meta.about_blurb||'').replace(/</g,'&lt;')}</div>`:''}
