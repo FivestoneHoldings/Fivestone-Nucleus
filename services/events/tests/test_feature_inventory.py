@@ -11,7 +11,7 @@ CHECKS = {
  "app/ui/home.html": [
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
    "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
-   "Local kitchens", "Paused right now", "<details", "gw-profile.js", "/me",
+   "Local kitchens", "rrow paused", "notifyMe", "<details", "gw-profile.js", "/me",
    "YOUR USUAL", "og:title", "localImpact", "quickReorder", "notifyMe", "viewport guard",
  ],
  "app/ui/order-form.html": [

@@ -32,7 +32,7 @@ def test_home_storefront_first_and_gate_collapsed():
     assert html.index('id="restaurants"') < html.index("custom delivery")
     assert "<details" in html and "GateWay team" in html
     assert "Local kitchens, delivered by your neighbors" in html
-    assert "Paused right now" in html  # renderer handles paused partners
+    assert "rrow paused" in html and "notifyMe" in html  # paused kitchens keep the customer
 
 
 def test_form_has_payment_section():

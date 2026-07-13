@@ -78,6 +78,32 @@ img,svg,video{max-width:100%;height:auto}
 .gw-bar{box-sizing:border-box;max-width:100vw}
 .catnav{max-width:100%}
 pre,code{white-space:pre-wrap;word-break:break-word}
+
+/* ===== RESTAURANT ROWS — scales past 3 kitchens (v0.51) ===== */
+.rsec{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+text-transform:uppercase;color:#9a9ea5;margin:20px 0 10px;font-weight:500}
+.rrow{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);
+border-radius:16px;padding:11px;margin-bottom:9px;text-decoration:none;color:inherit;
+box-shadow:0 2px 10px rgba(20,30,60,.05);transition:transform .14s, box-shadow .14s}
+.rrow:active{transform:scale(.985)}
+.rthumb{width:66px;height:66px;min-width:66px;border-radius:13px;overflow:hidden;
+background:linear-gradient(135deg,#16337a,#0e1526);display:flex;align-items:center;justify-content:center}
+.rthumb img.photo{width:100%;height:100%;object-fit:cover;display:block}
+.rthumb img.emb{width:62%;height:auto;opacity:.92}
+.rinfo{flex:1;min-width:0}
+.rname{font-weight:800;font-size:1rem;line-height:1.25;display:flex;align-items:center;gap:6px;
+flex-wrap:wrap}
+.rmeta{font-size:.76rem;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;
+text-overflow:ellipsis}
+.rspecial{font-size:.72rem;color:#8a6d3b;background:#fdf9ee;border:1px solid #eadfae;
+border-radius:7px;padding:2px 7px;margin-top:5px;display:inline-block;max-width:100%;
+overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbadge{font-family:'IBM Plex Mono',monospace;font-size:.5rem;background:#16337a;color:#fff;
+border-radius:9px;padding:3px 7px;letter-spacing:.1em;font-weight:500}
+.rgo{color:#c3ccdb;font-size:1.2rem;flex:0 0 auto}
+.rrow.paused{opacity:.72}
+.rpausebtn{width:100%;padding:10px;border-radius:11px;border:1.5px solid #16337a;background:#fff;
+color:#16337a;font-weight:800;font-family:inherit;font-size:.8rem;margin-top:8px;cursor:pointer}
 </style>
 </head>
 \1
@@ -183,37 +209,39 @@ fetch('/v0/local-impact').then(r=>r.json()).then(li=>{
     </div></div>`;
 }).catch(()=>{});
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
-  if(!d.partners || !d.partners.length) return;
-  document.getElementById('restaurants').innerHTML =
-    '<h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#5a5e64;margin:4px 0 10px;font-weight:800">Order from a local kitchen</h3>' +
-    (()=>{ try{
-      const hist = (gwProfile.get().history||[]);
-      const counts = {};
-      hist.forEach(h=>{ if(h.partner) counts[h.partner]=(counts[h.partner]||0)+1; });
-      d.partners.sort((a,b)=>(counts[b.code]||0)-(counts[a.code]||0));
-      d.partners.forEach(p=>{ p._usual = (counts[p.code]||0) >= 2; });
-    }catch(e){} return d.partners; })().map(p=>{
-      const name = p.display_name.replace(/</g,'&lt;');
-      const area = (p.address||'').split(',')[0].replace(/</g,'&lt;');
-      const fee = p.delivery_fee_cents ? `$${(p.delivery_fee_cents/100).toFixed(2)} delivery` : '';
-      const line = [area, fee].filter(Boolean).join(' · ') || 'Browse the menu · delivered by GateWay';
-      if(p.accepting_orders === false)
-        return `<div class="tile" style="padding:15px 20px">
-          <h2 style="font-size:1rem;opacity:.6">${name}</h2>
-          <p style="margin:0 0 10px;color:#d81f2a;font-weight:700">Paused right now — the kitchen is catching up</p>
-          <button onclick="notifyMe('${p.code}','${name.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;border-radius:11px;border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800;font-family:inherit;font-size:.82rem">🔔 Text me when they're back</button></div>`;
-      const heroImg = p.hero_url
-        ? `<img src="${p.hero_url}" alt="" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" onerror="this.parentNode.style.display='none'">`
-        : `<div style="aspect-ratio:16/9;background:linear-gradient(135deg,#16337a,#0e1526);display:flex;align-items:center;justify-content:center"><img src="/static/gwd-emblem.png" alt="" style="height:58px;opacity:.9"></div>`;
-      return `<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:0;overflow:hidden">
-        <div>${heroImg}</div>
-        <div style="padding:14px 18px;position:relative">
-          <span class="arrow" style="position:absolute;right:18px;top:16px">→</span>
-          ${p.special?`<div style="display:inline-block;background:#fdf9ee;border:1px solid #eadfae;color:#8a6d3b;border-radius:8px;padding:4px 9px;font-size:.7rem;font-weight:700;margin-bottom:6px">✨ ${String(p.special).replace(/</g,'&lt;')}</div>`:''}
-          <h2 style="font-size:1rem;margin:0 0 2px">${name}${p._usual?' <span style="font-family:\'IBM Plex Mono\',monospace;font-size:.5rem;background:#16337a;color:#fff;border-radius:10px;padding:3px 8px;vertical-align:middle;letter-spacing:.1em">YOUR USUAL</span>':''}</h2>
-          <p style="margin:0">${line}</p>
-        </div></a>`;
-    }).join('');
+  const el = document.getElementById('restaurants');
+  if(!d.partners || !d.partners.length){ el.innerHTML = ''; return; }
+  let counts = {};
+  try{ (gwProfile.get().history||[]).forEach(h=>{ if(h.partner) counts[h.partner]=(counts[h.partner]||0)+1; }); }catch(e){}
+  const list = d.partners.slice().sort((a,b)=>(counts[b.code]||0)-(counts[a.code]||0));
+  el.innerHTML = '<div class="rsec">Local kitchens · ' + list.length + '</div>' + list.map(p=>{
+    const name = (p.display_name||'').replace(/</g,'&lt;');
+    const area = (p.address||'').split(',')[0].replace(/</g,'&lt;');
+    const fee = p.delivery_fee_cents ? '$' + (p.delivery_fee_cents/100).toFixed(2) + ' delivery' : '';
+    const meta = [area, fee].filter(Boolean).join(' · ');
+    const usual = (counts[p.code]||0) >= 2 ? '<span class="rbadge">YOUR USUAL</span>' : '';
+    const thumb = p.hero_url
+      ? `<div class="rthumb"><img class="photo" src="${p.hero_url}" alt="" loading="lazy"
+           onerror="this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))"></div>`
+      : `<div class="rthumb"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
+    if(p.accepting_orders === false){
+      return `<div class="rrow paused" style="flex-wrap:wrap">
+        ${thumb}
+        <div class="rinfo"><div class="rname">${name}</div>
+          <div class="rmeta" style="color:#d81f2a;font-weight:700">Paused — the kitchen is catching up</div></div>
+        <button class="rpausebtn" onclick="notifyMe('${p.code}','${name.replace(/'/g,"\\'")}')">🔔 Text me when they're back</button>
+      </div>`;
+    }
+    return `<a class="rrow" href="/order?partner=${encodeURIComponent(p.code)}">
+      ${thumb}
+      <div class="rinfo">
+        <div class="rname">${name}${usual}</div>
+        <div class="rmeta">${meta || 'Browse the menu'}</div>
+        ${p.special?`<div class="rspecial">✨ ${String(p.special).replace(/</g,'&lt;')}</div>`:''}
+      </div>
+      <span class="rgo">›</span>
+    </a>`;
+  }).join('');
 }).catch(()=>{});
 async function notifyMe(code, name){
   const phone = await gwPrompt({title:`Text me when ${name} is back`,
