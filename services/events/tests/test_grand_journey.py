@@ -94,3 +94,59 @@ def test_grand_journey():
     client.post(f"{K}/orders/{rec}/close")
     summary = client.get(f"{K}/summary").json()
     assert summary["delivered"] >= 1 and summary["revenue_cents"] >= 2498
+
+
+def test_grand_journey_v2_every_feature():
+    """The full MVP, end to end: phone order → cash → special → heads-up → delivered →
+    tip → round-up → private feedback → earnings → statement → readiness."""
+    import json as _json
+    # Kitchen posts today's special from their own screen
+    ktok = SessionLocal().get(Partner, "burgerboys").portal_token
+    assert client.post(f"/api/kitchen/{ktok}/special",
+                       json={"text": "Collards just came off"}).status_code == 200
+    assert "Collards" in client.get("/v0/partners/burgerboys").json()["special"]
+
+    # A neighbor CALLS. Dispatch types it in (no app, no card).
+    r = client.post(f"{K}/phone-order", json={
+        "partner": "burgerboys", "items": "1× Kobe Burger", "subtotal_cents": 875,
+        "address": "9 Ridge Rd, Maryville TN", "name": "Ruth", "phone": "865-555-0121",
+        "tip_cents": 200, "notes": "Ring twice"})
+    assert r.status_code == 200
+    oid, rec = r.json()["order_id"], r.json()["record_id"]
+
+    # Driver assigned; cash-due is visible to them
+    tok = client.post(f"{K}/drivers", json={"name": "Ada Neighbor"}).json()["day_token"]
+    snap = client.get(f"{K}/snapshot").json()
+    drv = [d["id"] for d in snap["drivers"] if d["name"] == "Ada Neighbor"][0]
+    client.post(f"{K}/orders/{rec}/confirm")
+    client.post(f"{K}/orders/{rec}/assign", json={"driver_id": drv})
+    sheet = client.get(f"/api/driver/{tok}/orders").json()
+    mine = [o for o in sheet["orders"] if o["order_id"] == oid][0]
+    assert mine["collect_cash_cents"] == mine["total_cents"] > 0     # cash at the door
+
+    # Kitchen ready → driver picks up → sends a heads-up the customer sees
+    client.post(f"/api/kitchen/{ktok}/orders/{rec}/ready", json={})
+    client.post(f"/api/driver/{tok}/orders/{rec}/picked_up", json={"lat": "35.7", "lng": "-83.9"})
+    client.post(f"/api/driver/{tok}/orders/{rec}/heads-up", json={"note": "Two minutes out"})
+    assert client.get(f"/v0/track/{oid}/heads-up").json()["note"] == "Two minutes out"
+
+    # Delivered → customer tips MORE, rounds up for a neighbor, and speaks privately
+    client.post(f"/api/driver/{tok}/orders/{rec}/delivered", json={})
+    assert client.post(f"/v0/track/{oid}/tip", json={"cents": 300}).json()["tip_cents"] == 500
+    assert client.post(f"/v0/track/{oid}/round-up", json={"cents": 200}).status_code == 200
+    assert client.post(f"/v0/track/{oid}/feedback",
+                       json={"good": True, "note": "Ruth says thank you"}).status_code == 200
+
+    # The kitchen reads her words; the fund grew; the driver sees their pay
+    fb = client.get(f"/api/kitchen-feedback/{ktok}").json()
+    assert any("Ruth says thank you" in n["note"] for n in fb["notes"])
+    assert client.get("/v0/community-fund").json()["cents"] >= 200
+    earn = client.get(f"/api/driver/{tok}/earnings").json()
+    assert earn["totals"]["deliveries"] >= 1 and earn["totals"]["tips_cents"] >= 500
+
+    # The money lands: statement + readiness both reflect reality
+    stmt = client.get(f"{K}/statement/burgerboys").text
+    assert oid in stmt
+    ready = client.get(f"{K}/readiness").json()
+    assert isinstance(ready["ready_to_take_orders"], bool)
+    assert any(c["area"] == "Drivers" and c["ok"] for c in ready["checks"])
