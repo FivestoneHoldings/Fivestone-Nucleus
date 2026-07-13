@@ -24,12 +24,15 @@
     --accent: #16337a; --accent-soft: #e8efe b;
   }
   * { box-sizing: border-box; margin: 0; }
+  html { background: var(--paper); }
   body {
     font-family: 'Archivo', system-ui, sans-serif;
     background: var(--paper); color: var(--ink);
-    min-height: 100vh; display: flex; justify-content: center; padding: 24px 16px 64px;
+    min-height: 100vh;
+    max-width: 560px; margin: 0 auto;
+    padding: 24px 16px 64px;
   }
-  .card { width: 100%; max-width: min(560px, calc(100vw - 24px)); box-sizing: border-box; }
+  .card { width: 100%; }
   header { margin-bottom: 28px; }
   .mark {
     font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em;
@@ -192,38 +195,38 @@ border:1.5px solid transparent;background:#f2f4fa;font-family:inherit;font-size:
 border-radius:8px;padding:3px 7px;margin-top:5px;display:inline-block;cursor:pointer}
 .mnote.empty{color:#9aa3b5;background:#f2f4fa}
 
-/* ===== MENU — single authoritative block (v0.51) ===== */
+/* ===== MENU — single authoritative block (v1.0.1) ===== */
 .mcat{font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
-letter-spacing:.12em;color:#16337a;font-weight:600;margin:20px 0 9px;padding-bottom:6px;
-border-bottom:1px solid #e4e8f2}
-.mitem{display:flex;align-items:stretch;gap:0;background:#fff;border:1px solid #e4e8f2;
+letter-spacing:.1em;color:#16337a;font-weight:600;margin:22px 0 10px;padding-bottom:6px;
+border-bottom:1px solid #e4e8f2;line-height:1.4}
+.mitem{display:flex;align-items:center;background:#fff;border:1px solid #e4e8f2;
 border-radius:16px;overflow:hidden;margin-bottom:10px;box-shadow:0 2px 10px rgba(20,30,60,.05)}
-.mphoto{width:92px;min-width:92px;background:#eef2fc;position:relative;overflow:hidden}
+.mphoto{width:84px;height:84px;min-width:84px;flex:0 0 84px;background:#eef2fc;
+position:relative;overflow:hidden}
 .mphoto img{width:100%;height:100%;object-fit:cover;display:block}
 .mphoto .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
 background:linear-gradient(135deg,#16337a,#0e1526)}
-.mphoto .ph img{width:56%;height:auto;object-fit:contain;opacity:.92}
-.mbody{flex:1;min-width:0;padding:12px 12px 12px 13px;display:flex;flex-direction:column;
-justify-content:center}
-.mname{font-weight:800;font-size:.92rem;line-height:1.25;margin-bottom:2px}
-.mdesc{font-size:.74rem;color:#7a7f87;line-height:1.4;margin-bottom:5px;
-display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.mprice{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.84rem;color:#16337a}
-.mnote{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:#16337a;background:#eef2fc;
-border-radius:7px;padding:3px 7px;margin-top:6px;display:inline-block;cursor:pointer;
+.mphoto .ph img{width:58%;height:auto;object-fit:contain;opacity:.92}
+.mbody{flex:1 1 auto;min-width:0;padding:10px 10px 10px 12px}
+.mname{font-weight:800;font-size:.9rem;line-height:1.25;margin-bottom:2px;
+overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mdesc{font-size:.72rem;color:#7a7f87;line-height:1.35;margin-bottom:4px;
+display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.mprice{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.82rem;color:#16337a}
+.mnote{font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:#16337a;background:#eef2fc;
+border-radius:6px;padding:2px 6px;margin-top:5px;display:inline-block;cursor:pointer;
 max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mnote.empty{color:#9aa3b5;background:#f4f6fb}
-.mact{display:flex;align-items:center;padding:0 11px 0 6px;flex:0 0 auto}
-.step{display:flex;align-items:center;gap:6px}
-.step button{width:31px;height:31px;min-width:31px;padding:0;border-radius:50%;
-border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800;font-size:1.05rem;
+.mact{flex:0 0 auto;display:flex;align-items:center;padding:0 10px}
+.step{display:flex;align-items:center;gap:5px}
+.step button{width:29px;height:29px;min-width:29px;flex:0 0 29px;padding:0;border-radius:50%;
+border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800;font-size:1rem;
 line-height:1;display:flex;align-items:center;justify-content:center;font-family:inherit;cursor:pointer}
 .step button:active{background:#16337a;color:#fff}
-.step span{min-width:16px;text-align:center;font-weight:800;font-size:.9rem;
+.step span{min-width:14px;text-align:center;font-weight:800;font-size:.85rem;
 font-family:'IBM Plex Mono',monospace}
 .mitem.m86{opacity:.5}
-.mitem.m86 .mname::after{content:" · 86'd";color:#d81f2a;font-size:.68rem;font-weight:600}
-.soldout{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:#d81f2a;font-weight:600;
+.soldout{font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:#d81f2a;font-weight:600;
 white-space:nowrap}
 </style>
 </head>
@@ -309,6 +312,11 @@ white-space:nowrap}
 
     <button type="submit">Send Order to GateWay</button>
   </form>
+<div class="gwd-powered">
+  <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
+  <div><span>Powered by</span><b>GateWay Delivery</b></div>
+</div>
+
 
   <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
 </div>
@@ -597,9 +605,5 @@ function compose(){
     `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25);font-size:1rem"><span>${n} ${n===1?'item':'items'} · Total</span><span class="tot">${money(total)}</span></div>`;
 }
 </script>
-<div class="gwd-powered">
-  <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
-  <div><span>Powered by</span><b>GateWay Delivery</b></div>
-</div>
 </body>
 </html>
