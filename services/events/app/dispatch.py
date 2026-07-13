@@ -167,6 +167,7 @@ async def driver_orders(day_token: str):
     if not at.configured():
         raise HTTPException(503, "AIRTABLE_PAT not configured")
     drv = await _driver_by_token(day_token)
+    pay_by_order: dict = {}
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     combined = await at.list_records(
         at.ORDERS,
@@ -188,6 +189,14 @@ async def driver_orders(day_token: str):
                      .filter(Event.event_type == "order.kitchen_ready",
                              Event.entity_ref.in_(mine_ids)).all())
             ready_ids = {e.entity_ref for e in _rows}
+            import json as _pj
+            for e in (_dbr.query(Event)
+                      .filter(Event.event_type == "order.payment_method",
+                              Event.entity_ref.in_(mine_ids)).all()):
+                try:
+                    pay_by_order[e.entity_ref] = _pj.loads(e.payload).get("method", "cod")
+                except Exception:
+                    pay_by_order[e.entity_ref] = "cod"
         finally:
             _dbr.close()
     done_recs = [r for r in combined
@@ -212,6 +221,8 @@ async def driver_orders(day_token: str):
             "notes": r["fields"].get("special_instructions", ""),
             "requested_for": r["fields"].get("requested_for", ""),
             "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
+            "collect_cash_cents": _cash_due(r["fields"], pay_by_order),
+            "total_cents": int(r["fields"].get("total_cents") or 0),
         } for r in mine],
     }
 
@@ -458,6 +469,13 @@ async def confirm_order(key: str, record_id: str):
     _log_event("order.confirmed", order_id, "founder", {})
     await _mirror_event_airtable("order.confirmed", order_id, "founder", "")
     return {"ok": True, "order_id": order_id}
+
+
+def _cash_due(fields: dict, pay_by_order: dict) -> int:
+    """Cash-on-delivery amount the driver collects at the door (0 if prepaid)."""
+    if pay_by_order.get(fields.get("order_id", "")) == "card":
+        return 0
+    return int(fields.get("total_cents") or 0)
 
 
 async def _order_state(record_id: str) -> str:
@@ -1171,3 +1189,92 @@ async def add_tip(order_id: str, request: Request):
     _log_event("order.tip_added", oid, "customer",
                {"added_cents": add_cents, "tip_cents": new_tip})
     return {"ok": True, "tip_cents": new_tip}
+
+
+@router.post("/api/board/{key}/phone-order")
+async def phone_order(key: str, request: Request):
+    """The chains have no phone number. GateWay does: a neighbor calls, dispatch types it in.
+    Same record path, same tracking, same texts — just entered by a human who answered."""
+    _check_key(key)
+    import hashlib
+    from .models import Partner as P
+    body = await request.json()
+    code = _fq(str(body.get("partner", "")).lower())
+    items = str(body.get("items", "")).strip()[:600]
+    addr = str(body.get("address", "")).strip()[:300]
+    name = str(body.get("name", "")).strip()[:120]
+    phone = str(body.get("phone", "")).strip()[:40]
+    notes = str(body.get("notes", "")).strip()[:300]
+    try:
+        subtotal = int(body.get("subtotal_cents") or 0)
+        tip = int(body.get("tip_cents") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Amounts must be numbers")
+    if not items or not addr:
+        raise HTTPException(400, "Items and address are required")
+    pay = str(body.get("payment_method", "cod")).lower()
+    pay = pay if pay in ("cod", "card") else "cod"
+
+    db: Session = SessionLocal()
+    try:
+        p = db.get(P, code) if code else None
+        pickup = p.address if p else ""
+        fee = p.delivery_fee_cents if p else 399
+    finally:
+        db.close()
+    total = subtotal + fee + tip
+    now = _now()
+    oid = "ORD-" + hashlib.md5(f"phone{addr}{items}{now}".encode()).hexdigest()[:8].upper()
+    fields = {
+        "order_id": oid, "status": "received", "source_channel": "phone",
+        "partner_code": code, "pickup_address": pickup, "dropoff_address": addr,
+        "items_description": items, "special_instructions": notes,
+        "customer_name_raw": name, "customer_phone_raw": phone,
+        "fingerprint": hashlib.md5(f"phone{now}{addr}".encode()).hexdigest(),
+        "received_at": now, "subtotal_cents": subtotal, "fee_cents": fee,
+        "tip_cents": tip, "total_cents": total,
+    }
+    created = await at.create_record(at.ORDERS, fields)
+    _log_event("order.received", oid, "founder:phone",
+               {"channel": "phone", "partner": code, "payment_method": pay})
+    _log_event("order.payment_method", oid, "founder:phone", {"method": pay})
+    return {"ok": True, "order_id": oid, "record_id": created["id"],
+            "total_cents": total, "fee_cents": fee}
+
+
+@router.get("/v0/community-fund")
+async def community_fund():
+    """Public: neighbors rounding up to cover a delivery for someone who needs one.
+    A platform funded by extraction would never build this."""
+    db: Session = SessionLocal()
+    try:
+        rows = db.query(Event).filter(Event.event_type == "order.rounded_up").all()
+        import json as _j
+        total = 0
+        for e in rows:
+            try:
+                total += int(_j.loads(e.payload).get("cents", 0))
+            except Exception:
+                pass
+        return {"cents": total, "gifts": len(rows),
+                "meals_covered": total // 1200}
+    finally:
+        db.close()
+
+
+@router.post("/v0/track/{order_id}/round-up")
+async def round_up(order_id: str, request: Request):
+    """Add a round-up gift to the community fund. No account, no fee, no cut."""
+    oid = _fq(order_id.upper().strip())
+    body = await request.json()
+    try:
+        cents = int(body.get("cents", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "cents must be a number")
+    if cents <= 0 or cents > 10000:
+        raise HTTPException(400, "Round-up must be between $0.01 and $100")
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    _log_event("order.rounded_up", oid, "customer", {"cents": cents})
+    return {"ok": True, "cents": cents}

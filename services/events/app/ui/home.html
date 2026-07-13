@@ -195,6 +195,17 @@ try{
       <div style="font-size:.76rem;opacity:.85">${hasCart ? 'Reorder your usual · one tap' : (fav?'Your favorite':'Your most-ordered kitchen') + ' · one tap away'}</div></span></a>`;
   }
 }catch(e){}
+fetch('/v0/community-fund').then(r=>r.json()).then(cf=>{
+  if(!cf || !cf.gifts) return;
+  const el = document.getElementById('localImpact');
+  el.insertAdjacentHTML('afterend', `<div style="background:#fff;border:1px solid #dfe4ee;border-radius:16px;
+    padding:13px 18px;margin-bottom:16px;box-shadow:0 3px 16px rgba(20,30,60,.06);display:flex;align-items:center;gap:13px">
+    <div style="font-size:1.4rem">🤝</div>
+    <div style="font-size:.85rem;line-height:1.45">
+      <b>${cf.meals_covered} ${cf.meals_covered===1?'delivery':'deliveries'}</b> covered for neighbors who needed one
+      <div style="color:#7a7f87;font-size:.75rem">${cf.gifts} neighbors rounded up · GateWay takes nothing</div>
+    </div></div>`);
+}).catch(()=>{});
 fetch('/v0/local-impact').then(r=>r.json()).then(li=>{
   if(!li || !li.delivered) return;
   const el = document.getElementById('localImpact');

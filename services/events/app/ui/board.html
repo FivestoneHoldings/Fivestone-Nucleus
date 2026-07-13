@@ -109,6 +109,7 @@ pre,code{white-space:pre-wrap;word-break:break-word}
     <button onclick="findOrder()">Find</button>
   </div>
   <div id="dayopen"></div>
+  <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -420,6 +421,45 @@ async function load(){
   paintStats(d.stats);
   maybeDayOpen();
 }
+async function phoneOrder(){
+  const parts = await (await fetch('/v0/partners')).json();
+  const list = (parts.partners||[]).map(p=>`${p.code} — ${p.display_name}`).join('\n');
+  const partner = await gwPrompt({title:'Which kitchen?', placeholder:'burgerboys',
+    confirm:'Next', body:'Type the kitchen code:\n\n' + list + '\n\n(Leave blank for a custom courier run.)'});
+  if(partner === null) return;
+  const items = await gwPrompt({title:'What are they ordering?', multiline:true,
+    placeholder:'1× Kobe Burger, 1× Mac & Cheese', confirm:'Next',
+    body:'Type it as you would read it back to them.'});
+  if(!items) return;
+  const subtotal = await gwPrompt({title:'Food subtotal ($)', inputmode:'decimal',
+    placeholder:'17.50', confirm:'Next', body:'Just the food — the delivery fee is added automatically.'});
+  if(subtotal === null) return;
+  const address = await gwPrompt({title:'Delivery address', multiline:true,
+    placeholder:'123 Elm St, Maryville TN', confirm:'Next'});
+  if(!address) return;
+  const name = await gwPrompt({title:'Their name', placeholder:'Ruth', confirm:'Next'});
+  if(name === null) return;
+  const phone = await gwPrompt({title:'Their phone', inputmode:'tel',
+    placeholder:'865-555-0100', confirm:'Next', body:'So they get delivery texts. Leave blank if they prefer not to.'});
+  if(phone === null) return;
+  const tip = await gwPrompt({title:'Tip for the driver ($)', inputmode:'decimal',
+    placeholder:'0.00', confirm:'Place the order', body:'Cash tips at the door are fine too — leave blank.'});
+  if(tip === null) return;
+  const payload = {
+    partner: (partner||'').trim(), items, address, name, phone,
+    subtotal_cents: Math.round(parseFloat(subtotal||'0')*100) || 0,
+    tip_cents: Math.round(parseFloat(tip||'0')*100) || 0,
+    payment_method: 'cod',
+  };
+  const r = await fetch(api('/phone-order'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if(r.ok){
+    const d = await r.json();
+    gwToast(`${d.order_id} placed · $${(d.total_cents/100).toFixed(2)} (cash at door)`);
+    load();
+  } else gwToast('Could not place the order.', false);
+}
+
 let SNAP = [], FILTER = 'all';
 
 // ---- Day open: yesterday's scorecard + carryover, once per day ----

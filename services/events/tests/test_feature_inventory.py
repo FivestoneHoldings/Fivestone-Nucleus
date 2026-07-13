@@ -26,7 +26,7 @@ CHECKS = {
    "recordOrder", "thank_you_note", "driver_first", "milestone", "og:title", "pollHeadsUp", "anticipation", "addTip", "viewport guard",
  ],
  "app/ui/driver.html": [
-   "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "esc(o.pickup)", "Kitchen says READY",
+   "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "collect_cash_cents", "esc(o.pickup)", "Kitchen says READY",
    "SCHEDULED", "tel:", "tips_today_cents", "shiftBtn", "navigator.vibrate",
    "HAS_ACTIVE = (d.orders", "/guide/driver", "netDown", "skel",
  ],
@@ -38,7 +38,7 @@ CHECKS = {
  "app/ui/board.html": [
    "gwPrompt", "paintFilters", "ageChip", "o.partner?", "URGENCY", "/snapshot",
    "editField", "Statement", "shareLink", "showDigest", "toggleTrend",
-   "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO", "editAbout",
+   "logq", "relTime", "editSummary", "setAccepting", "requeue", "notifyO", "editAbout", "phoneOrder",
    "netDown", "skel", "maybeDayOpen", "closeAllDelivered", "gw_dayopen_",
    "demoOrder", "editThanks",
  ],
@@ -51,7 +51,7 @@ CHECKS = {
  "app/dispatch.py": ["TRANSITIONS", "_fq", "not on your sheet", "_TTL_CACHE",
                       "partner_statement", "track_status", "STATUS_PRIORITY", "subtotal_usd",
                       "stripe_configured", "retention_sweep", "demo-order", "local_impact", "heads_up",
-                      "add_tip"],
+                      "add_tip", "phone_order", "_cash_due", "community_fund"],
  "app/identity.py": ["_todays_special", "notify_me", "_flush_reopen_alerts", "hero_url"],
  "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
  "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting", "topKitchen", "setFavorite"],

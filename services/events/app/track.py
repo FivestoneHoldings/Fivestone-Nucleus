@@ -187,6 +187,15 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+async function roundUp(cents){
+  const r = await fetch('/v0/track/' + encodeURIComponent(OID) + '/round-up', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({cents})});
+  const box = document.getElementById('roundBox');
+  if(r.ok && box){
+    box.innerHTML = '<div style="text-align:center;font-weight:800;color:#16337a">' +
+      'Thank you \U0001F9E1 You just helped feed a neighbor.</div>';
+  } else gwToast('Could not add that.', false);
+}
 async function addTip(cents){
   if(!cents){
     const v = await gwPrompt({title:'Tip your driver', inputmode:'decimal', placeholder:'5.00',
@@ -350,6 +359,16 @@ async def track(order_id: str):
                       '<button class="tipb" onclick="addTip(300)">$3</button>'
                       '<button class="tipb" onclick="addTip(500)">$5</button>'
                       '<button class="tipb" onclick="addTip(0)">Other</button>'
+                      '</div></div>'
+                      '<div id="roundBox" style="background:#fff;border:1px solid #e4e8f2;border-radius:16px;'
+                      'padding:16px 18px;margin:0 0 14px;box-shadow:0 3px 16px rgba(20,30,60,.06)">'
+                      '<div style="font-weight:800;font-size:.95rem;margin-bottom:3px">Round up for a neighbor?</div>'
+                      '<div style="font-size:.8rem;color:#7a7f87;margin-bottom:11px">'
+                      'Every $12 covers a delivery for someone who needs one. GateWay takes nothing from this.</div>'
+                      '<div style="display:flex;gap:8px">'
+                      '<button class="tipb" onclick="roundUp(100)">+$1</button>'
+                      '<button class="tipb" onclick="roundUp(200)">+$2</button>'
+                      '<button class="tipb" onclick="roundUp(500)">+$5</button>'
                       '</div></div>'
                       '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>')
     micro_text = MICRO.get(status, "")
