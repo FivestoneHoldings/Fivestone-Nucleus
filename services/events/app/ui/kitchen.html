@@ -87,6 +87,8 @@ pre,code{white-space:pre-wrap;word-break:break-word}
 <div class="mark" style="display:none">GateWay <span>Kitchen</span></div>
 <div class="who" id="who">LOADING…</div>
 <div id="specialBar" style="margin-bottom:14px"></div>
+<button onclick="showFeedback()" id="fbBtn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">💬 What neighbors are saying</button>
+<div id="fbPanel" style="display:none;margin-bottom:14px"></div>
 <div id="loadBanner"></div>
 <div id="pride" class="pride"></div>
 <div id="pickchip" style="display:none"></div>
@@ -106,6 +108,26 @@ function paintGate(){
   b.textContent = ACCEPTING ? '⏸ Pause new orders' : '▶ Resume orders';
   b.style.background = ACCEPTING ? 'transparent' : '#16337a';
   b.style.color = ACCEPTING ? '#16337a' : '#fff';
+}
+async function showFeedback(){
+  const el = document.getElementById('fbPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch('/api/kitchen-feedback/' + token)).json();
+  el.innerHTML = `<div class="card" style="margin:0">
+    <div style="display:flex;gap:16px;margin-bottom:12px">
+      <div><div style="font-size:1.6rem;font-weight:900;color:#16337a">${d.loved||0}</div>
+        <div style="font-family:monospace;font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#7a7f87">Loved it</div></div>
+      <div><div style="font-size:1.6rem;font-weight:900;color:#d81f2a">${d.issues||0}</div>
+        <div style="font-family:monospace;font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#7a7f87">Had an issue</div></div>
+    </div>
+    ${(d.notes||[]).length ? (d.notes||[]).map(n=>`
+      <div style="border-left:3px solid ${n.good?'#16337a':'#d81f2a'};padding:7px 0 7px 11px;margin-bottom:9px">
+        <div style="font-size:.88rem;line-height:1.45">${esc(n.note)}</div>
+        <div style="font-family:monospace;font-size:.58rem;color:#9a9ea5;margin-top:3px">${esc(n.order_id)} · ${esc((n.at||'').slice(0,10))}</div>
+      </div>`).join('')
+      : '<div style="color:#9a9ea5;font-size:.85rem">No notes yet. When neighbors write, you read it here first — never a public star rating.</div>'}
+  </div>`;
 }
 async function editSpecial(current){
   const text = await gwPrompt({title:"Today's special", multiline:true, value: current,

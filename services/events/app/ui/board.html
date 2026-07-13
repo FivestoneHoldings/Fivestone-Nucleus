@@ -109,6 +109,8 @@ pre,code{white-space:pre-wrap;word-break:break-word}
     <button onclick="findOrder()">Find</button>
   </div>
   <div id="dayopen"></div>
+  <button onclick="showReadiness()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚦 Launch readiness</button>
+  <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
@@ -420,6 +422,19 @@ async function load(){
   renderOrders();
   paintStats(d.stats);
   maybeDayOpen();
+}
+async function showReadiness(){
+  const el = document.getElementById('readyPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api('/readiness'))).json();
+  el.innerHTML = `<div class="card">
+    <div style="font-weight:900;margin-bottom:10px;color:${d.ready_to_take_orders?'#57c68f':'#f0a04b'}">
+      ${d.ready_to_take_orders ? '✓ Ready to take real orders' : '⚠ ' + (d.blocking||[]).length + ' item(s) to finish'}</div>
+    ${(d.checks||[]).map(c=>`<div class="ev" style="border:none;padding:6px 0">
+      <span style="color:${c.ok?'#57c68f':'#f0a04b'};font-weight:800">${c.ok?'✓':'○'}</span>
+      <b>${esc(c.area)}</b><br><span style="color:#8b93a7">${esc(c.detail)}</span></div>`).join('')}
+  </div>`;
 }
 async function phoneOrder(){
   const parts = await (await fetch('/v0/partners')).json();

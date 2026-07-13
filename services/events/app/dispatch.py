@@ -1278,3 +1278,129 @@ async def round_up(order_id: str, request: Request):
         raise HTTPException(404, "No such order")
     _log_event("order.rounded_up", oid, "customer", {"cents": cents})
     return {"ok": True, "cents": cents}
+
+
+@router.post("/v0/track/{order_id}/feedback")
+async def order_feedback(order_id: str, request: Request):
+    """Private feedback, straight to the people who made and carried the food.
+    NO public star rating: a single bad night shouldn't be able to sink a family kitchen
+    the way a public 1-star average does on the big platforms."""
+    oid = _fq(order_id.upper().strip())
+    body = await request.json()
+    good = bool(body.get("good", True))
+    note = str(body.get("note", "")).strip()[:400]
+    recs = await at.list_records(at.ORDERS, formula=f"{{order_id}}='{oid}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    if recs[0]["fields"].get("status") not in ("delivered", "closed"):
+        raise HTTPException(409, "Feedback opens once your order is delivered.")
+    partner = recs[0]["fields"].get("partner_code", "")
+    _log_event("order.feedback", oid, "customer",
+               {"good": good, "note": note, "partner": partner})
+    return {"ok": True}
+
+
+@router.get("/api/kitchen-feedback/{token}")
+async def kitchen_feedback(token: str):
+    """The kitchen reads what neighbors actually said — praise and problems both,
+    unfiltered, private, and theirs. Not a public score they can never repair."""
+    from .kitchen import _partner_by_token
+    p = _partner_by_token(token)
+    import json as _j
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Event).filter(Event.event_type == "order.feedback")
+                .order_by(Event.occurred_at.desc()).limit(200).all())
+        out, good, bad = [], 0, 0
+        for e in rows:
+            try:
+                d = _j.loads(e.payload)
+            except Exception:
+                continue
+            if d.get("partner") != p.code:
+                continue
+            if d.get("good"):
+                good += 1
+            else:
+                bad += 1
+            if d.get("note"):
+                out.append({"good": bool(d.get("good")), "note": d["note"][:400],
+                            "order_id": e.entity_ref,
+                            "at": e.occurred_at.isoformat()})
+        return {"kitchen": p.display_name, "loved": good, "issues": bad,
+                "notes": out[:30]}
+    finally:
+        db.close()
+
+
+@router.get("/api/driver/{day_token}/earnings")
+async def driver_earnings(day_token: str, days: int = 7):
+    """The driver's own ledger: deliveries and tips, day by day. Their work, their numbers,
+    visible without asking anyone."""
+    drv = await _driver_by_token(day_token)
+    from datetime import timedelta
+    days = max(1, min(days, 31))
+    start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
+                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')>='{start}')"),
+        max_records=100)
+    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    by_day: dict = {}
+    for r in mine:
+        d = (r["fields"].get("delivered_at") or "")[:10]
+        row = by_day.setdefault(d, {"date": d, "deliveries": 0, "tips_cents": 0})
+        row["deliveries"] += 1
+        row["tips_cents"] += int(r["fields"].get("tip_cents") or 0)
+    days_list = sorted(by_day.values(), key=lambda x: x["date"], reverse=True)
+    return {
+        "driver": drv["fields"].get("display_name", ""),
+        "since": start,
+        "days": days_list,
+        "totals": {"deliveries": sum(d["deliveries"] for d in days_list),
+                   "tips_cents": sum(d["tips_cents"] for d in days_list)},
+    }
+
+
+@router.get("/api/board/{key}/readiness")
+async def launch_readiness(key: str):
+    """Everything standing between here and taking real money, in one honest list."""
+    _check_key(key)
+    from .models import MenuItem, Partner as P
+    from . import payments
+    checks = []
+    db: Session = SessionLocal()
+    try:
+        partners = db.query(P).all()
+        drivers_ok = True
+        for p in partners:
+            items = db.query(MenuItem).filter(MenuItem.partner_code == p.code).count()
+            photos = db.query(MenuItem).filter(MenuItem.partner_code == p.code,
+                                               MenuItem.image_url != "").count()
+            checks.append({
+                "area": f"{p.display_name}",
+                "ok": bool(items and p.address and p.about_blurb),
+                "detail": (f"{items} menu items · "
+                           f"{photos} with photos · "
+                           f"{'hero ✓' if p.hero_url else 'no hero photo'} · "
+                           f"{'address ✓' if p.address else 'NO ADDRESS'}"),
+            })
+    finally:
+        db.close()
+    try:
+        drivers = await at.list_records(at.DRIVERS)
+    except Exception:
+        drivers = []
+    checks.append({"area": "Drivers", "ok": len(drivers) > 0,
+                   "detail": f"{len(drivers)} driver(s) with day links"})
+    checks.append({"area": "SMS (Twilio)", "ok": bool(os.environ.get("TWILIO_SID")),
+                   "detail": "Live texts to customers" if os.environ.get("TWILIO_SID")
+                             else "NOT SET — texts queue but never send. Add TWILIO_SID/TOKEN/FROM in Railway."})
+    checks.append({"area": "Card payments (Stripe)", "ok": payments.configured(),
+                   "detail": "Online payment live" if payments.configured()
+                             else "Not set — orders default to CASH at the door (works today)."})
+    checks.append({"area": "Database", "ok": True, "detail": "PostgreSQL on Railway · owned event log"})
+    ready = all(c["ok"] for c in checks if c["area"] != "Card payments (Stripe)")
+    blocking = [c["area"] for c in checks if not c["ok"]]
+    return {"ready_to_take_orders": ready, "checks": checks, "blocking": blocking}

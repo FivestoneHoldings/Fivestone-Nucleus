@@ -187,6 +187,21 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+async function feedback(good){
+  const note = await gwPrompt({title: good ? 'What did you love?' : 'What went wrong?',
+    multiline: true, confirm: 'Send privately',
+    placeholder: good ? 'The brisket was unreal.' : 'Order was cold when it arrived.',
+    body: good ? 'The cook will read this. Nothing is posted publicly.'
+               : "The kitchen and dispatch will see this and make it right. Nothing is posted publicly."});
+  if(note === null) return;
+  const r = await fetch('/v0/track/' + encodeURIComponent(OID) + '/feedback', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({good, note})});
+  const box = document.getElementById('fbBox');
+  if(r.ok && box){
+    box.innerHTML = '<div style="text-align:center;font-weight:800;color:#16337a">' +
+      (good ? 'Thank you \U0001F9E1 The kitchen will hear it.' : "Thank you \u2014 we're on it.") + '</div>';
+  } else gwToast('Could not send.', false);
+}
 async function roundUp(cents){
   const r = await fetch('/v0/track/' + encodeURIComponent(OID) + '/round-up', {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({cents})});
@@ -369,6 +384,16 @@ async def track(order_id: str):
                       '<button class="tipb" onclick="roundUp(100)">+$1</button>'
                       '<button class="tipb" onclick="roundUp(200)">+$2</button>'
                       '<button class="tipb" onclick="roundUp(500)">+$5</button>'
+                      '</div></div>'
+                      '<div id="fbBox" style="background:#fff;border:1px solid #e4e8f2;border-radius:16px;'
+                      'padding:16px 18px;margin:0 0 14px;box-shadow:0 3px 16px rgba(20,30,60,.06)">'
+                      '<div style="font-weight:800;font-size:.95rem;margin-bottom:3px">How was it?</div>'
+                      '<div style="font-size:.8rem;color:#7a7f87;margin-bottom:11px">'
+                      'This goes straight to the kitchen and to us \u2014 privately. '
+                      'We don\'t run public star ratings that can sink a family restaurant.</div>'
+                      '<div style="display:flex;gap:8px">'
+                      '<button class="tipb" onclick="feedback(true)">\U0001F9E1 Loved it</button>'
+                      '<button class="tipb" onclick="feedback(false)">Something was off</button>'
                       '</div></div>'
                       '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>')
     micro_text = MICRO.get(status, "")

@@ -97,6 +97,8 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="mark" style="display:none">GateWay <span>Day Sheet</span></div>
   <div class="who" id="who">…</div>
 </div>
+<button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
+<div id="earnPanel" style="display:none;margin-bottom:14px"></div>
 <div id="runline"></div>
 <div id="list"><div class="empty">Loading your route…</div></div>
 <p class="note">Tap Picked Up when you have it. Tap Delivered when it's done.<br>GateWay Dispatch · Fivestone Holdings · <a href="/guide/driver" style="color:#16337a">How it works</a></p>
@@ -158,6 +160,28 @@ async function load(){
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
     </div>`}).join('');
+}
+async function showEarnings(){
+  const el = document.getElementById('earnPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api('/earnings'))).json();
+  const t = d.totals || {deliveries:0, tips_cents:0};
+  el.innerHTML = `<div class="card" style="margin:0">
+    <div style="display:flex;gap:18px;margin-bottom:12px">
+      <div><div style="font-size:1.7rem;font-weight:900;color:#16337a">${t.deliveries}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#7a7f87">Deliveries · 7 days</div></div>
+      <div><div style="font-size:1.7rem;font-weight:900;color:#16337a">$${(t.tips_cents/100).toFixed(2)}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#7a7f87">Tips earned</div></div>
+    </div>
+    ${(d.days||[]).length ? (d.days||[]).map(x=>`
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid #eef1f7;font-size:.85rem">
+        <span>${esc(x.date)}</span>
+        <span><b>${x.deliveries}</b> deliveries · <b>$${(x.tips_cents/100).toFixed(2)}</b> tips</span>
+      </div>`).join('')
+      : '<div style="color:#9a9ea5;font-size:.85rem">No deliveries logged in the last 7 days.</div>'}
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:#9a9ea5;margin-top:10px;letter-spacing:.06em">TIPS ARE 100% YOURS · GATEWAY TAKES NO CUT OF THEM</div>
+  </div>`;
 }
 function nav(addr){
   window.open('https://maps.apple.com/?daddr=' + encodeURIComponent(addr), '_blank');
