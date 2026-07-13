@@ -75,3 +75,20 @@ def test_photo_fallback_uses_emblem():
     assert "gwd-emblem.png" in html          # no-photo restaurants show the brand mark
     form = client.get("/order?partner=stephens").text
     assert "gwd-emblem.png" in form
+
+
+def test_photo_coverage_reports_shot_list():
+    d = client.get(f"{K}/photo-coverage").json()
+    codes = {p["code"] for p in d["partners"]}
+    assert {"burgerboys", "friendsbbq", "stephens"} <= codes
+    st = [p for p in d["partners"] if p["code"] == "stephens"][0]
+    assert st["items"] >= 25
+    assert 0 <= st["pct"] <= 100
+    assert isinstance(st["missing_sample"], list)
+    assert client.get("/api/board/wrong/photo-coverage").status_code == 403
+
+
+def test_menu_page_has_premium_header_and_nav():
+    html = client.get("/order?partner=stephens").text
+    assert "rhead" in html and "catnav" in html and "mbody" in html
+    assert "Delivered by a neighbor" in html

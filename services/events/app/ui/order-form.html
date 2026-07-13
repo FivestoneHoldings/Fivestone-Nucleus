@@ -135,6 +135,39 @@ padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
 .gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
 letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
 .gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
+
+/* v0.48 photo-forward menu */
+.rhead{margin:-8px 0 16px;border-radius:20px;overflow:hidden;background:#fff;
+border:1px solid #e4e8f2;box-shadow:0 6px 22px rgba(20,30,60,.08)}
+.rhead .img{position:relative;aspect-ratio:16/9;background:linear-gradient(135deg,#16337a,#0e1526);
+display:flex;align-items:center;justify-content:center}
+.rhead .img img.hero{width:100%;height:100%;object-fit:cover;display:block}
+.rhead .img .emb{height:60px;opacity:.9}
+.rhead .img .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(14,21,38,.72),transparent 58%)}
+.rhead .img .nm{position:absolute;left:18px;right:18px;bottom:14px;color:#fff;
+font-weight:900;font-size:1.35rem;line-height:1.15;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+.rhead .meta{padding:14px 18px 16px}
+.rhead .story{font-size:.86rem;line-height:1.55;color:#3a3f47;margin-bottom:10px}
+.rhead .facts{display:flex;gap:8px;flex-wrap:wrap}
+.rhead .fact{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.08em;
+text-transform:uppercase;background:#eef2fc;color:#16337a;border-radius:20px;padding:6px 11px;font-weight:500}
+.catnav{position:sticky;top:64px;z-index:20;display:flex;gap:7px;overflow-x:auto;padding:10px 0;
+margin-bottom:8px;background:#f7f8fb;-webkit-overflow-scrolling:touch}
+.catnav::-webkit-scrollbar{display:none}
+.catnav a{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:.63rem;letter-spacing:.08em;
+text-transform:uppercase;text-decoration:none;background:#fff;border:1px solid #dfe4ee;color:#5a5e64;
+border-radius:20px;padding:8px 13px;font-weight:500}
+.catnav a.on{background:#16337a;color:#fff;border-color:#16337a}
+.mitem{padding:0;overflow:hidden;align-items:stretch}
+.mphoto{width:112px;min-width:112px}
+.mbody{flex:1;padding:13px 14px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.mname{font-weight:800;font-size:.95rem;margin-bottom:2px}
+.mdesc{font-size:.76rem;color:#7a7f87;line-height:1.4;margin-bottom:6px;
+display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mprice{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.88rem;color:#16337a}
+.mact{display:flex;align-items:center;padding-right:12px}
+.m86{opacity:.5}
+.m86 .mname::after{content:' · 86ʼd';color:#d81f2a;font-size:.7rem}
 </style>
 </head>
 \1
@@ -308,43 +341,58 @@ function renderMenu(m){
   window._MENU = m;
   const z = document.getElementById('menuZone');
   z.style.display = '';
-  const hero = (window._PARTNER_META && window._PARTNER_META.hero_url)
-    ? `<img class="mhero" src="${window._PARTNER_META.hero_url}" alt=""
-         onerror="this.style.display='none'">` : '';
-  z.innerHTML = hero +
-    '<div class="mcat" style="margin-top:4px">Tap + to build your order</div>' +
-    m.categories.map(c => `<div class="mcat">${c.name}</div>` +
-      c.items.map(i => `
-      <div class="mitem">
-        <div class="mphoto">
-          ${i.image_url
-            ? `<img src="${i.image_url}" alt="${(i.name||'').replace(/"/g,'&quot;')}" loading="lazy"
-                 onerror="this.parentNode.innerHTML='<div class=\\'ph\\'><img src=\\'/static/gwd-emblem.png\\' alt=\\'\\'></div>'">`
-            : `<div class="ph"><img src="/static/gwd-emblem.png" alt=""></div>`}
-        </div>
+  const meta = window._PARTNER_META || {};
+  const nm = (meta.display_name || '').replace(/</g,'&lt;');
+  const heroInner = meta.hero_url
+    ? `<img class="hero" src="${meta.hero_url}" alt="${nm}" onerror="this.remove()">`
+    : `<img class="emb" src="/static/gwd-emblem.png" alt="">`;
+  const facts = [];
+  if(meta.address) facts.push(meta.address.split(',')[0]);
+  if(meta.delivery_fee_cents != null) facts.push(`$${(meta.delivery_fee_cents/100).toFixed(2)} delivery`);
+  facts.push('Delivered by a neighbor');
+  const head = `<div class="rhead">
+    <div class="img">${heroInner}<div class="scrim"></div><div class="nm">${nm}</div></div>
+    <div class="meta">
+      ${meta.about_blurb?`<div class="story">${(meta.about_blurb||'').replace(/</g,'&lt;')}</div>`:''}
+      <div class="facts">${facts.map(f=>`<span class="fact">${String(f).replace(/</g,'&lt;')}</span>`).join('')}</div>
+    </div></div>`;
+  const cats = m.categories.filter(c=>c.items && c.items.length);
+  const nav = cats.length > 1
+    ? `<div class="catnav">${cats.map((c,i)=>
+        `<a href="#cat${i}" class="${i===0?'on':''}" onclick="navPick(this)">${c.name.split('—')[0].trim().replace(/</g,'&lt;')}</a>`).join('')}</div>`
+    : '';
+  z.innerHTML = head + nav + cats.map((c,i) => `<div class="mcat" id="cat${i}">${c.name.replace(/</g,'&lt;')}</div>` +
+    c.items.map(i2 => {
+      const nm2 = (i2.name||'').replace(/</g,'&lt;');
+      const photo = i2.image_url
+        ? `<img src="${i2.image_url}" alt="${nm2}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()">`
+        : `<div class="ph"><img src="/static/gwd-emblem.png" alt=""></div>`;
+      return `
+      <div class="mitem ${i2.available===false?'m86':''}">
+        <div class="mphoto">${photo}</div>
         <div class="mbody">
-          <div class="mi-info"><div class="mi-name">${i.name}</div>
-            ${i.description?`<div class="mi-desc">${i.description}</div>`:''}
-            <div class="mi-price">${money(i.price_cents)}</div></div>
-          <div class="step" style="margin-top:8px">
-            <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},-1)">−</button>
-            <span class="qty" id="q-${i.id}">0</span>
-            <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},1)">+</button>
-          </div>
+          <div class="mname">${nm2}</div>
+          ${i2.description?`<div class="mdesc">${(i2.description||'').replace(/</g,'&lt;')}</div>`:''}
+          <div class="mprice">$${(i2.price_cents/100).toFixed(2)}</div>
         </div>
-      </div>`).join('')).join('') +
-    `<div class="mcat">Add a tip for your driver</div>
-     <div style="display:flex;gap:8px;margin-bottom:6px">
-       ${[["No tip",0],["$2",200],["$3",300],["$5",500]].map(([l,c],i)=>
-         `<button type="button" class="tipchip" onclick="setTip(${c},this)"
-           style="flex:1;padding:10px;border-radius:20px;border:1.5px solid #16337a;background:${i===0?'#16337a':'#fff'};color:${i===0?'#fff':'#16337a'};font-weight:800;font-size:.8rem">${l}</button>`).join('')}
-     </div>
-     <div style="font-size:.72rem;color:#9a9ea5;margin-bottom:4px">100% of tips go to your driver.</div>
-     <div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
-  // items field becomes the composed summary (still editable for special requests)
+        <div class="mact">
+          ${i2.available===false
+            ? `<span style="font-family:monospace;font-size:.58rem;color:#d81f2a">SOLD OUT</span>`
+            : `<div class="step">
+                 <button type="button" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},-1)">−</button>
+                 <span id="q-${i2.id}">0</span>
+                 <button type="button" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},1)">+</button>
+               </div>`}
+        </div>
+      </div>`;}).join('')).join('') +
+    `<div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
   maybeReorder();
+}
+function navPick(el){
+  document.querySelectorAll('.catnav a').forEach(a=>a.classList.remove('on'));
+  el.classList.add('on');
 }
 function maybeReorder(){
   try{

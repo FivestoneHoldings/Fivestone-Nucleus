@@ -355,3 +355,26 @@ def seed_menus():
     # stories must run AFTER all partners exist (seed-ordering lesson, debug #14)
     migrate_real_menus()
     migrate_partner_stories()
+
+
+@router.get("/api/board/{key}/photo-coverage")
+def photo_coverage(key: str):
+    """What still needs a photo — the founder's shot list."""
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        out = []
+        for p in db.query(Partner).order_by(Partner.code).all():
+            items = db.query(MenuItem).filter(MenuItem.partner_code == p.code).all()
+            with_photo = [i for i in items if i.image_url]
+            missing = [{"id": i.id, "name": i.name} for i in items if not i.image_url][:12]
+            out.append({
+                "code": p.code, "display_name": p.display_name,
+                "hero": bool(p.hero_url),
+                "items": len(items), "items_with_photo": len(with_photo),
+                "pct": round(100 * len(with_photo) / len(items)) if items else 0,
+                "missing_sample": missing,
+            })
+        return {"partners": out}
+    finally:
+        db.close()

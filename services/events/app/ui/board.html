@@ -162,7 +162,9 @@ async function loadPartners(){
         <button class="ghost" onclick="demoOrder('${x.code}')">＋ Demo order</button>
         <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button>
         <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button>
-        <button class="ghost" onclick="editHero('${x.code}',${JSON.stringify(x.hero_url||'')})">Hero photo ✎</button></div>
+        <button class="ghost" onclick="editHero('${x.code}',${JSON.stringify(x.hero_url||'')})">Hero photo ✎</button>
+        <button class="ghost" onclick="showPhotos('${x.code}')">📷 Photos</button></div>
+      <div id="photos-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
@@ -275,6 +277,32 @@ async function editThanks(code, current){
   const r = await fetch(api(`/partners/${code}/thanks`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({note})});
   if(r.ok){ gwToast('Note saved ✓'); loadPartners(); }
+}
+async function showPhotos(code){
+  const el = document.getElementById('photos-'+code);
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  const d = await (await fetch(api('/photo-coverage'))).json();
+  const p = (d.partners||[]).find(x=>x.code===code);
+  if(!p){ el.innerHTML = '<div class="ev">No data.</div>'; return; }
+  const bar = `<div style="height:8px;border-radius:5px;background:#263252;overflow:hidden;margin:6px 0 10px">
+    <div style="height:100%;width:${p.pct}%;background:${p.pct>=80?'#57c68f':p.pct>=40?'#f0a04b':'#e03131'}"></div></div>`;
+  el.innerHTML = `<div class="ev" style="border:none">
+      <b>${p.items_with_photo}/${p.items}</b> dishes have photos (${p.pct}%) · hero: ${p.hero?'✓':'—'}</div>
+    ${bar}` +
+    (p.missing_sample.length
+      ? p.missing_sample.map(i=>`<div class="ev" style="border:none;padding:3px 0">
+          <span class="copy" onclick="itemPhoto('${code}','${i.id}')">${esc(i.name)} — add photo ✎</span></div>`).join('')
+      : '<div class="ev" style="border:none;color:#57c68f">Every dish has a photo ✓</div>');
+}
+async function itemPhoto(code, id){
+  const url = await gwPrompt({title:'Photo for this dish', placeholder:'https://…',
+    confirm:'Save photo', body:'Paste a link to the restaurant\'s own photo of this dish (their site, Facebook, or Instagram).'});
+  if(!url) return;
+  const r = await fetch(api(`/partners/${code}/menu`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, image_url: url})});
+  if(r.ok){ gwToast('Photo saved ✓'); document.getElementById('photos-'+code).style.display='none'; showPhotos(code); }
+  else gwToast('Must be an https:// link', false);
 }
 async function editHero(code, current){
   const url = await gwPrompt({title:'Kitchen hero photo', value: current, multiline:true,
