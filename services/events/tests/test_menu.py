@@ -19,7 +19,7 @@ def test_seeded_partners_and_menus():
     assert "Kobe Burger" in names and "Sweet Potato Pie" in names
     m2 = client.get("/v0/partners/stephens/menu").json()
     names2 = [i["name"] for c in m2["categories"] for i in c["items"]]
-    assert 'Pepperoni Pizza 16"' in names2 and "Philly Cheesesteak" in names2
+    assert 'Extra Large Pizza 16"' in names2 and "Philly Cheese Steak" in names2
 
 
 def test_menu_404_for_partner_without_menu():

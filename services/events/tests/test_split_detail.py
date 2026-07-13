@@ -41,8 +41,8 @@ def test_two_separate_restaurants():
     fb = client.get("/v0/partners/friendsbbq/menu").json()
     bb_names = [i["name"] for c in bb["categories"] for i in c["items"]]
     fb_names = [i["name"] for c in fb["categories"] for i in c["items"]]
-    assert "Kobe Burger" in bb_names and "Pulled Pork Sandwich" not in bb_names
-    assert "Pulled Pork Sandwich" in fb_names and "Rib Family Pack (serves 5)" in fb_names
+    assert "Kobe Burger" in bb_names and "Pulled Pork" not in bb_names
+    assert "Pulled Pork" in fb_names and "Ribs Pack (serves 5)" in fb_names
 
 
 def test_migration_repairs_combined_partner():

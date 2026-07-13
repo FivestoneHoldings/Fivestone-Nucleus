@@ -112,12 +112,29 @@ input:focus,textarea:focus{background:#fff !important;border-color:#2f6fe0 !impo
 button[type="submit"]{background:linear-gradient(135deg,#16337a,#1e4292) !important;
 box-shadow:0 8px 22px rgba(22,51,122,.32);border-radius:14px !important;font-size:1rem !important;
 letter-spacing:.01em}
-.mitem{border:1px solid #e4e8f2;box-shadow:0 2px 10px rgba(20,30,60,.05);border-radius:16px}
+.mitem{border:1px solid #e4e8f2;box-shadow:0 2px 10px rgba(20,30,60,.05);border-radius:16px;
+overflow:hidden;display:flex;gap:0;align-items:stretch;padding:0 !important}
+.mphoto{width:104px;min-width:104px;background:#eef2fc;position:relative;overflow:hidden}
+.mphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.mphoto .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#16337a,#0e1526)}
+.mphoto .ph img{width:44%;height:auto;object-fit:contain;opacity:.85}
+.mbody{flex:1;padding:13px 14px;display:flex;flex-direction:column;justify-content:center}
+.mhero{width:100%;height:180px;object-fit:cover;border-radius:18px;margin-bottom:14px;
+box-shadow:0 6px 22px rgba(20,30,60,.14)}
 .step button{border-width:2px;font-size:1.15rem}
 .cartbar{background:linear-gradient(135deg,#0e1526,#16337a);box-shadow:0 10px 26px rgba(10,20,50,.35);
 border-radius:18px}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#5a5e64}
 .opt{color:#9a9ea5;font-weight:400;font-size:.8em}
+
+.gwd-powered{display:flex;align-items:center;justify-content:center;gap:10px;margin:26px auto 8px;
+padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
+.gwd-powered img{height:34px;width:34px;object-fit:contain;border-radius:8px}
+.gwd-powered div{text-align:left;line-height:1.25}
+.gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
+letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
+.gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
 </style>
 </head>
 \1
@@ -229,6 +246,7 @@ function setWhen(sched){
 }
 function applyPartnerMeta(d){
   if(!d) return;
+  window._PARTNER_META = d;
   FEE_CENTS = d.delivery_fee_cents || 0;
   if(d.accepting_orders === false){
     const b = document.getElementById('pausedBanner');
@@ -290,17 +308,29 @@ function renderMenu(m){
   window._MENU = m;
   const z = document.getElementById('menuZone');
   z.style.display = '';
-  z.innerHTML = '<div class="mcat" style="margin-top:4px">Tap + to build your order</div>' +
+  const hero = (window._PARTNER_META && window._PARTNER_META.hero_url)
+    ? `<img class="mhero" src="${window._PARTNER_META.hero_url}" alt=""
+         onerror="this.style.display='none'">` : '';
+  z.innerHTML = hero +
+    '<div class="mcat" style="margin-top:4px">Tap + to build your order</div>' +
     m.categories.map(c => `<div class="mcat">${c.name}</div>` +
       c.items.map(i => `
       <div class="mitem">
-        <div class="mi-info"><div class="mi-name">${i.name}</div>
-          ${i.description?`<div class="mi-desc">${i.description}</div>`:''}
-          <div class="mi-price">${money(i.price_cents)}</div></div>
-        <div class="step">
-          <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},-1)">−</button>
-          <span class="qty" id="q-${i.id}">0</span>
-          <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},1)">+</button>
+        <div class="mphoto">
+          ${i.image_url
+            ? `<img src="${i.image_url}" alt="${(i.name||'').replace(/"/g,'&quot;')}" loading="lazy"
+                 onerror="this.parentNode.innerHTML='<div class=\\'ph\\'><img src=\\'/static/gwd-emblem.png\\' alt=\\'\\'></div>'">`
+            : `<div class="ph"><img src="/static/gwd-emblem.png" alt=""></div>`}
+        </div>
+        <div class="mbody">
+          <div class="mi-info"><div class="mi-name">${i.name}</div>
+            ${i.description?`<div class="mi-desc">${i.description}</div>`:''}
+            <div class="mi-price">${money(i.price_cents)}</div></div>
+          <div class="step" style="margin-top:8px">
+            <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},-1)">−</button>
+            <span class="qty" id="q-${i.id}">0</span>
+            <button type="button" onclick="bump('${i.id}','${i.name.replace(/'/g,"\\'")}',${i.price_cents},1)">+</button>
+          </div>
         </div>
       </div>`).join('')).join('') +
     `<div class="mcat">Add a tip for your driver</div>
@@ -375,5 +405,9 @@ function compose(){
     `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25);font-size:1rem"><span>${n} ${n===1?'item':'items'} · Total</span><span class="tot">${money(total)}</span></div>`;
 }
 </script>
+<div class="gwd-powered">
+  <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
+  <div><span>Powered by</span><b>GateWay Delivery</b></div>
+</div>
 </body>
 </html>

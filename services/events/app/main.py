@@ -36,6 +36,8 @@ app.include_router(guides_router)
 app.include_router(menu_router)
 seed_partners()
 seed_menus()
+from .menu import migrate_real_menus
+migrate_real_menus()
 from .dispatch import retention_sweep
 retention_sweep(force=True)
 
@@ -127,7 +129,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "0.46"
+NUCLEUS_VERSION = "0.47"
 
 
 @app.get("/healthz")

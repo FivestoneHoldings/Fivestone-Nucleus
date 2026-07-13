@@ -74,7 +74,8 @@ def partner_lookup(code: str):
     return {"code": p.code, "display_name": p.display_name, "status": p.status,
             "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
             "accepting_orders": p.accepting_orders,
-            "about_blurb": p.about_blurb}
+            "about_blurb": p.about_blurb,
+            "hero_url": p.hero_url}
 
 
 @router.get("/api/board/{key}/partners")
@@ -91,7 +92,8 @@ def list_partners(key: str):
                           "accepting_orders": p.accepting_orders,
                           "portal_token": p.portal_token,
                           "thank_you_note": p.thank_you_note,
-                          "about_blurb": p.about_blurb}
+                          "about_blurb": p.about_blurb,
+                          "hero_url": p.hero_url}
                          for p in rows]}
 
 
@@ -177,6 +179,46 @@ async def set_about(key: str, code: str, request: Request):
         if not p:
             raise HTTPException(404, "Unknown partner")
         p.about_blurb = blurb
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.post("/api/board/{key}/partners/{code}/hero")
+async def set_hero(key: str, code: str, request: Request):
+    """The kitchen's hero photo (their own food, their own rights)."""
+    _check_key(key)
+    body = await request.json()
+    url = str(body.get("url", "")).strip()[:500]
+    if url and not url.startswith(("https://", "http://")):
+        raise HTTPException(400, "url must start with https://")
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.hero_url = url
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.post("/api/board/{key}/partners/{code}/hero")
+async def set_hero(key: str, code: str, request: Request):
+    """Restaurant hero photo (16:9). URL only — we never rehost a partner's imagery."""
+    _check_key(key)
+    body = await request.json()
+    url = str(body.get("url", "")).strip()[:500]
+    if url and not url.startswith(("https://", "/static/")):
+        raise HTTPException(400, "Hero must be an https:// URL")
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.hero_url = url
         db.commit()
     finally:
         db.close()

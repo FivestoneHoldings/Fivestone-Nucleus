@@ -62,6 +62,14 @@ animation:gwsh 1.2s infinite linear;border-radius:14px}
 @keyframes gwsh{to{background-position:-200% 0}}
 body{padding-top:76px !important}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+.gwd-powered{display:flex;align-items:center;justify-content:center;gap:10px;margin:26px auto 8px;
+padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
+.gwd-powered img{height:34px;width:34px;object-fit:contain;border-radius:8px}
+.gwd-powered div{text-align:left;line-height:1.25}
+.gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
+letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
+.gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
 </style>
 </head>
 \1
@@ -184,10 +192,16 @@ fetch('/v0/partners').then(r=>r.json()).then(d=>{
         return `<div class="tile" style="padding:15px 20px;opacity:.55">
           <h2 style="font-size:1rem">${name}</h2>
           <p style="margin:0;color:#d81f2a;font-weight:700">Paused right now — check back soon</p></div>`;
-      return `<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:15px 20px">
-        <span class="arrow" style="margin-top:2px">→</span>
-        <h2 style="font-size:1rem">${name}${p._usual?' <span style="font-family:\'IBM Plex Mono\',monospace;font-size:.5rem;background:#16337a;color:#fff;border-radius:10px;padding:3px 8px;vertical-align:middle;letter-spacing:.1em">YOUR USUAL</span>':''}</h2>
-        <p style="margin:0">${line}</p></a>`;
+      const heroImg = p.hero_url
+        ? `<img src="${p.hero_url}" alt="" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" onerror="this.parentNode.style.display='none'">`
+        : `<div style="aspect-ratio:16/9;background:linear-gradient(135deg,#16337a,#0e1526);display:flex;align-items:center;justify-content:center"><img src="/static/gwd-emblem.png" alt="" style="height:58px;opacity:.9"></div>`;
+      return `<a class="tile" href="/order?partner=${encodeURIComponent(p.code)}" style="padding:0;overflow:hidden">
+        <div>${heroImg}</div>
+        <div style="padding:14px 18px;position:relative">
+          <span class="arrow" style="position:absolute;right:18px;top:16px">→</span>
+          <h2 style="font-size:1rem;margin:0 0 2px">${name}${p._usual?' <span style="font-family:\'IBM Plex Mono\',monospace;font-size:.5rem;background:#16337a;color:#fff;border-radius:10px;padding:3px 8px;vertical-align:middle;letter-spacing:.1em">YOUR USUAL</span>':''}</h2>
+          <p style="margin:0">${line}</p>
+        </div></a>`;
     }).join('');
 }).catch(()=>{});
 function go(path, id){
@@ -212,5 +226,9 @@ document.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{
   if(e.key==='Enter') i.nextElementSibling ? i.parentElement.querySelector('button').click() : null;
 }));
 </script>
+<div class="gwd-powered">
+  <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
+  <div><span>Powered by</span><b>GateWay Delivery</b></div>
+</div>
 </body>
 </html>

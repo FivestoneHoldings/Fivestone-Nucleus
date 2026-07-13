@@ -88,6 +88,13 @@ box-shadow:0 8px 22px rgba(22,51,122,.3)}
 .livebadge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
 font-size:.62rem;color:#d81f2a;font-weight:700;letter-spacing:.1em}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:#d81f2a;animation:pulse 1.4s infinite}
+.gwd-powered{display:flex;align-items:center;justify-content:center;gap:10px;margin:26px auto 8px;
+padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
+.gwd-powered img{height:34px;width:34px;object-fit:contain;border-radius:8px}
+.gwd-powered div{text-align:left;line-height:1.25}
+.gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
+letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
+.gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
 @media (prefers-reduced-motion: reduce){.step.now .dot,.livebadge i,.celebrate{animation:none}}</style></head>"""
 
 _MAP_SCRIPT = """
@@ -96,7 +103,7 @@ _MAP_SCRIPT = """
     <span class="livebadge" style="float:right;margin-top:3px"><i></i>LIVE</span></div>
   <div id="map" style="height:260px;border-radius:14px;overflow:hidden;border:1.5px solid #d9deea"></div>
 </div>
-<div class="foot">Updates automatically \u00b7 GateWay Delivery \u00b7 Fivestone Holdings</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-top:26px;padding-top:18px;border-top:1px solid #e4e8f2"><img src="/static/gwd-emblem.png" alt="GateWay Delivery" style="height:30px"><div style="text-align:left;line-height:1.25"><div style="font-family:monospace;font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:#9a9ea5">Powered by</div><div style="font-weight:900;font-size:.82rem;color:#16337a">GateWay Delivery</div></div></div><div class="foot">Updates automatically \u00b7 Fivestone Holdings</div>
 <script>
 const OID = document.body.getAttribute('data-oid');
 let map, marker;

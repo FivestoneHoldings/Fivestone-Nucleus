@@ -60,6 +60,7 @@ class Partner(Base):
     portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     about_blurb: Mapped[str] = mapped_column(String(280), nullable=False, default="")
+    hero_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
@@ -88,6 +89,7 @@ class MenuItem(Base):
     description: Mapped[str] = mapped_column(String(400), nullable=False, default="")
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    image_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 

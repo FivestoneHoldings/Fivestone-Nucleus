@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import MenuItem, Partner
+from .models import MenuItem, Partner, Event
 
 router = APIRouter()
 
@@ -25,7 +25,8 @@ def _grouped(items):
     for i in items:
         cats.setdefault(i.category, []).append({
             "id": i.id, "name": i.name, "description": i.description,
-            "price_cents": i.price_cents, "available": i.available})
+            "price_cents": i.price_cents, "available": i.available,
+            "image_url": i.image_url})
     return [{"name": c, "items": v} for c, v in cats.items()]
 
 
@@ -76,6 +77,11 @@ async def upsert_item(key: str, code: str, request: Request):
                 setattr(item, field, caster(body[field])[:400])
         if body.get("price_cents") is not None:
             item.price_cents = max(0, int(body["price_cents"]))
+        if body.get("image_url") is not None:
+            url = str(body["image_url"]).strip()[:500]
+            if url and not url.startswith(("https://", "http://")):
+                raise HTTPException(400, "image_url must start with https://")
+            item.image_url = url
         if body.get("available") is not None:
             item.available = bool(body["available"])
         db.commit()
@@ -108,82 +114,193 @@ SEED_PARTNERS = [
 ]
 
 SEED_MENUS = {
+    # VERIFIED from Burger Boys' live Toast ordering page (3000 N Broadway), July 2026.
     "burgerboys": [
-        ("Burgers — ½ lb fresh 80/20, FREE fries", [
-            ("Classic Burger", "Half-pound fresh beef, dressed your way, free fries", 850),
-            ("Kobe Burger", "Sauteed onions & green peppers dipped in steak sauce, tomato, lettuce", 950),
-            ("Lil Dom Burger", "Mayo, ketchup, jalapenos, pepper jack, tomato, lettuce", 950),
-            ("Lil Dre's Burger", "Loaded with everything in the garden, cheese, 6 strips of bacon", 1050),
-            ("Fire Burger", "Habanero & cayenne sauces, jalapenos — for the brave", 1150),
+        ("Burgers — ½ lb fresh 80/20 · Home of the FREE Fries", [
+            ("Kobe Burger", "½ lb beef, sautéed onions & green peppers dipped in steak sauce, tomato & lettuce", 875),
+            ("Lil Dom", "Mayo, ketchup, jalapeños, pepper jack, tomato & lettuce", 875),
+            ("Lil Dre", "Loaded garden toppings, cheese, bacon", 975),
+            ("Dante", "Onion straws, light mustard, American cheese", 850),
+            ("Vol Burger", "½ lb, made to your specifications", 900),
+            ("Big Dom", "1 lb beef, spicy peppers & sauce, tomato & lettuce", 1400),
         ]),
-        ("Chicken, Wings & Fish", [
-            ("Chicken Wings (8)", "Fried, sauced", 999),
-            ("Fried Chicken Sandwich", "Crispy, dressed", 899),
-            ("Fish Sandwich", "Crispy fried fish, dressed", 899),
-            ("Chicken Livers", "Southern style", 799),
+        ("Chicken Wings", [
+            ("Chicken Wings (5 pc)", "", 900),
+            ("Chicken Wings (10 pc)", "", 1700),
+            ("Chicken Wings Meal", "5 pc with 2 sides", 1350),
         ]),
         ("Sides", [
-            ("Mac & Cheese", "", 349), ("Collard Greens", "", 349),
-            ("Candied Yams", "", 349), ("Potato Salad", "", 349),
-            ("Rice & Gravy", "", 349), ("Extra Fries", "More of the free fries", 100),
+            ("Mashed Potatoes (sm)", "", 350), ("Mashed Potatoes (lg)", "", 600),
+            ("Mac & Cheese (sm)", "", 400), ("Mac & Cheese (lg)", "", 700),
+            ("Collard Greens (sm)", "", 425), ("Collard Greens (lg)", "", 775),
+            ("Potato Salad (sm)", "", 350), ("Potato Salad (lg)", "", 700),
         ]),
-        ("Desserts", [
-            ("Sweet Potato Pie", "", 399), ("Cheesecake Slice", "", 449),
+        ("Desserts & Drinks", [
+            ("Cheesecake", "", 350), ("Sweet Potato Pie", "", 300),
+            ("Coke Products (12 oz)", "", 150),
         ]),
     ],
+    # VERIFIED from Friends BBQ's live Marble City Market listing, 2026.
     "friendsbbq": [
-        ("Sandwiches & Plates", [
-            ("Pulled Pork Sandwich", "Slow-smoked pork, house BBQ sauce", 899),
-            ("BBQ Chicken Plate", "Smoked BBQ chicken with 2 sides", 1199),
-            ("Rib Plate", "Slow-smoked ribs with 2 sides", 1399),
-            ("Smoked Hot Dog", "Off the smoker, dressed", 499),
-            ("Meatloaf Plate", "Homestyle, with 2 sides", 1099),
-        ]),
-        ("Family Packs", [
-            ("Pork Family Pack (serves 5)", "20 oz BBQ pork, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
-            ("Chicken Family Pack (serves 5)", "20 oz BBQ chicken, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
-            ("Rib Family Pack (serves 5)", "2.5 lb ribs, 3 pint sides, sauce, 5 cookies", 4999),
-            ("Pork Family Pack (serves 10)", "40 oz BBQ pork, 3 quart sides, sauce, 10 buns, 10 cookies", 6999),
+        ("Smoked Meats", [
+            ("Turkey Leg", "Bone-in, all dark meat", 1500),
+            ("Spare Ribs (slab)", "Slow-smoked", 1800),
+            ("Rib Portion", "Bone-in", 1300),
+            ("Brisket", "Sliced beef", 1200),
+            ("Smoked Meatloaf", "", 1000),
+            ("Pulled Chicken", "", 800),
+            ("Pulled Pork", "", 600),
+            ("Bologna Sandwich", "Thick-cut, lettuce & tomato", 600),
+            ("Smoked Sausage", "", 500),
+            ("Chicken Wing (each)", "Bone-in", 225),
         ]),
         ("Sides", [
-            ("Baked Beans", "", 349), ("Mac & Cheese", "", 349),
-            ("Coleslaw", "", 349), ("Potato Salad", "", 349),
+            ("Fried Green Tomatoes", "", 660),
+            ("Collard Greens", "", 440), ("Mac-n-Cheese", "", 440),
+            ("Baked Beans", "", 440), ("Coleslaw", "", 440),
+            ("Potato Salad", "", 440), ("Green Beans", "", 440),
+            ("Fried Potato Chips", "", 440),
         ]),
-        ("Extras", [
-            ("Cookie", "", 150), ("Extra BBQ Sauce", "", 75),
+        ("Family Packs — call to confirm pricing", [
+            ("Pork Pack (serves 5)", "20 oz meat, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
+            ("Chicken Pack (serves 5)", "20 oz meat, 3 pint sides, sauce, 5 buns, 5 cookies", 3999),
+            ("Ribs Pack (serves 5)", "2.5 lb ribs, 3 pint sides, sauce, 5 cookies", 4999),
+            ("Pork Pack (serves 10)", "40 oz meat, 3 quart sides, 10 buns, 10 cookies", 6999),
+        ]),
+        ("Drinks", [
+            ("Pineapple Lemonade", "", 330),
         ]),
     ],
+    # VERIFIED from Stephen's Pizzeria published menu, 2026.
     "stephens": [
         ("Appetizers", [
-            ("Momma Mia Meatballs", "3 homemade meatballs in pasta sauce, mozzarella", 549),
-            ("Garlic & Cheese Breadsticks", "14\" crust, garlic butter, cheese & herbs, marinara", 649),
-            ("Boneless Wings (8)", "All-white meat; hot, hotter, honey BBQ, or BBQ", 699),
+            ("Momma Mia Meatball Appetizer", "Homemade meatballs in pasta sauce", 549),
+            ("Garlic & Cheese Breadsticks", "Garlic butter, cheese & herbs, marinara", 649),
+            ("Boneless Chicken Wings", "All-white meat", 699),
+            ("Roasted Garlic Hummus", "", 749),
         ]),
-        ("Pizzas — NY style, hand-tossed", [
-            ("Cheese Pizza 10\"", "Stephen's traditional red, mozzarella", 999),
-            ("Cheese Pizza 16\"", "Stephen's traditional red, mozzarella", 1599),
-            ("Pepperoni Pizza 10\"", "The fan favorite", 1149),
-            ("Pepperoni Pizza 16\"", "The fan favorite", 1799),
-            ("Two-Topping Pizza 16\"", "Mozzarella plus your choice of two toppings", 1899),
-            ("Supreme Pizza 16\"", "Sausage, pepperoni, onions, green peppers", 1999),
+        ("Pizzas — NY style, hand-tossed 50-yr family recipe", [
+            ("Personal Pizza 10\"", "Cheese; add toppings in notes", 867),
+            ("Large Pizza 14\"", "Cheese; add toppings in notes", 1259),
+            ("Extra Large Pizza 16\"", "Cheese; add toppings in notes", 1449),
+            ("Pizza by the Slice", "", 259),
         ]),
-        ("Calzones", [
-            ("Cheese Calzone", "Stuffed with mozzarella, side of marinara", 999),
-            ("Sausage & Mushroom Calzone", "House Italian sausage, mushrooms", 1199),
+        ("Specialty Pizzas (Large 14\")", [
+            ("Queen's Margherita", "Fresh mozzarella, basil", 1470),
+            ("Hawaiian", "Ham & pineapple", 1529),
+            ("Spinach Tomato Alfredo", "Alfredo base", 1529),
+            ("Big Babbo", "The house special", 1679),
+            ("Jamaican Jerk", "Jerk-spiced chicken", 1679),
+            ("Pesto Chicken", "Pesto base, grilled chicken", 1679),
+            ("Buffalo Chicken Blue Cheese", "", 1679),
+            ("Mega Meat", "Loaded with meats", 1879),
         ]),
-        ("Hoagies", [
-            ("Philly Cheesesteak", "Seasoned steak, cooked onions, mozzarella, lettuce, mayo", 999),
-            ("Buffalo Chicken Hoagie", "Buffalo-seasoned chicken, blue cheese spread, mozzarella", 949),
+        ("Calzones & Pasta", [
+            ("New Classic New York Calzone", "Ricotta & mozzarella, marinara side", 749),
+            ("Stephen's Spaghetti", "House marinara", 829),
         ]),
-        ("Salads & Pasta", [
-            ("Greek Salad", "Crisp greens, fresh vegetables, tangy dressing", 849),
-            ("Spaghetti & Meatballs", "Stephen's marinara, grated cheese, cheese toast", 1049),
+        ("Hoagies & Italian Wedges", [
+            ("Stephen's Classic Italian Hoagie", "", 869),
+            ("Mega Meatball Wedge", "", 899),
+            ("Philly Cheese Steak", "", 899),
+            ("Italian Philly", "", 899),
+            ("Chicken Philly", "", 899),
+            ("Buffalo Chicken Wedge", "", 899),
+            ("Grilled Chicken Wedge", "", 899),
+            ("Ham & Cheese", "", 799),
         ]),
-        ("Desserts", [
-            ("Tiramisu", "Made fresh", 599),
+        ("Salads", [
+            ("Garden Salad (half)", "", 399),
+            ("Garden Salad (whole)", "", 599),
+            ("\"Best in Show\" Sweet BBQ Chicken Southwest Salad", "", 899),
+            ("Premium Grilled Chicken Salad", "", 849),
+            ("Premium Chef's Salad", "", 829),
+            ("Italian Gorgonzola Salad", "", 829),
+        ]),
+        ("Desserts & Drinks", [
+            ("Homemade Tiramisu", "", 599),
+            ("Chocolate Cannoli", "", 499),
+            ("Soft Drink / Tea", "", 239),
         ]),
     ],
 }
+
+
+MENU_DATA_VERSION = "real-v1"
+
+
+def migrate_real_menus():
+    """One-time: replace DRAFT seeded menus with the VERIFIED published menus
+    (Burger Boys' Toast page, Friends BBQ's Marble City listing, Stephen's menu).
+    Idempotent via a marker event. Founder edits made AFTER this run are preserved
+    because the migration only fires once."""
+    from .models import Event
+    db: Session = SessionLocal()
+    try:
+        done = (db.query(Event)
+                .filter(Event.event_type == "menu.migrated",
+                        Event.entity_ref == MENU_DATA_VERSION).count() > 0)
+        if done:
+            return
+        for code in SEED_MENUS:
+            db.query(MenuItem).filter(MenuItem.partner_code == code).delete(
+                synchronize_session=False)
+        db.commit()
+        for code, cats in SEED_MENUS.items():
+            sort = 0
+            for cat_name, items in cats:
+                for name, desc, cents in items:
+                    sort += 1
+                    db.add(MenuItem(partner_code=code, category=cat_name, name=name,
+                                    description=desc, price_cents=cents, sort=sort))
+        db.add(Event(event_type="menu.migrated", entity_ref=MENU_DATA_VERSION,
+                     tenant="gateway", actor="system",
+                     payload='{"source":"published menus verified 2026-07"}'))
+        db.commit()
+    finally:
+        db.close()
+
+
+STORIES = {
+    "burgerboys": {
+        "about": "Founded in 2017 by Andre Bryant and built from the ground up. After eight years on Chapman Highway, the community helped us reopen on North Broadway — there's a supporter wall inside to prove it. Half-pound, fresh, never-frozen. Home of the FREE fries.",
+        "thanks": "From my family to yours — thank you for keeping the little guy going. — Andre, Burger Boys",
+    },
+    "friendsbbq": {
+        "about": "Knoxville born and raised. We bring soul to soul food — ribs, wings, turkey legs, pulled pork and smoked meatloaf. Every bite sends you down memory lane. We're not just friends, we're family.",
+        "thanks": "Thank you for eating with us. We're not just friends, we're family. — Friends BBQ",
+    },
+    "stephens": {
+        "about": "Hand-tossed New York style from a 50-year-old family recipe. Dough rolled nightly, vegetables sliced every morning, and a buttery blended cheese that makes your taste buds sing. Life, happiness, pizza.",
+        "thanks": "Grazie for choosing our family's pizza. Life, happiness, pizza. — Stephen's Pizzeria",
+    },
+}
+
+STORY_VERSION = "stories-v1"
+
+
+def migrate_partner_stories():
+    """Seed each pilot kitchen's real voice (idempotent, event-guarded)."""
+    db: Session = SessionLocal()
+    try:
+        done = (db.query(Event)
+                .filter(Event.event_type == "partner.stories_seeded",
+                        Event.entity_ref == STORY_VERSION).count() > 0)
+        if done:
+            return
+        for code, story in STORIES.items():
+            p = db.get(Partner, code)
+            if not p:
+                continue
+            if not p.about_blurb:
+                p.about_blurb = story["about"][:280]
+            if not p.thank_you_note:
+                p.thank_you_note = story["thanks"][:300]
+        db.add(Event(event_type="partner.stories_seeded", entity_ref=STORY_VERSION,
+                     tenant="gateway", actor="system", payload="{}"))
+        db.commit()
+    finally:
+        db.close()
 
 
 def migrate_split_burgerboys():
@@ -235,3 +352,6 @@ def seed_menus():
                 db.commit()
     finally:
         db.close()
+    # stories must run AFTER all partners exist (seed-ordering lesson, debug #14)
+    migrate_real_menus()
+    migrate_partner_stories()

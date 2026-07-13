@@ -57,6 +57,14 @@ background:#eef2fc;color:#16337a;text-transform:uppercase}
 .empty{color:#9a9ea5;font-size:.85rem;padding:8px 0}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#9a9ea5;text-align:center;
 margin-top:26px;text-transform:uppercase;letter-spacing:.1em}
+
+.gwd-powered{display:flex;align-items:center;justify-content:center;gap:10px;margin:26px auto 8px;
+padding:12px 18px;border-radius:16px;background:#0e1526;max-width:300px}
+.gwd-powered img{height:34px;width:34px;object-fit:contain;border-radius:8px}
+.gwd-powered div{text-align:left;line-height:1.25}
+.gwd-powered span{display:block;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
+letter-spacing:.14em;text-transform:uppercase;color:#8b93a7}
+.gwd-powered b{display:block;font-size:.86rem;color:#e8eaf0;font-weight:800}
 </style>
 </head>
 <body>
@@ -178,5 +186,9 @@ document.getElementById('pp').value = p.phone || '';
 TIP = (typeof p.defaultTip === 'number') ? p.defaultTip : 300;
 paintTips(); paintAddrs(); paintHistory(); paintHello();
 </script>
+<div class="gwd-powered">
+  <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
+  <div><span>Powered by</span><b>GateWay Delivery</b></div>
+</div>
 </body>
 </html>

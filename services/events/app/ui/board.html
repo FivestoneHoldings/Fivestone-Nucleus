@@ -161,7 +161,8 @@ async function loadPartners(){
       <div class="row">
         <button class="ghost" onclick="demoOrder('${x.code}')">＋ Demo order</button>
         <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button>
-        <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button></div>
+        <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button>
+        <button class="ghost" onclick="editHero('${x.code}',${JSON.stringify(x.hero_url||'')})">Hero photo ✎</button></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="menu-${x.code}" style="display:none;margin-top:10px"></div>
     </div>`).join('');
@@ -183,6 +184,7 @@ async function toggleMenu(code){
       <div class="row" style="align-items:center">
         <span style="flex:2;font-size:.82rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${i.name}</span>
         <span class="oid copy" style="flex:0" onclick="menuPrice('${code}','${i.id}',${i.price_cents})">$${(i.price_cents/100).toFixed(2)} ✎</span>
+        <span class="oid copy" style="flex:0" onclick="menuPhoto('${code}','${i.id}',${JSON.stringify(i.image_url||'')})">${i.image_url?'📷':'📷+'}</span>
         <button class="ghost" style="padding:6px 10px" onclick="menuAvail('${code}','${i.id}',${!i.available})">${i.available?'86':'restore'}</button>
         <button class="warn" style="padding:6px 10px" onclick="menuDel('${code}','${i.id}')">✕</button>
       </div>`).join('')).join('');
@@ -208,6 +210,16 @@ async function menuPrice(code, id, current){
   if(isNaN(cents) || cents < 0) return gwToast('Enter a valid price.', false);
   if(await post(`/partners/${code}/menu`, {id, price_cents: cents}))
     { document.getElementById('menu-'+code).style.display='none'; toggleMenu(code); }
+}
+async function menuPhoto(code, id, current){
+  const url = await gwPrompt({title:'Item photo', value: current, multiline:true,
+    placeholder:'https://…', confirm:'Save photo',
+    body:'Direct https:// link to a photo of THIS dish (restaurant-owned). Blank removes it.'});
+  if(url === null) return;
+  if(await post(`/partners/${code}/menu`, {id, image_url: url})){
+    gwToast(url ? 'Photo saved ✓' : 'Photo removed');
+    document.getElementById('menu-'+code).style.display='none'; toggleMenu(code);
+  }
 }
 async function menuAvail(code, id, avail){
   if(await post(`/partners/${code}/menu`, {id, available:avail}))
@@ -263,6 +275,16 @@ async function editThanks(code, current){
   const r = await fetch(api(`/partners/${code}/thanks`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({note})});
   if(r.ok){ gwToast('Note saved ✓'); loadPartners(); }
+}
+async function editHero(code, current){
+  const url = await gwPrompt({title:'Kitchen hero photo', value: current, multiline:true,
+    placeholder:'https://…  (a direct link to their own food photo)',
+    confirm:'Save photo', body:'Paste a direct https:// image link the restaurant owns (their site, their Facebook/Instagram photo). Leave blank to remove.'});
+  if(url === null) return;
+  const r = await fetch(api(`/partners/${code}/hero`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+  if(r.ok){ gwToast('Hero photo saved ✓'); loadPartners(); }
+  else gwToast('Must be an https:// link.', false);
 }
 async function editAbout(code, current){
   const blurb = await gwPrompt({title:'This kitchen\'s story', multiline:true, value: current,
