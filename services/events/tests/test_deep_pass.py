@@ -75,10 +75,12 @@ def test_retry_backoff_on_429(monkeypatch):
             return FakeResp(429 if calls["n"] < 3 else 200)
 
     monkeypatch.setattr(at.httpx, "AsyncClient", FakeClient)
+    at._CLIENT = None  # drop the pooled client so the fake class is used
     _orig_sleep = asyncio.sleep
     monkeypatch.setattr(at.asyncio, "sleep", lambda s: _orig_sleep(0))
     r = asyncio.get_event_loop().run_until_complete(at._request("GET", "http://x"))
     assert r.status_code == 200 and calls["n"] == 3  # two retries then success
+    at._CLIENT = None
 
 
 def test_intake_throttle_429():

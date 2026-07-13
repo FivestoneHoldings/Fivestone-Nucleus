@@ -8,13 +8,33 @@ import httpx
 
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 
+# One pooled client for the process: TCP + TLS handshakes are the single biggest
+# avoidable latency on the hot path (every board refresh, every driver poll).
+_CLIENT: httpx.AsyncClient | None = None
+
+
+def _client() -> httpx.AsyncClient:
+    global _CLIENT
+    if _CLIENT is None or getattr(_CLIENT, "is_closed", False):
+        _CLIENT = httpx.AsyncClient(
+            timeout=httpx.Timeout(12.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+        )
+    return _CLIENT
+
+
+async def aclose():
+    global _CLIENT
+    if _CLIENT is not None and not _CLIENT.is_closed:
+        await _CLIENT.aclose()
+    _CLIENT = None
+
 
 async def _request(method: str, url: str, **kw) -> httpx.Response:
     """3 attempts with exponential backoff on rate limits / transient 5xx."""
     last: httpx.Response | None = None
     for attempt in range(3):
-        async with httpx.AsyncClient(timeout=15) as c:
-            r = await c.request(method, url, **kw)
+        r = await _client().request(method, url, **kw)
         if r.status_code not in RETRY_STATUSES:
             r.raise_for_status()
             return r

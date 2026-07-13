@@ -18,7 +18,7 @@ CHECKS = {
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",
    "Almost done", "recipientRow", "gw_last_partner", "total_cents", "maybeReorder", "gw_cart_",
    "payment_method", "Pay at the door", "gw-profile.js", "gwProfile.addAddress",
-   "Place order ·", "og:title", "Welcome to GateWay",
+   "Place order ·", "og:title", "Welcome to GateWay", "pickCustom", "TIP_PCTS", "itemNote", "filterMenu",
  ],
  "app/track.py": [
    "gw-bar", 'cls = "now"', "MICRO", "elapsed", "celebrate", "againBtn",
@@ -56,6 +56,8 @@ CHECKS = {
  "app/ui/me.html": ["only on this device", "kept in local kitchens", "Erase my profile"],
  "app/ui/static/gw-profile.js": ["recordOrder", "localImpactCents", "greeting", "topKitchen", "setFavorite"],
  "app/payments.py": ["configured", "normalize_method", "cod"],
+ "app/airtable_client.py": ["_client", "max_keepalive_connections"],
+ "app/main.py": ["Server-Timing", "system.slow_request"],
  "app/intake.py": ["order.payment_method", "payments.normalize_method"],
 }
 

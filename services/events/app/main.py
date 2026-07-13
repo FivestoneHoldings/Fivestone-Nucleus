@@ -129,7 +129,51 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "0.49"
+NUCLEUS_VERSION = "0.50"
+
+
+@app.middleware("http")
+async def timing_and_slow_log(request, call_next):
+    import time as _t
+    t0 = _t.perf_counter()
+    response = await call_next(request)
+    dur_ms = (_t.perf_counter() - t0) * 1000
+    response.headers["Server-Timing"] = f"app;dur={dur_ms:.1f}"
+    _METRICS["count"] += 1
+    _METRICS["total_ms"] += dur_ms
+    _METRICS["max_ms"] = max(_METRICS["max_ms"], dur_ms)
+    if response.status_code >= 500:
+        _METRICS["errors"] += 1
+    # a request slower than 2s on a delivery board is an incident, not a stat
+    if dur_ms > 2000 and not request.url.path.startswith("/static"):
+        try:
+            import json as _json
+            from .models import Event
+            db = SessionLocal()
+            db.add(Event(event_type="system.slow_request", entity_ref=request.url.path[:120],
+                         tenant="gateway", actor="system",
+                         payload=_json.dumps({"ms": round(dur_ms)})))
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+    return response
+
+
+_METRICS = {"count": 0, "total_ms": 0.0, "max_ms": 0.0, "errors": 0}
+
+
+@app.get("/metrics")
+def metrics():
+    """Lightweight ops pulse — no PII, safe to hit from an uptime monitor."""
+    c = _METRICS["count"] or 1
+    return {
+        "requests": _METRICS["count"],
+        "avg_ms": round(_METRICS["total_ms"] / c, 1),
+        "max_ms": round(_METRICS["max_ms"], 1),
+        "errors_5xx": _METRICS["errors"],
+        "version": NUCLEUS_VERSION,
+    }
 
 
 @app.get("/healthz")

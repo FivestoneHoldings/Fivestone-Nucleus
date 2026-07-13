@@ -176,6 +176,27 @@ img,svg,video{max-width:100%;height:auto}
 .gw-bar{box-sizing:border-box;max-width:100vw}
 .catnav{max-width:100%}
 pre,code{white-space:pre-wrap;word-break:break-word}
+
+/* v0.50 tip block */
+.tipwrap{background:#fff;border:1px solid #e4e8f2;border-radius:18px;padding:16px 18px;
+margin-bottom:14px;box-shadow:0 3px 16px rgba(20,30,60,.06)}
+.tiphead{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+text-transform:uppercase;color:#16337a;margin-bottom:3px}
+.tipsub{font-size:.78rem;color:#7a7f87;margin-bottom:11px}
+.tiprow{display:flex;gap:7px}
+.tipchip{flex:1;padding:11px 4px;border-radius:12px;border:1.5px solid #c3d0f0;background:#fff;
+color:#16337a;font-weight:800;font-family:inherit;font-size:.86rem;cursor:pointer;
+display:flex;flex-direction:column;align-items:center;line-height:1.15;transition:all .14s}
+.tipchip small{font-family:'IBM Plex Mono',monospace;font-size:.54rem;font-weight:500;opacity:.7;margin-top:2px}
+.tipchip.on{background:#16337a;color:#fff;border-color:#16337a;box-shadow:0 4px 14px rgba(22,51,122,.28)}
+.tipnote{font-size:.72rem;color:#9a9ea5;margin-top:9px;text-align:center}
+
+.msearch{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;
+border:1.5px solid transparent;background:#f2f4fa;font-family:inherit;font-size:.9rem;margin-bottom:10px}
+.msearch:focus{background:#fff;border-color:#2f6fe0;outline:none}
+.mnote{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:#16337a;background:#eef2fc;
+border-radius:8px;padding:3px 7px;margin-top:5px;display:inline-block;cursor:pointer}
+.mnote.empty{color:#9aa3b5;background:#f2f4fa}
 </style>
 </head>
 \1
@@ -236,6 +257,13 @@ pre,code{white-space:pre-wrap;word-break:break-word}
       <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
     </fieldset>
 
+    <div class="tipwrap" id="tipWrap" style="display:none">
+      <div class="tiphead">Tip your driver</div>
+      <div class="tipsub">Your neighbor drives their own car and their own gas. 100% of the tip is theirs.</div>
+      <div class="tiprow" id="tipRow"></div>
+      <div class="tipnote">You can always add more after delivery.</div>
+    </div>
+
     <fieldset id="payFs">
       <legend>Payment</legend>
       <input type="hidden" name="payment_method" value="cod">
@@ -257,6 +285,7 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
 </div>
 <script src="/static/gw-profile.js"></script>
+<script src="/static/gw-ui.js"></script>
 <script>
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
@@ -271,12 +300,49 @@ if(p){
     .then(renderMenu).catch(()=>{});
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
-let FEE_CENTS = 0, TIP_CENTS = 0;
-function setTip(cents, el){
-  TIP_CENTS = cents;
-  document.querySelectorAll('.tipchip').forEach(c=>{c.style.background='#fff';c.style.color='#16337a'});
-  if(el){ el.style.background='#16337a'; el.style.color='#fff'; }
-  compose();
+let FEE_CENTS = 0, TIP_CENTS = 0, TIP_MODE = 'pct', TIP_PCT = 18;
+const TIP_PCTS = [15, 18, 20, 25];
+
+function subtotalCents(){
+  return Object.values(CART).reduce((a,e)=>a + e.cents*e.qty, 0);
+}
+function paintTips(){
+  const wrap = document.getElementById('tipWrap');
+  const sub = subtotalCents();
+  if(!wrap) return;
+  if(!sub){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const row = document.getElementById('tipRow');
+  row.innerHTML = TIP_PCTS.map(p=>{
+    const cents = Math.round(sub * p / 100);
+    const on = (TIP_MODE === 'pct' && TIP_PCT === p);
+    return `<button type="button" class="tipchip ${on?'on':''}" onclick="pickPct(${p})">
+      ${p}%<small>${money(cents)}</small></button>`;
+  }).join('') +
+  `<button type="button" class="tipchip ${TIP_MODE==='custom'?'on':''}" onclick="pickCustom()">
+     ${TIP_MODE==='custom' ? money(TIP_CENTS) : 'Other'}<small>${TIP_MODE==='custom'?'custom':'or $0'}</small></button>`;
+}
+function pickPct(p){
+  TIP_MODE = 'pct'; TIP_PCT = p;
+  TIP_CENTS = Math.round(subtotalCents() * p / 100);
+  paintTips(); compose();
+}
+async function pickCustom(){
+  const cur = TIP_CENTS ? (TIP_CENTS/100).toFixed(2) : '';
+  const v = await gwPrompt({title:'Custom tip', value: cur, inputmode:'decimal',
+    placeholder:'0.00', confirm:'Set tip',
+    body:'Any amount you like — including $0. 100% goes to your driver, and you can add more after delivery.'});
+  if(v === null) return;
+  const cents = Math.round(parseFloat(v || '0') * 100);
+  if(isNaN(cents) || cents < 0 || cents > 50000) return gwToast('Enter an amount between $0 and $500.', false);
+  TIP_MODE = 'custom'; TIP_CENTS = cents;
+  paintTips(); compose();
+}
+// legacy hook (profile default tip): treat a stored amount as a custom tip
+function setTip(cents){
+  if(typeof cents !== 'number') return;
+  TIP_MODE = 'custom'; TIP_CENTS = cents;
+  paintTips(); compose();
 }
 function setWhen(sched){
   document.getElementById('reqFor').style.display = sched ? '' : 'none';
@@ -369,12 +435,13 @@ function renderMenu(m){
       ${meta.about_blurb?`<div class="story">${(meta.about_blurb||'').replace(/</g,'&lt;')}</div>`:''}
       <div class="facts">${facts.map(f=>`<span class="fact">${String(f).replace(/</g,'&lt;')}</span>`).join('')}</div>
     </div></div>`;
+  const search = `<input class="msearch" id="msearch" placeholder="Search the menu…" oninput="filterMenu()">`;
   const cats = m.categories.filter(c=>c.items && c.items.length);
   const nav = cats.length > 1
     ? `<div class="catnav">${cats.map((c,i)=>
         `<a href="#cat${i}" class="${i===0?'on':''}" onclick="navPick(this)">${c.name.split('—')[0].trim().replace(/</g,'&lt;')}</a>`).join('')}</div>`
     : '';
-  z.innerHTML = head + nav + cats.map((c,i) => `<div class="mcat" id="cat${i}">${c.name.replace(/</g,'&lt;')}</div>` +
+  z.innerHTML = head + search + nav + cats.map((c,i) => `<div class="mcat" id="cat${i}">${c.name.replace(/</g,'&lt;')}</div>` +
     c.items.map(i2 => {
       const nm2 = (i2.name||'').replace(/</g,'&lt;');
       const photo = i2.image_url
@@ -387,6 +454,7 @@ function renderMenu(m){
           <div class="mname">${nm2}</div>
           ${i2.description?`<div class="mdesc">${(i2.description||'').replace(/</g,'&lt;')}</div>`:''}
           <div class="mprice">$${(i2.price_cents/100).toFixed(2)}</div>
+          <span class="mnote empty" id="note-${i2.id}" onclick="itemNote('${i2.id}','${nm2.replace(/'/g,"\\'")}')">+ special request</span>
         </div>
         <div class="mact">
           ${i2.available===false
@@ -402,6 +470,36 @@ function renderMenu(m){
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
   maybeReorder();
+}
+const NOTES = {};
+function filterMenu(){
+  const q = (document.getElementById('msearch').value || '').toLowerCase().trim();
+  document.querySelectorAll('.mitem').forEach(el=>{
+    const t = el.textContent.toLowerCase();
+    el.style.display = (!q || t.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.mcat').forEach(cat=>{
+    let n = cat.nextElementSibling, any = false;
+    while(n && n.classList.contains('mitem')){
+      if(n.style.display !== 'none') any = true;
+      n = n.nextElementSibling;
+    }
+    cat.style.display = any ? '' : 'none';
+  });
+}
+async function itemNote(id, name){
+  const v = await gwPrompt({title:`Special request — ${name}`, multiline:true,
+    value: NOTES[id] || '', confirm:'Save request',
+    placeholder:'No onions · extra crispy · sauce on the side',
+    body:'This goes straight to the cook on their kitchen screen.'});
+  if(v === null) return;
+  if(v.trim()) NOTES[id] = v.trim().slice(0,120); else delete NOTES[id];
+  const pill = document.getElementById('note-' + id);
+  if(pill){
+    pill.textContent = NOTES[id] ? ('📝 ' + NOTES[id].slice(0,28) + (NOTES[id].length>28?'…':'')) : '+ special request';
+    pill.className = 'mnote' + (NOTES[id] ? '' : ' empty');
+  }
+  compose();
 }
 function navPick(el){
   document.querySelectorAll('.catnav a').forEach(a=>a.classList.remove('on'));
@@ -448,14 +546,19 @@ function compose(){
   if(!entries.length){
     if(itemsField) itemsField.value='';
     bar.style.display='none';
+    const tw = document.getElementById('tipWrap'); if(tw) tw.style.display='none';
     const sb = document.querySelector('button[type="submit"]');
     if(sb && !sb.disabled) sb.textContent = 'Send Order to GateWay';
     return;
   }
   if(itemsField) itemsField.value =
-    entries.map(e=>`${e.qty}× ${e.name} (${money(e.cents*e.qty)})`).join(', ') +
-    ` — subtotal ${money(sub)}`;
+    Object.entries(CART).map(([id,e])=>{
+      const note = NOTES[id] ? ` [${NOTES[id]}]` : '';
+      return `${e.qty}× ${e.name}${note} (${money(e.cents*e.qty)})`;
+    }).join(', ') + ` — subtotal ${money(sub)}`;
   bar.style.display = 'block';
+  if(TIP_MODE === 'pct') TIP_CENTS = Math.round(sub * TIP_PCT / 100);
+  paintTips();
   const total = sub + FEE_CENTS + TIP_CENTS;
   const sendBtn = document.querySelector('button[type="submit"]');
   if(sendBtn && !sendBtn.disabled) sendBtn.textContent = `Place order · ${money(total)}`;
