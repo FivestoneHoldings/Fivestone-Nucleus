@@ -104,6 +104,35 @@ border-radius:9px;padding:3px 7px;letter-spacing:.1em;font-weight:500}
 .rrow.paused{opacity:.72}
 .rpausebtn{width:100%;padding:10px;border-radius:11px;border:1.5px solid #16337a;background:#fff;
 color:#16337a;font-weight:800;font-family:inherit;font-size:.8rem;margin-top:8px;cursor:pointer}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;margin:0 -22px 6px;padding-left:22px;padding-right:22px;
+scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);
+border-radius:22px;padding:9px 14px;font-size:.84rem;font-weight:800;color:var(--ink);cursor:pointer;
+text-decoration:none;white-space:nowrap;font-family:'Archivo'}
+.chip.on{background:#0e1526;color:#fff;border-color:#0e1526}
+.chip span{font-size:1rem}
+.frail{display:flex;gap:12px;overflow-x:auto;margin:0 -22px 4px;padding:2px 22px 8px;scrollbar-width:none}
+.frail::-webkit-scrollbar{display:none}
+.ftile{flex:0 0 78%;max-width:290px;background:#fff;border:1px solid var(--line);border-radius:18px;
+overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 4px 16px rgba(20,30,60,.08)}
+.fhero{height:118px;display:flex;align-items:center;justify-content:center;position:relative}
+.fhero img.photo{width:100%;height:100%;object-fit:cover;display:block}
+.fhero img.emb{width:34%;opacity:.95}
+.fbody{padding:11px 13px 13px}
+.fname{font-weight:900;font-size:1.02rem;letter-spacing:-.01em}
+.ftag{font-size:.76rem;color:var(--dim);margin-top:2px;line-height:1.35;
+display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fmeta{font-size:.72rem;color:var(--dim);margin-top:7px;font-weight:700}
+.demo{font-family:'IBM Plex Mono',monospace;font-size:.48rem;background:#eef1f7;color:#7a8398;
+border-radius:8px;padding:3px 6px;letter-spacing:.1em;font-weight:500;border:1px solid #dde2ec}
+.empty{text-align:center;padding:34px 18px;color:var(--dim)}
+.empty .dashbig{display:inline-flex;gap:5px;margin-bottom:12px}
+.empty .dashbig i{width:26px;height:9px;border-radius:3px;transform:skewX(-18deg)}
+.empty .dashbig i:nth-child(1){background:#2f6fe0}.empty .dashbig i:nth-child(2){background:#dfe4ee}
+.empty .dashbig i:nth-child(3){background:#d81f2a}
+.empty b{display:block;font-size:1rem;color:var(--ink);margin-bottom:4px}
+.empty p{font-size:.84rem;line-height:1.5}
 .gw-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:4px;background:#0e1526;border-radius:26px;padding:7px 10px;box-shadow:0 10px 30px rgba(10,15,30,.4);padding-bottom:max(7px, env(safe-area-inset-bottom))}
 .gw-nav a{display:flex;flex-direction:column;align-items:center;gap:1px;color:#8b93a7;text-decoration:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;padding:5px 13px;border-radius:18px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
 .gw-nav a span{font-size:1.05rem}
@@ -129,6 +158,8 @@ body{padding-bottom:110px !important}
 <div id="quickReorder" style="display:none"></div>
 <div id="localImpact" style="display:none"></div>
 
+<div id="chips" class="chips"></div>
+<div id="featured"></div>
 <div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
 
 <a class="tile" href="/order" style="padding:15px 20px">
@@ -218,41 +249,102 @@ fetch('/v0/local-impact').then(r=>r.json()).then(li=>{
       <div style="color:#7a7f87;font-size:.76rem">${li.delivered} neighbor ${li.delivered===1?'delivery':'deliveries'} · powered by GateWay</div>
     </div></div>`;
 }).catch(()=>{});
-fetch('/v0/partners').then(r=>r.json()).then(d=>{
+let ALL = [], COUNTS = {}, CAT = 'all';
+const CAT_ICON = {Burgers:'🍔', BBQ:'🍖', Pizza:'🍕', Asian:'🥡', Breakfast:'🍳',
+  Coffee:'☕', Mexican:'🌮', Desserts:'🍰', Healthy:'🥗'};
+
+function esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+function fee(p){ return p.delivery_fee_cents ? '$'+(p.delivery_fee_cents/100).toFixed(2)+' delivery' : 'Free delivery'; }
+
+function thumb(p, cls){
+  const tint = p.brand_color || '#16337a';
+  const bg = `background:linear-gradient(135deg, ${esc(tint)}, #0e1526)`;
+  return p.hero_url
+    ? `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.hero_url)}" alt="" loading="lazy"
+         onerror="this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))"></div>`
+    : `<div class="${cls}" style="${bg}"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
+}
+
+function paintChips(){
+  const cats = [...new Set(ALL.map(p=>p.cuisine).filter(Boolean))].sort();
+  document.getElementById('chips').innerHTML =
+    `<a class="chip ${CAT==='all'?'on':''}" href="#" onclick="setCat('all');return false"><span>🍽</span>All</a>` +
+    cats.map(c=>`<a class="chip ${CAT===c?'on':''}" href="#" onclick="setCat('${esc(c)}');return false">
+      <span>${CAT_ICON[c]||'🍴'}</span>${esc(c)}</a>`).join('');
+}
+
+function setCat(c){ CAT = c; paintChips(); paintList(); paintFeatured();
+  document.getElementById('restaurants').scrollIntoView({behavior:'smooth', block:'start'}); }
+
+function paintFeatured(){
+  const el = document.getElementById('featured');
+  const feat = ALL.filter(p=>p.featured && p.accepting_orders !== false &&
+    (CAT==='all' || p.cuisine===CAT));
+  if(!feat.length){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="rsec">✨ Featured kitchens</div><div class="frail">' + feat.map(p=>`
+    <a class="ftile" href="/order?partner=${encodeURIComponent(p.code)}">
+      ${thumb(p,'fhero')}
+      <div class="fbody">
+        <div class="fname">${esc(p.display_name)}</div>
+        <div class="ftag">${esc(p.tagline || p.about_blurb || 'Browse the menu')}</div>
+        <div class="fmeta">${esc(p.cuisine||'Local')} · ${fee(p)}</div>
+      </div></a>`).join('') + '</div>';
+}
+
+function paintList(){
   const el = document.getElementById('restaurants');
-  if(!d.partners || !d.partners.length){ el.innerHTML = ''; return; }
-  let counts = {};
-  try{ (gwProfile.get().history||[]).forEach(h=>{ if(h.partner) counts[h.partner]=(counts[h.partner]||0)+1; }); }catch(e){}
-  const list = d.partners.slice().sort((a,b)=>(counts[b.code]||0)-(counts[a.code]||0));
-  el.innerHTML = '<div class="rsec">Local kitchens · ' + list.length + '</div>' + list.map(p=>{
-    const name = (p.display_name||'').replace(/</g,'&lt;');
-    const area = (p.address||'').split(',')[0].replace(/</g,'&lt;');
-    const fee = p.delivery_fee_cents ? '$' + (p.delivery_fee_cents/100).toFixed(2) + ' delivery' : '';
-    const meta = [area, fee].filter(Boolean).join(' · ');
-    const usual = (counts[p.code]||0) >= 2 ? '<span class="rbadge">YOUR USUAL</span>' : '';
-    const thumb = p.hero_url
-      ? `<div class="rthumb"><img class="photo" src="${p.hero_url}" alt="" loading="lazy"
-           onerror="this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))"></div>`
-      : `<div class="rthumb"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
+  const list = ALL.filter(p => CAT==='all' || p.cuisine===CAT)
+    .slice().sort((a,b)=>(COUNTS[b.code]||0)-(COUNTS[a.code]||0));
+  if(!list.length){
+    el.innerHTML = `<div class="empty"><div class="dashbig"><i></i><i></i><i></i></div>
+      <b>No kitchens here yet</b><p>We're signing them up. Tap <b>All</b> to see who's cooking right now.</p></div>`;
+    return;
+  }
+  const head = CAT==='all' ? 'Local kitchens · ' + list.length : esc(CAT) + ' · ' + list.length;
+  el.innerHTML = '<div class="rsec">' + head + '</div>' + list.map(p=>{
+    const name = esc(p.display_name);
+    const area = esc((p.address||'').split(',')[0]);
+    const meta = [area, fee(p)].filter(Boolean).join(' · ');
+    const usual = (COUNTS[p.code]||0) >= 2 ? '<span class="rbadge">YOUR USUAL</span>' : '';
+    const demo = p.demo ? '<span class="demo">PREVIEW</span>' : '';
     if(p.accepting_orders === false){
       return `<div class="rrow paused" style="flex-wrap:wrap">
-        ${thumb}
-        <div class="rinfo"><div class="rname">${name}</div>
+        ${thumb(p,'rthumb')}
+        <div class="rinfo"><div class="rname">${name}${demo}</div>
           <div class="rmeta" style="color:#d81f2a;font-weight:700">Paused — the kitchen is catching up</div></div>
-        <button class="rpausebtn" onclick="notifyMe('${p.code}','${name.replace(/'/g,"\\'")}')">🔔 Text me when they're back</button>
+        <button class="rpausebtn" onclick="notifyMe('${esc(p.code)}','${name.replace(/'/g,"\\'")}')">🔔 Text me when they're back</button>
       </div>`;
     }
     return `<a class="rrow" href="/order?partner=${encodeURIComponent(p.code)}">
-      ${thumb}
+      ${thumb(p,'rthumb')}
       <div class="rinfo">
-        <div class="rname">${name}${usual}</div>
+        <div class="rname">${name}${usual}${demo}</div>
         <div class="rmeta">${meta || 'Browse the menu'}</div>
-        ${p.special?`<div class="rspecial">✨ ${String(p.special).replace(/</g,'&lt;')}</div>`:''}
+        ${p.special?`<div class="rspecial">✨ ${esc(p.special)}</div>`:''}
       </div>
       <span class="rgo">›</span>
     </a>`;
   }).join('');
-}).catch(()=>{});
+}
+
+fetch('/v0/partners').then(r=>r.json()).then(d=>{
+  ALL = d.partners || [];
+  try{ (gwProfile.get().history||[]).forEach(h=>{ if(h.partner) COUNTS[h.partner]=(COUNTS[h.partner]||0)+1; }); }catch(e){}
+  if(!ALL.length){
+    document.getElementById('restaurants').innerHTML =
+      `<div class="empty"><div class="dashbig"><i></i><i></i><i></i></div>
+       <b>The kitchens are warming up</b>
+       <p>We're bringing local kitchens online right now. Check back in a bit — or
+       <a href="/partner-with-us" style="color:#16337a;font-weight:800">put yours on GateWay</a>.</p></div>`;
+    return;
+  }
+  paintChips(); paintFeatured(); paintList();
+}).catch(()=>{
+  document.getElementById('restaurants').innerHTML =
+    `<div class="empty"><div class="dashbig"><i></i><i></i><i></i></div>
+     <b>We couldn't load the kitchens</b>
+     <p>Check your connection and pull to refresh. Your cart is safe.</p></div>`;
+});
 async function notifyMe(code, name){
   const phone = await gwPrompt({title:`Text me when ${name} is back`,
     placeholder:'865-555-0100', inputmode:'tel', confirm:'Notify me',

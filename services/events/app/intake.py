@@ -19,14 +19,16 @@ router = APIRouter()
 FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address",
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
           "special_instructions", "requested_for", "partner",
-          "subtotal_cents", "fee_cents", "total_cents", "tip_cents"]
+          "subtotal_cents", "fee_cents", "total_cents", "tip_cents",
+          "promo_code", "discount_cents"]
 
 CAPS = {"items_description": 1000, "special_instructions": 600,
         "pickup_address": 300, "dropoff_address": 300,
         "customer_name": 120, "dropoff_contact_name": 120,
         "customer_phone": 30, "dropoff_contact_phone": 30,
         "requested_for": 40, "partner": 60,
-        "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12}
+        "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12,
+        "promo_code": 30, "discount_cents": 12}
 
 # In-memory per-IP throttle: 30 submissions/minute (dispatch-scale abuse guard)
 _HITS: dict = {}
@@ -170,6 +172,38 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                         fields[money_field] = int(data[money_field])
                     except (ValueError, TypeError):
                         pass
+
+            # --- SERVER IS THE ONLY AUTHORITY ON MONEY (v1.1) ---
+            # A tampered client must never be able to shrink what the driver
+            # collects at the door. We re-derive the discount from the DB and
+            # recompute the total; the client's discount_cents is ignored.
+            sub = int(fields.get("subtotal_cents") or 0)
+            fee = int(fields.get("fee_cents") or 0)
+            tip = int(fields.get("tip_cents") or 0)
+            promo = str(data.get("promo_code") or "").strip().upper()[:30]
+            disc = 0
+            if promo and sub > 0:
+                from .growth import promo_discount_cents
+                from .db import SessionLocal as _SL
+                _db = _SL()
+                try:
+                    disc, desc = promo_discount_cents(promo, data["partner"], sub, _db)
+                    if disc > 0:
+                        from .models import PromoCode as _PC
+                        row = _db.get(_PC, promo)
+                        if row:
+                            row.uses += 1
+                            _db.commit()
+                        _log_owned("order.promo_applied", order_id,
+                                   {"code": promo, "discount_cents": disc, "description": desc})
+                finally:
+                    _db.close()
+            disc = max(0, min(disc, sub))
+            if disc:
+                fields["promo_code"] = promo
+                fields["discount_cents"] = disc
+            if sub:
+                fields["total_cents"] = max(0, sub + fee + tip - disc)
             await at.create_record(at.ORDERS, fields)
             _log_owned("order.payment_method", order_id, {"method": payment_method})
             _log_owned("order.received", order_id,

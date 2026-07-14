@@ -76,7 +76,8 @@
 
 
 
-.cartbar{position:sticky;bottom:12px;background:#16337a;color:#fff;border-radius:14px;
+.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:calc(100% - 28px);
+max-width:532px;z-index:70;background:#16337a;color:#fff;border-radius:16px;
 padding:14px 18px;display:none;justify-content:space-between;align-items:center;
 font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
 .cartbar .tot{font-family:'IBM Plex Mono',monospace}
@@ -121,7 +122,7 @@ letter-spacing:.01em}
 .mhero{width:100%;height:180px;object-fit:cover;border-radius:18px;margin-bottom:14px;
 box-shadow:0 6px 22px rgba(20,30,60,.14)}
 
-.cartbar{background:linear-gradient(135deg,#0e1526,#16337a);box-shadow:0 10px 26px rgba(10,20,50,.35);
+.cartbar{background:linear-gradient(135deg,#0e1526,#16337a);box-shadow:0 12px 34px rgba(10,20,50,.42);
 border-radius:18px}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#5a5e64}
 .opt{color:#9a9ea5;font-weight:400;font-size:.8em}
@@ -228,9 +229,65 @@ font-family:'IBM Plex Mono',monospace}
 .mitem.m86{opacity:.5}
 .soldout{font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:#d81f2a;font-weight:600;
 white-space:nowrap}
+.cartbar{display:none;flex-direction:column;gap:0;padding:12px 16px;cursor:pointer;
+padding-bottom:max(12px, env(safe-area-inset-bottom))}
+.cartbar.show{display:flex}
+.cbline{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:#b9c6e6;
+font-family:'IBM Plex Mono',monospace;padding:2px 0}
+.cbtot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:8px;
+border-top:1px solid rgba(255,255,255,.16)}
+.cbtot b{font-size:1.06rem;font-weight:900}
+.cbtot .go{background:#fff;color:#16337a;border-radius:11px;padding:8px 15px;font-weight:900;font-size:.86rem}
+.cbcount{font-weight:800;font-size:.9rem;color:#fff}
+/* the bar floats over the page — give the page room so nothing hides beneath it */
+body{padding-bottom:150px}
+/* ===== BRANDED STOREFRONT SPLASH (v1.1) — entering the store, not popping a page ===== */
+#splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;
+justify-content:center;gap:16px;background:#0e1526;color:#fff;
+animation:splashOut .42s ease .78s forwards}
+#splash .slogo{width:96px;height:96px;border-radius:24px;display:flex;align-items:center;justify-content:center;
+box-shadow:0 18px 44px rgba(0,0,0,.42);animation:splashPop .5s cubic-bezier(.2,1.3,.4,1) both}
+#splash .slogo img{width:64%;height:auto}
+#splash .sname{font-size:1.35rem;font-weight:900;letter-spacing:-.02em;animation:splashUp .45s ease .1s both}
+#splash .stag{font-size:.8rem;color:#9fb0d4;max-width:74%;text-align:center;line-height:1.4;
+animation:splashUp .45s ease .18s both}
+#splash .spow{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.16em;
+text-transform:uppercase;color:#6b7793;animation:splashUp .45s ease .26s both}
+#splash .sdash{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}
+#splash .sdash i{width:13px;height:5px;border-radius:2px;transform:skewX(-18deg)}
+#splash .sdash i:nth-child(1){background:#2f6fe0}#splash .sdash i:nth-child(2){background:#e8eaf0}
+#splash .sdash i:nth-child(3){background:#d81f2a}
+@keyframes splashPop{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+@keyframes splashUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media (prefers-reduced-motion: reduce){#splash{animation:splashOut .01s linear .2s forwards}
+#splash .slogo,#splash .sname,#splash .stag,#splash .spow{animation:none}}
+/* ===== PROMO ===== */
+.promo{display:flex;gap:8px;margin-top:6px}
+.promo input{flex:1;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.promo button{flex:0 0 auto;padding:12px 16px;border-radius:11px;border:1.5px solid #16337a;
+background:#fff;color:#16337a;font-weight:800;font-family:'Archivo';cursor:pointer}
+.promo-ok{display:none;align-items:center;gap:8px;margin-top:9px;background:#eefaf3;border:1px solid #b7e6cd;
+color:#1c6b45;border-radius:11px;padding:10px 12px;font-size:.83rem;font-weight:700}
+.promo-ok.show{display:flex}
+.promo-ok .x{margin-left:auto;background:none;border:none;color:#1c6b45;font-weight:900;cursor:pointer;font-size:1rem;padding:0 4px}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="slogo" id="splashLogo" style="background:linear-gradient(135deg,#16337a,#0e1526)">
+    <img id="splashImg" src="/static/gwd-emblem.png" alt=""></div>
+  <div class="sname" id="splashName">GateWay Delivery</div>
+  <div class="stag" id="splashTag">Local kitchens, delivered by your neighbors.</div>
+  <div class="spow">Powered by GateWay <span class="sdash"><i></i><i></i><i></i></span></div>
+</div>
+<div class="cartbar" id="cartbar" onclick="scrollToSend()">
+  <div class="cbline"><span id="cartCount" class="cbcount"></span><span id="cbSub"></span></div>
+  <div class="cbline"><span>Delivery</span><span id="cbFee"></span></div>
+  <div class="cbline"><span>Tip</span><span id="cbTip"></span></div>
+  <div class="cbline" id="cbDiscLine" style="display:none;color:#7ee2b0"><span>Discount</span><span id="cbDisc"></span></div>
+  <div class="cbtot"><b id="cartTot"></b><span class="go">Review order ›</span></div>
+</div>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Order <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
@@ -302,6 +359,17 @@ white-space:nowrap}
         <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#16337a;color:#fff;font-weight:800;text-align:center">Pay at the door</div>
         <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d9deea;background:#f2f4fa;color:#9a9ea5;font-weight:800;text-align:center">Pay online<br><span style="font-size:.62rem;font-weight:500;letter-spacing:.06em">COMING SOON</span></div>
       </div>
+      <label for="promoIn" style="margin-top:14px">Promo or referral code</label>
+      <div class="promo">
+        <input id="promoIn" placeholder="WELCOME10" autocapitalize="characters" autocomplete="off">
+        <button type="button" onclick="applyPromo()">Apply</button>
+      </div>
+      <div class="promo-ok" id="promoOk">
+        <span>🎉</span><span id="promoTxt"></span>
+        <button type="button" class="x" onclick="clearPromo()" aria-label="Remove code">✕</button>
+      </div>
+      <input type="hidden" name="promo_code" id="promoField" value="">
+      <input type="hidden" name="discount_cents" id="discountField" value="">
     </fieldset>
 
     <fieldset id="pickupFs">
@@ -310,7 +378,7 @@ white-space:nowrap}
       <textarea id="pa" name="pickup_address" required placeholder="Street, City, TN"></textarea>
     </fieldset>
 
-    <button type="submit">Send Order to GateWay</button>
+    <button type="submit" id="sendBtnAnchor">Send Order to GateWay</button>
   </form>
 <div class="gwd-powered">
   <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
@@ -330,12 +398,74 @@ if(p){
   fetch('/v0/partners/' + encodeURIComponent(p))
     .then(r => r.ok ? r.json() : null)
     .then(d => { document.querySelector('.tag').textContent =
-      (d ? d.display_name : p) + ' × GateWay Delivery'; applyPartnerMeta(d); }).catch(()=>{});
+      (d ? d.display_name : p) + ' × GateWay Delivery'; paintSplash(d); applyPartnerMeta(d); }).catch(()=>{});
   fetch('/v0/partners/' + encodeURIComponent(p) + '/menu')
     .then(r => r.ok ? r.json() : null)
     .then(renderMenu).catch(()=>{});
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
+function scrollToSend(){
+  const b = document.getElementById('sendBtnAnchor');
+  if(b) b.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* --- Branded storefront splash: you are ENTERING this merchant's store --- */
+function paintSplash(d){
+  if(!d) return;
+  const tint = d.brand_color || '#16337a';
+  document.getElementById('splash').style.background =
+    `linear-gradient(160deg, ${tint} 0%, #0e1526 78%)`;
+  document.getElementById('splashLogo').style.background = '#fff';
+  if(d.logo_url || d.hero_url){
+    const img = document.getElementById('splashImg');
+    img.src = d.logo_url || d.hero_url;
+    img.style.width = '100%'; img.style.height = '100%';
+    img.style.objectFit = 'cover'; img.style.borderRadius = '24px';
+    img.onerror = () => { img.src = '/static/gwd-emblem.png'; img.style.width='64%';
+      img.style.height='auto'; img.style.objectFit='contain'; };
+  }
+  document.getElementById('splashName').textContent = d.display_name || 'GateWay';
+  document.getElementById('splashTag').textContent =
+    d.tagline || d.about_blurb || 'Local kitchens, delivered by your neighbors.';
+  const theme = document.querySelector('meta[name="theme-color"]');
+  if(theme) theme.setAttribute('content', tint);
+}
+/* No partner in the URL? It's the generic courier form — don't fake a storefront. */
+if(!new URLSearchParams(location.search).get('partner')){
+  const sp = document.getElementById('splash');
+  if(sp) sp.style.animationDelay = '.1s';
+}
+
+/* --- PROMO: the client only PREVIEWS. app/intake.py re-computes the discount
+   server-side, so a tampered client can never change the driver's cash-due. --- */
+let DISCOUNT_CENTS = 0, PROMO_CODE = '';
+async function applyPromo(){
+  const code = (document.getElementById('promoIn').value || '').trim().toUpperCase();
+  if(!code) return;
+  const sub = subtotalCents();
+  if(sub <= 0){ gwToast('Add something to your order first.', false); return; }
+  const partner = new URLSearchParams(location.search).get('partner') || '';
+  try{
+    const r = await fetch(`/v0/promo/${encodeURIComponent(code)}?partner=${encodeURIComponent(partner)}&subtotal_cents=${sub}`);
+    const d = await r.json();
+    if(!d.valid){ gwToast("That code isn't valid for this order.", false); return; }
+    PROMO_CODE = code; DISCOUNT_CENTS = d.discount_cents;
+    document.getElementById('promoField').value = code;
+    document.getElementById('promoTxt').textContent = `${d.description} — you save ${money(d.discount_cents)}`;
+    document.getElementById('promoOk').classList.add('show');
+    document.querySelector('.promo').style.display = 'none';
+    compose();
+  }catch(e){ gwToast("We couldn't check that code. Try again.", false); }
+}
+function clearPromo(){
+  PROMO_CODE = ''; DISCOUNT_CENTS = 0;
+  document.getElementById('promoField').value = '';
+  document.getElementById('discountField').value = '';
+  document.getElementById('promoIn').value = '';
+  document.getElementById('promoOk').classList.remove('show');
+  document.querySelector('.promo').style.display = 'flex';
+  compose();
+}
 let FEE_CENTS = 0, TIP_CENTS = 0, TIP_MODE = 'pct', TIP_PCT = 18;
 const TIP_PCTS = [15, 18, 20, 25];
 
@@ -501,8 +631,7 @@ function renderMenu(m){
                  <button type="button" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},1)">+</button>
                </div>`}
         </div>
-      </div>`;}).join('')).join('') +
-    `<div class="cartbar" id="cartbar"><span id="cartCount"></span><span class="tot" id="cartTot"></span></div>`;
+      </div>`;}).join('')).join('');
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
   maybeReorder();
@@ -578,10 +707,12 @@ function compose(){
   document.getElementById('subtotalField').value = entries.length ? sub : '';
   document.getElementById('feeField').value = entries.length ? FEE_CENTS : '';
   document.getElementById('tipField').value = entries.length ? TIP_CENTS : '';
-  document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS + TIP_CENTS) : '';
+  if(DISCOUNT_CENTS > sub) DISCOUNT_CENTS = sub;   // never below zero
+  document.getElementById('discountField').value = (entries.length && DISCOUNT_CENTS) ? DISCOUNT_CENTS : '';
+  document.getElementById('totalField').value = entries.length ? (sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS) : '';
   if(!entries.length){
     if(itemsField) itemsField.value='';
-    bar.style.display='none';
+    bar.classList.remove('show');
     const tw = document.getElementById('tipWrap'); if(tw) tw.style.display='none';
     const sb = document.querySelector('button[type="submit"]');
     if(sb && !sb.disabled) sb.textContent = 'Send Order to GateWay';
@@ -592,10 +723,19 @@ function compose(){
       const note = NOTES[id] ? ` [${NOTES[id]}]` : '';
       return `${e.qty}× ${e.name}${note} (${money(e.cents*e.qty)})`;
     }).join(', ') + ` — subtotal ${money(sub)}`;
-  bar.style.display = 'block';
+  bar.classList.add('show');
   if(TIP_MODE === 'pct') TIP_CENTS = Math.round(sub * TIP_PCT / 100);
   paintTips();
-  const total = sub + FEE_CENTS + TIP_CENTS;
+  const total = sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS;
+  document.getElementById('cbSub').textContent = money(sub);
+  const dl = document.getElementById('cbDiscLine');
+  if(DISCOUNT_CENTS > 0){ dl.style.display='flex';
+    document.getElementById('cbDisc').textContent = '−' + money(DISCOUNT_CENTS); }
+  else { dl.style.display='none'; }
+  document.getElementById('cbFee').textContent = FEE_CENTS ? money(FEE_CENTS) : 'Free';
+  document.getElementById('cbTip').textContent = money(TIP_CENTS);
+  document.getElementById('cartTot').textContent = 'Total ' + money(total);
+  document.getElementById('cartCount').textContent = n + (n===1?' item':' items');
   const sendBtn = document.querySelector('button[type="submit"]');
   if(sendBtn && !sendBtn.disabled) sendBtn.textContent = `Place order · ${money(total)}`;
   bar.innerHTML =

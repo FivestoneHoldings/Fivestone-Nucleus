@@ -5,8 +5,10 @@ real ones take their place.
 Money rule: the SERVER is the only authority on what a promo is worth
 (app/intake.py re-validates at order time). The client only previews.
 """
+import json
 import os
 import re
+import uuid
 import secrets
 from datetime import datetime, timezone
 
@@ -208,12 +210,14 @@ def create_lead(body: LeadIn):
         raise HTTPException(422, "Leave a phone number or an email so we can reach you.")
     db: Session = SessionLocal()
     try:
-        lead = Lead(kind=body.kind, name=body.name.strip(), phone=body.phone.strip(),
-                    email=body.email.strip(), message=body.message.strip())
+        lead = Lead(id=str(uuid.uuid4()), kind=body.kind, name=body.name.strip(),
+                    phone=body.phone.strip(), email=body.email.strip(),
+                    message=body.message.strip())
         db.add(lead)
         db.add(Event(event_type=f"lead.{body.kind}", entity_ref=lead.id,
-                     actor="public:web", payload={"name": lead.name, "phone": lead.phone,
-                                                  "email": lead.email}))
+                     tenant="gateway", actor="public:web",
+                     payload=json.dumps({"name": lead.name, "phone": lead.phone,
+                                         "email": lead.email})))
         db.commit()
         return {"ok": True, "id": lead.id}
     finally:
@@ -231,12 +235,15 @@ class SupportIn(BaseModel):
 def create_ticket(body: SupportIn):
     db: Session = SessionLocal()
     try:
-        t = SupportTicket(name=body.name.strip(), phone=body.phone.strip(),
-                          order_id=body.order_id.strip().upper(), message=body.message.strip())
+        t = SupportTicket(id=str(uuid.uuid4()), name=body.name.strip(),
+                          phone=body.phone.strip(),
+                          order_id=body.order_id.strip().upper(),
+                          message=body.message.strip())
         db.add(t)
-        db.add(Event(event_type="support.ticket", entity_ref=t.id, actor="public:web",
-                     payload={"name": t.name, "order_id": t.order_id,
-                              "message": t.message[:200]}))
+        db.add(Event(event_type="support.ticket", entity_ref=t.id,
+                     tenant="gateway", actor="public:web",
+                     payload=json.dumps({"name": t.name, "order_id": t.order_id,
+                                         "message": t.message[:200]})))
         db.commit()
         return {"ok": True, "id": t.id}
     finally:
