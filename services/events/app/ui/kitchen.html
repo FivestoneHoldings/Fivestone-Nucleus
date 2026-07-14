@@ -93,6 +93,8 @@ cursor:pointer;box-shadow:none}
 <div id="specialBar" style="margin-bottom:14px"></div>
 <button onclick="showFeedback()" id="fbBtn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">💬 What neighbors are saying</button>
 <div id="fbPanel" style="display:none;margin-bottom:14px"></div>
+<button onclick="show86()" id="menu86Btn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🍽 86 an item</button>
+<div id="menu86Panel" style="display:none;margin-bottom:14px"></div>
 <div id="loadBanner"></div>
 <div id="pride" class="pride"></div>
 <div id="pickchip" style="display:none"></div>
@@ -191,6 +193,55 @@ function fmtWhen(o){
   if(o.requested_for) return 'SCHEDULED · ' + esc(o.requested_for).replace('T',' ').slice(0,16);
   return 'ASAP · in ' + esc((o.received_at||'').replace('T',' ').slice(11,16)) + ' UTC';
 }
+/* ===== 86 AN ITEM, FROM THE KITCHEN (v1.3) ===== The person who knows the
+   shrimp just ran out is standing here — not logged into the board. This is
+   scoped to THIS kitchen's own token and can only flip availability, never
+   price or name. ===== */
+let MENU86_CACHE = null;
+async function show86(){
+  const el = document.getElementById('menu86Panel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="skel" style="height:80px"></div>';
+  try{
+    const d = await (await fetch(api('/menu'))).json();
+    MENU86_CACHE = d;
+    paint86();
+  }catch(e){
+    el.innerHTML = '<div class="card" style="color:#f0a04b">Could not load the menu.</div>';
+  }
+}
+function paint86(){
+  const el = document.getElementById('menu86Panel');
+  const cats = (MENU86_CACHE && MENU86_CACHE.categories) || [];
+  if(!cats.length){ el.innerHTML = '<div class="card">No menu items yet.</div>'; return; }
+  el.innerHTML = '<div class="card">' + cats.map(c => `
+    <div style="font-weight:800;font-size:.82rem;margin:10px 0 6px;color:#8b93a7;
+      font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em">${esc(c.name)}</div>
+    ${c.items.map(i => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e2942">
+        <span style="flex:1;font-size:.86rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${esc(i.name)}</span>
+        <button onclick="toggle86('${i.id}', ${i.available})"
+          style="flex:0 0 auto;padding:8px 14px;border-radius:20px;font-size:.76rem;font-weight:800;
+          background:${i.available?'transparent':'#d81f2a'};color:${i.available?'#f0a04b':'#fff'};
+          border:1.5px solid ${i.available?'#f0a04b':'#d81f2a'};box-shadow:none">
+          ${i.available ? '86 this' : "We're back"}</button>
+      </div>`).join('')}`).join('') + '</div>';
+}
+async function toggle86(id, wasAvailable){
+  const r = await fetch(api(`/menu-items/${id}/86`), {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({available: !wasAvailable})});
+  if(r.ok){
+    const d = await r.json();
+    gwToast(d.available ? `${d.name} is back on the menu ✓` : `${d.name} 86'd — off the menu now`, true);
+    const fresh = await (await fetch(api('/menu'))).json();
+    MENU86_CACHE = fresh; paint86();   // refresh in place, panel stays open
+  } else {
+    gwToast("That didn't go through. Try again.", false);
+  }
+}
+
 async function load(){
   const r = await fetch(api('/orders'));
   if(!r.ok){ document.getElementById('list').innerHTML =

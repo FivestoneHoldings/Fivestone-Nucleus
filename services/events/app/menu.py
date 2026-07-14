@@ -90,6 +90,47 @@ async def upsert_item(key: str, code: str, request: Request):
         db.close()
 
 
+# ---------- KITCHEN-SCOPED 86 (v1.3) ----------
+# The person who knows the fryer just died, or the shrimp ran out, is standing at
+# the KITCHEN screen — not logged into the board. Before this, 86'ing an item
+# required the board key, which the cook doesn't have and shouldn't need for a
+# thirty-second fix. This endpoint is scoped to ONE partner's own portal token and
+# can only flip availability — it cannot touch price, name, or add new items.
+@router.get("/api/kitchen/{token}/menu")
+async def kitchen_menu(token: str):
+    from .kitchen import _partner_by_token
+    p = _partner_by_token(token)
+    db: Session = SessionLocal()
+    try:
+        items = (db.query(MenuItem)
+                 .filter(MenuItem.partner_code == p.code)
+                 .order_by(MenuItem.category, MenuItem.sort).all())
+    finally:
+        db.close()
+    return {"partner": p.code, "categories": _grouped(items)}
+
+
+@router.post("/api/kitchen/{token}/menu-items/{item_id}/86")
+async def kitchen_toggle_86(token: str, item_id: str, request: Request):
+    from .kitchen import _partner_by_token
+    p = _partner_by_token(token)
+    body = await request.json()
+    db: Session = SessionLocal()
+    try:
+        item = db.get(MenuItem, item_id)
+        if not item or item.partner_code != p.code:
+            raise HTTPException(404, "No such item on your menu")
+        item.available = bool(body.get("available", not item.available))
+        db.commit()
+        db.add(Event(event_type="menu.86" if not item.available else "menu.un86",
+                     entity_ref=item.id, tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=f'{{"name":"{item.name[:80]}"}}'))
+        db.commit()
+        return {"ok": True, "id": item.id, "available": item.available, "name": item.name}
+    finally:
+        db.close()
+
+
 @router.delete("/api/board/{key}/menu-items/{item_id}")
 def delete_item(key: str, item_id: str):
     _check_key(key)

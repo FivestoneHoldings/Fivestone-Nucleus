@@ -157,6 +157,21 @@ scrollbar-width:none;position:relative}
 .crchips::-webkit-scrollbar{display:none}
 .crchips span{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);
 color:#c3cee6;border-radius:14px;padding:6px 11px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.gsearch{position:relative;margin-bottom:16px}
+.gsearch input{width:100%;padding:14px 42px;border-radius:16px;border:1.5px solid var(--line);
+background:#fff;font-family:'Archivo';font-size:.92rem;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)}
+.gsico{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:.95rem;opacity:.5}
+.gsx{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:#9a9ea5;
+font-weight:800;font-size:.9rem;padding:4px}
+.sr-sec{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+color:#9a9ea5;margin:16px 0 8px}
+.sr-item{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);
+border-radius:14px;padding:12px 14px;margin-bottom:8px;text-decoration:none;color:var(--ink)}
+.sr-item .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.sr-item .nm{flex:1;font-weight:800;font-size:.88rem}
+.sr-item .sub{font-size:.74rem;color:var(--dim);margin-top:1px}
+.sr-item .pr{font-variant-numeric:tabular-nums;font-weight:800;font-size:.86rem;flex:0 0 auto}
+.sr-empty{text-align:center;padding:30px 14px;color:var(--dim);font-size:.86rem}
 .gw-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;justify-content:center;
 padding:0 0 max(10px, env(safe-area-inset-bottom));pointer-events:none;
 background:linear-gradient(180deg, rgba(247,248,251,0) 0%, rgba(247,248,251,.82) 45%, #f7f8fb 100%)}
@@ -209,9 +224,19 @@ gwSplash({name:'GateWay Delivery',
 <div id="quickReorder" style="display:none"></div>
 <div id="localImpact" style="display:none"></div>
 
+<div class="gsearch">
+  <span class="gsico">🔍</span>
+  <input id="gsInput" placeholder="Search dishes or kitchens — try &quot;burger&quot;" autocomplete="off" oninput="onSearchInput()">
+  <span class="gsx" id="gsClear" onclick="clearSearch()" style="display:none">✕</span>
+</div>
+<div id="searchResults" style="display:none"></div>
+
+<div id="browseWrap">
 <div id="chips" class="chips"></div>
 <div id="featured"></div>
 <div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
+
+</div><!-- /browseWrap -->
 
 <a class="courier" href="/courier">
   <div class="crhead">
@@ -391,6 +416,56 @@ function paintList(){
       <span class="rgo">›</span>
     </a>`;
   }).join('');
+}
+
+let SEARCH_T = null;
+function onSearchInput(){
+  const q = document.getElementById('gsInput').value.trim();
+  document.getElementById('gsClear').style.display = q ? '' : 'none';
+  clearTimeout(SEARCH_T);
+  if(!q){ showBrowse(); return; }
+  SEARCH_T = setTimeout(() => runSearch(q), 260);
+}
+function clearSearch(){
+  document.getElementById('gsInput').value = '';
+  document.getElementById('gsClear').style.display = 'none';
+  showBrowse();
+}
+function showBrowse(){
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('browseWrap').style.display = '';
+}
+async function runSearch(q){
+  try{
+    const d = await (await fetch('/v0/search?q=' + encodeURIComponent(q))).json();
+    document.getElementById('browseWrap').style.display = 'none';
+    const el = document.getElementById('searchResults');
+    el.style.display = '';
+    if(!d.merchants.length && !d.items.length){
+      el.innerHTML = `<div class="sr-empty">Nothing matches "${esc(q)}" yet.<br>Try a dish name or a kitchen.</div>`;
+      return;
+    }
+    let out = '';
+    if(d.merchants.length){
+      out += '<div class="sr-sec">Kitchens</div>' + d.merchants.map(m => `
+        <a class="sr-item" href="/order?partner=${encodeURIComponent(m.code)}">
+          <span class="dot" style="background:${esc(m.brand_color||'#16337a')}"></span>
+          <span class="nm">${esc(m.display_name)}<div class="sub">${esc(m.tagline||m.cuisine||'')}</div></span>
+        </a>`).join('');
+    }
+    if(d.items.length){
+      out += '<div class="sr-sec">Dishes</div>' + d.items.map(it => `
+        <a class="sr-item" href="/order?partner=${encodeURIComponent(it.partner_code)}">
+          <span class="dot" style="background:${esc(it.brand_color||'#16337a')}"></span>
+          <span class="nm">${esc(it.name)}<div class="sub">${esc(it.partner_name)}</div></span>
+          <span class="pr">$${(it.price_cents/100).toFixed(2)}</span>
+        </a>`).join('');
+    }
+    el.innerHTML = out;
+  }catch(e){
+    document.getElementById('searchResults').innerHTML =
+      '<div class="sr-empty">Search hiccuped — try again.</div>';
+  }
 }
 
 fetch('/v0/partners').then(r=>r.json()).then(d=>{

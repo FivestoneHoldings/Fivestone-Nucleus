@@ -388,3 +388,50 @@ def go_live_checklist(key: str, code: str):
         }
     finally:
         db.close()
+
+
+@router.get("/v0/search")
+def search_gateway(q: str = ""):
+    """One search box, every kitchen. A customer shouldn't have to know WHICH
+    restaurant sells burgers to find one — DoorDash and Uber Eats both search
+    menu items across the whole marketplace, not just merchant names."""
+    from .models import MenuItem
+    term = q.strip()[:60]
+    if len(term) < 2:
+        return {"query": term, "merchants": [], "items": []}
+    db: Session = SessionLocal()
+    try:
+        like = f"%{term}%"
+        merchants = (db.query(Partner)
+                     .filter(Partner.display_name.ilike(like) |
+                             Partner.cuisine.ilike(like) |
+                             Partner.tagline.ilike(like))
+                     .filter(Partner.accepting_orders.is_(True))
+                     .limit(10).all())
+        items = (db.query(MenuItem)
+                 .filter(MenuItem.available.is_(True))
+                 .filter(MenuItem.name.ilike(like) | MenuItem.description.ilike(like))
+                 .limit(20).all())
+        # attach each item's merchant so the customer can jump straight to the order
+        codes = {i.partner_code for i in items}
+        by_code = {p.code: p for p in db.query(Partner).filter(Partner.code.in_(codes)).all()} if codes else {}
+        item_rows = []
+        for it in items:
+            p = by_code.get(it.partner_code)
+            if not p or not p.accepting_orders:
+                continue
+            item_rows.append({
+                "id": it.id, "name": it.name, "description": it.description,
+                "price_cents": it.price_cents, "partner_code": it.partner_code,
+                "partner_name": p.display_name, "brand_color": p.brand_color,
+            })
+        return {
+            "query": term,
+            "merchants": [{"code": p.code, "display_name": p.display_name,
+                          "cuisine": p.cuisine, "tagline": p.tagline,
+                          "brand_color": p.brand_color, "logo_url": p.logo_url}
+                         for p in merchants],
+            "items": item_rows[:20],
+        }
+    finally:
+        db.close()
