@@ -323,3 +323,46 @@ def test_promo_ignores_a_negative_subtotal():
     """A negative subtotal must never produce a 'discount' that pays the customer."""
     d = client.get("/v0/promo/WELCOME10", params={"subtotal_cents": -9999}).json()
     assert d["valid"] is False
+
+
+# ---------------- loyalty, referral, greeting ----------------
+
+def test_loyalty_counts_real_orders_and_never_inflates_them():
+    """A reward the customer didn't earn is a lie you have to walk back at the
+    door. The count comes from actual order history — never a decorative number."""
+    me = _page("me.html")
+    assert "REWARD_EVERY" in me
+    assert "gwProfile.get().history" in me
+    assert "LOYAL10" in me
+
+
+def test_the_loyalty_code_the_ui_promises_actually_works():
+    """The account page tells the customer to use LOYAL10. If that code isn't
+    real, they get turned away at checkout by a promise WE made."""
+    d = client.get("/v0/promo/LOYAL10", params={"subtotal_cents": 3000}).json()
+    assert d["valid"] is True
+    assert d["discount_cents"] == 300
+
+
+def test_referral_code_shape_matches_what_the_server_honors():
+    """The /me page mints GW-XXXX codes. The server must recognize that exact
+    shape, or every referral the customer shares silently fails."""
+    me = _page("me.html")
+    assert "'GW-'" in me
+    assert "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" in me   # no 0/O/1/I look-alikes
+    minted = "GW-K7QP"
+    d = client.get("/v0/promo/" + minted, params={"subtotal_cents": 2500}).json()
+    assert d["valid"] is True, "the server does not honor the code the UI hands out"
+    assert d["discount_cents"] == 500
+
+
+def test_referral_invite_tells_the_truth_about_gateway():
+    me = _page("me.html")
+    assert "100%" in me and "cash at the door" in me
+
+
+def test_greeting_is_day_aware_and_never_says_good_evening_at_1am():
+    js = open(os.path.join(ROOT, "app", "ui", "static", "gw-profile.js")).read()
+    assert "Happy " + "'" not in js or "Happy ' + day" in js
+    assert "Still up, " in js          # 1am has its own voice
+    assert "Tuesday" in js

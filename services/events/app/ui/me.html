@@ -117,6 +117,25 @@ or even see it — it exists to make ordering effortless for you. Delete it anyt
   <button onclick="addAddr()">Save address</button>
 </div>
 
+<div class="card" id="loyaltyCard">
+  <div class="eyebrow">🎁 Neighborhood rewards</div>
+  <div id="loyalty"></div>
+</div>
+
+<div class="card">
+  <div class="eyebrow">🤝 Bring a neighbor</div>
+  <p style="font-size:.85rem;color:#5a5e64;line-height:1.5;margin-bottom:10px">
+    Share your code. They get <b>20% off</b> their first order, and you get
+    <b>$5 toward yours</b> once they've eaten.</p>
+  <div style="display:flex;align-items:center;gap:10px;background:#f2f4fa;border:1.5px dashed #c3ccdb;
+    border-radius:13px;padding:14px;margin-bottom:10px">
+    <b id="refCode" style="font-family:'IBM Plex Mono',monospace;font-size:1.15rem;letter-spacing:.08em;
+      color:#16337a;flex:1">GW-————</b>
+    <button onclick="copyRef()" style="margin:0;padding:9px 14px;font-size:.82rem;box-shadow:none">Copy</button>
+  </div>
+  <button onclick="shareRef()">Share with a neighbor</button>
+</div>
+
 <div class="card">
   <div class="eyebrow">Your orders</div>
   <div id="hist"><div class="empty">Orders you place on this device will appear here.</div></div>
@@ -149,6 +168,74 @@ function paintAddrs(){
         <span class="x" onclick="gwProfile.removeAddress(${JSON.stringify(a)});paintAddrs()">✕</span></div>`).join('')
     : '<div class="empty">No saved addresses yet.</div>';
 }
+/* --- LOYALTY (v1.1) --- The count is the customer's REAL order history from this
+   device. We never inflate it: a reward you didn't earn is a lie you'll have to
+   walk back at the door. --- */
+const REWARD_EVERY = 10;
+function paintLoyalty(){
+  const h = (gwProfile.get().history || []);
+  const n = h.length;
+  const into = n % REWARD_EVERY;
+  const left = REWARD_EVERY - into;
+  const earned = Math.floor(n / REWARD_EVERY);
+  const el = document.getElementById('loyalty');
+  if(!n){
+    el.innerHTML = `<p style="font-size:.86rem;color:#5a5e64;line-height:1.5">
+      Order from a local kitchen and we start counting. Every ${REWARD_EVERY}th order,
+      we take <b>10% off</b> — no card, no points to redeem, it just happens.</p>`;
+    return;
+  }
+  const pct = Math.round((into / REWARD_EVERY) * 100);
+  const ready = (into === 0);
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <b style="font-size:1.02rem">${ready ? "Your next order is 10% off 🎉"
+        : `${left} more ${left===1?'order':'orders'} to your reward`}</b>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#7a7f87">
+        ${n} order${n===1?'':'s'}</span>
+    </div>
+    <div style="height:10px;background:#eef1f7;border-radius:6px;overflow:hidden">
+      <div style="height:100%;width:${ready?100:pct}%;border-radius:6px;
+        background:linear-gradient(90deg,#2f6fe0,#16337a)"></div>
+    </div>
+    ${ready ? `<div style="margin-top:10px;background:#eefaf3;border:1px solid #b7e6cd;color:#1c6b45;
+        border-radius:11px;padding:10px 12px;font-size:.84rem;font-weight:700">
+        Use code <b style="font-family:'IBM Plex Mono',monospace">LOYAL10</b> at checkout.</div>`
+      : `<div style="margin-top:8px;font-size:.79rem;color:#7a7f87">
+        Every ${REWARD_EVERY}th order is 10% off. ${earned ? `You've earned ${earned} so far.` : ''}</div>`}`;
+}
+
+/* --- REFERRAL --- A stable per-device code. The server honors the GW-XXXX shape
+   at checkout (20%, capped at $15) and logs the use, so the credit can be paid. */
+function refCode(){
+  const p = gwProfile.get();
+  if(p.ref) return p.ref;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no look-alikes
+  let c = 'GW-';
+  for(let i=0;i<4;i++) c += alphabet[Math.floor(Math.random()*alphabet.length)];
+  try{ const cur = gwProfile.get(); cur.ref = c;
+       localStorage.setItem('gw_profile', JSON.stringify(cur)); }catch(e){}
+  return c;
+}
+function paintRef(){ document.getElementById('refCode').textContent = refCode(); }
+function refMsg(){
+  return `I've been ordering from local kitchens on GateWay — the tips go 100% to the driver `
+       + `and you can even pay cash at the door. Use my code ${refCode()} for 20% off your first order: `
+       + location.origin;
+}
+async function copyRef(){
+  try{ await navigator.clipboard.writeText(refCode()); gwToast('Code copied ✓', true); }
+  catch(e){ gwToast('Copy failed — long-press the code to select it.', false); }
+}
+async function shareRef(){
+  const text = refMsg();
+  if(navigator.share){
+    try{ await navigator.share({title:'GateWay Delivery', text}); return; }catch(e){ if(e.name==='AbortError') return; }
+  }
+  try{ await navigator.clipboard.writeText(text); gwToast('Invite copied — paste it to a neighbor ✓', true); }
+  catch(e){ gwToast('Share unavailable on this device.', false); }
+}
+
 async function paintHistory(){
   const p = gwProfile.get();
   const h = p.history || [];
@@ -206,7 +293,7 @@ const p = gwProfile.get();
 document.getElementById('pn').value = p.name || '';
 document.getElementById('pp').value = p.phone || '';
 TIP = (typeof p.defaultTip === 'number') ? p.defaultTip : 300;
-paintTips(); paintAddrs(); paintHistory(); paintHello();
+paintTips(); paintAddrs(); paintHistory(); paintHello(); paintLoyalty(); paintRef();
 </script>
 <div class="gwd-powered">
   <img src="/static/gwd-emblem.png" alt="GateWay Delivery">

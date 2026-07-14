@@ -32,10 +32,18 @@
       return save(p);
     },
     greeting(){
+      // v1.1: a storefront greets you by name and by day — "Happy Tuesday, Patrick."
+      // Late night gets its own voice; nobody says "good evening" at 1am.
       const p = load(); if(!p.name) return '';
-      const h = new Date().getHours();
-      const part = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-      return 'Good ' + part + ', ' + p.name.split(' ')[0];
+      const first = p.name.split(' ')[0];
+      const now = new Date();
+      const h = now.getHours();
+      const day = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+      if(h < 4)  return 'Still up, ' + first + '?';
+      if(h < 11) return 'Happy ' + day + ', ' + first;
+      if(h < 17) return 'Happy ' + day + ', ' + first;
+      if(h < 22) return 'Evening, ' + first;
+      return 'Late one, ' + first + '?';
     },
     setFavorite(partnerCode, partnerName){
       return save(Object.assign(load(), {favorite: {code: partnerCode, name: partnerName}}));

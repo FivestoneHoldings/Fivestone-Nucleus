@@ -207,7 +207,7 @@ try{
 }catch(e){}
 try{
   const g = gwProfile.greeting();
-  if(g) document.getElementById('greet').textContent = g + ' — hungry?';
+  if(g) document.getElementById('greet').textContent = g + ' — what are we eating?';
   const top = gwProfile.topKitchen && gwProfile.topKitchen();
   if(top && top.code){
     const el = document.getElementById('quickReorder');
