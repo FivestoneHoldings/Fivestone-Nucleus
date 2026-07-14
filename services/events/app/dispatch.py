@@ -1099,7 +1099,7 @@ async def create_demo_order(key: str, code: str):
     fields = {
         "order_id": oid, "status": "received", "source_channel": "demo",
         "partner_code": p.code, "pickup_address": p.address or "",
-        "dropoff_address": "123 Demo Lane, Maryville TN",
+        "dropoff_address": "123 Demo Lane, Knoxville TN",
         "items_description": f"{lines} — subtotal ${subtotal/100:.2f}",
         "customer_name_raw": "Demo Customer", "customer_phone_raw": "",
         "fingerprint": hashlib.md5(f"demo{now}".encode()).hexdigest(),

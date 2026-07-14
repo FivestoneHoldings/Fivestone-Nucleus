@@ -136,6 +136,13 @@ def team_page():
     return _page("team.html")
 
 
+@app.get("/courier", response_class=HTMLResponse)
+def courier_page():
+    """GateWay Courier — the flexible half of the model. The big apps only move
+    food from partners they signed; we move what a neighbor actually needs moved."""
+    return _page("courier.html")
+
+
 @app.get("/support", response_class=HTMLResponse)
 def support_page():
     return _page("support.html")
@@ -157,7 +164,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.1.0"
+NUCLEUS_VERSION = "1.2.0"
 
 
 @app.middleware("http")

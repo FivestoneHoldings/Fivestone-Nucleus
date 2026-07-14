@@ -9,7 +9,12 @@ import os
 import pytest
 
 UI = os.path.join(os.path.dirname(__file__), "..", "app", "ui")
-PAGES = ["board.html", "driver.html", "kitchen.html", "order-form.html", "home.html"]
+# v1.2: this list used to be hand-maintained — and courier.html shipped with a
+# double-escaped apostrophe (the exact bug class that froze the dispatch board in
+# v0.8) because nobody had added it here. Discover every page instead; a new
+# surface is now guarded the moment it exists.
+UI = os.path.join(os.path.dirname(__file__), "..", "app", "ui")
+PAGES = sorted(f for f in os.listdir(UI) if f.endswith(".html"))
 STATIC_JS = ["static/gw-ui.js", "static/sw.js"]
 
 node = shutil.which("node")

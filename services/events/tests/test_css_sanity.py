@@ -8,8 +8,11 @@ UI = os.path.join(os.path.dirname(__file__), "..", "app", "ui")
 
 # selectors that MUST be defined exactly once — layout depends on them
 CRITICAL = {
-    "order-form.html": [".mitem{", ".mphoto{", ".mbody{", ".step{", ".mact{", ".mcat{"],
-    "home.html": [".rrow{", ".rthumb{", ".rinfo{", ".tile{"],
+    "order-form.html": [".mitem{", ".mphoto{", ".mbody{", ".step{", ".mact{", ".mcat{",
+                       # v1.2: THREE stacked .cartbar rules collided the money labels
+                       # with their amounts ("Subtotal$9.00"). Watch it forever.
+                       ".cartbar{", ".cbline{", ".cbtot{", ".promo{"],
+    "home.html": [".rrow{", ".rthumb{", ".rinfo{", ".tile{", ".gw-nav{", ".courier{", ".chip{"],
     "kitchen.html": [".card{"],
 }
 

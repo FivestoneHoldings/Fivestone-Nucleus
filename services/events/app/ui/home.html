@@ -8,8 +8,8 @@
 <meta property="og:image" content="https://fivestone-nucleus-production.up.railway.app/static/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:title" content="GateWay Delivery">
-<meta property="og:description" content="Local kitchens, delivered by your neighbors. Blount & Knox County, Tennessee.">
-<meta name="description" content="Local kitchens, delivered by your neighbors. Blount & Knox County, Tennessee.">
+<meta property="og:description" content="Local kitchens, delivered by your neighbors. Knoxville, Tennessee and the surrounding areas.">
+<meta name="description" content="Local kitchens, delivered by your neighbors. Knoxville, Tennessee and the surrounding areas.">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -133,14 +133,65 @@ border-radius:8px;padding:3px 6px;letter-spacing:.1em;font-weight:500;border:1px
 .empty .dashbig i:nth-child(3){background:#d81f2a}
 .empty b{display:block;font-size:1rem;color:var(--ink);margin-bottom:4px}
 .empty p{font-size:.84rem;line-height:1.5}
-.gw-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:4px;background:#0e1526;border-radius:26px;padding:7px 10px;box-shadow:0 10px 30px rgba(10,15,30,.4);padding-bottom:max(7px, env(safe-area-inset-bottom))}
-.gw-nav a{display:flex;flex-direction:column;align-items:center;gap:1px;color:#8b93a7;text-decoration:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;padding:5px 13px;border-radius:18px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
-.gw-nav a span{font-size:1.05rem}
-.gw-nav a.on{background:#1b2740;color:#fff}
 body{padding-bottom:110px !important}
+/* ===== FLOATING NAV (v1.2) — glassy, weighted, with a real active state.
+   v1.1 was a flat dark pill with emoji; it read like a prototype. ===== */
+/* ===== COURIER (v1.2) — promoted from a one-line tile to a real service.
+   The founder: "we can deliver almost anything and we'll do it however we can —
+   some people need us to be flexible in every way." That is not a footnote. ===== */
+.courier{display:block;text-decoration:none;color:#fff;margin-top:14px;
+background:linear-gradient(135deg,#1b2740 0%,#0e1526 100%);border-radius:20px;padding:16px 17px;
+box-shadow:0 8px 26px rgba(10,15,30,.24);border:1px solid rgba(255,255,255,.07);
+position:relative;overflow:hidden}
+.courier::after{content:"";position:absolute;right:-30px;top:-30px;width:130px;height:130px;
+border-radius:50%;background:radial-gradient(circle, rgba(47,111,224,.28), transparent 70%)}
+.crhead{display:flex;align-items:center;gap:12px;position:relative}
+.cricon{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.09);
+display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex:0 0 auto;
+border:1px solid rgba(255,255,255,.1)}
+.crhead b{font-size:1.02rem;font-weight:900;letter-spacing:-.01em}
+.crsub{font-size:.79rem;color:#9fb0d4;margin-top:2px;line-height:1.35}
+.crgo{margin-left:auto;font-size:1.15rem;color:#7e8ba8;flex:0 0 auto}
+.crchips{display:flex;gap:6px;overflow-x:auto;margin-top:13px;padding-bottom:2px;
+scrollbar-width:none;position:relative}
+.crchips::-webkit-scrollbar{display:none}
+.crchips span{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);
+color:#c3cee6;border-radius:14px;padding:6px 11px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.gw-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;justify-content:center;
+padding:0 0 max(10px, env(safe-area-inset-bottom));pointer-events:none;
+background:linear-gradient(180deg, rgba(247,248,251,0) 0%, rgba(247,248,251,.82) 45%, #f7f8fb 100%)}
+.gw-navin{pointer-events:auto;display:flex;gap:2px;align-items:center;
+background:rgba(14,21,38,.94);-webkit-backdrop-filter:blur(16px) saturate(1.5);
+backdrop-filter:blur(16px) saturate(1.5);border-radius:22px;padding:6px;
+border:1px solid rgba(255,255,255,.08);
+box-shadow:0 12px 34px rgba(10,15,30,.34), 0 2px 8px rgba(10,15,30,.2),
+inset 0 1px 0 rgba(255,255,255,.09)}
+.gw-nav a{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;
+color:#8791a8;text-decoration:none;font-size:.6rem;font-weight:700;letter-spacing:.03em;
+padding:8px 15px 7px;border-radius:17px;font-family:'Archivo',system-ui,sans-serif;
+transition:color .2s ease,background .24s cubic-bezier(.2,1,.3,1);min-width:62px}
+.gw-nav a svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
+stroke-linecap:round;stroke-linejoin:round;transition:transform .24s cubic-bezier(.2,1.3,.4,1)}
+.gw-nav a:active svg{transform:scale(.88)}
+.gw-nav a.on{color:#fff;background:linear-gradient(135deg,#2f6fe0,#16337a);
+box-shadow:0 4px 14px rgba(47,111,224,.4)}
+.gw-nav a.on svg{stroke-width:2.2}
+.gw-nav .dot{position:absolute;top:5px;right:11px;width:7px;height:7px;border-radius:50%;
+background:#d81f2a;border:1.5px solid #0e1526;display:none}
+.gw-nav .dot.on{display:block}
+@media (prefers-reduced-motion: reduce){.gw-nav a,.gw-nav a svg{transition:none}}
 </style>
+<link rel="stylesheet" href="/static/gw-splash.css">
 </head>
 <body>
+<script src="/static/gw-splash.js"></script>
+<script>
+/* The app opens like a door, not a popup. Once per session — coming back from a
+   menu shouldn't make you sit through the curtain again. */
+gwSplash({name:'GateWay Delivery',
+          sub:'Local kitchens, delivered by your neighbors',
+          logo:'/static/gwd-emblem.png', tint:'#16337a', hold:1500});
+</script>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Delivery <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
@@ -148,7 +199,7 @@ body{padding-bottom:110px !important}
   <img src="/static/logo.png" alt="GateWay Dispatch" style="width:78%;max-width:340px;display:block;margin:0 auto">
   <div style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#8b93a7;
     text-transform:uppercase;letter-spacing:.16em;margin-top:14px">
-    Blount &amp; Knox County · Tennessee <span class="gw-dash"><i></i><i></i><i></i></span></div>
+    Knoxville, Tennessee &amp; surrounding areas <span class="gw-dash"><i></i><i></i><i></i></span></div>
   <div style="color:#c7cede;font-size:.92rem;margin-top:10px;font-weight:600">
     <span id="greet">Local kitchens, delivered by your neighbors.</span></div>
   <a href="/me" style="display:inline-block;margin-top:12px;font-family:'IBM Plex Mono',monospace;
@@ -162,10 +213,17 @@ body{padding-bottom:110px !important}
 <div id="featured"></div>
 <div id="restaurants"><div class="skel" style="height:74px;margin-bottom:12px"></div><div class="skel" style="height:74px;opacity:.6"></div></div>
 
-<a class="tile" href="/order" style="padding:15px 20px">
-  <span class="arrow" style="margin-top:2px">→</span>
-  <h2 style="font-size:1rem">Place an order — custom delivery</h2>
-  <p style="margin:0">Anything else, picked up and delivered locally.</p>
+<a class="courier" href="/courier">
+  <div class="crhead">
+    <div class="cricon">📦</div>
+    <div><b>GateWay Courier</b>
+      <div class="crsub">If it fits in a car, we'll move it.</div></div>
+    <span class="crgo">→</span>
+  </div>
+  <div class="crchips">
+    <span>Forgot an item?</span><span>Pick up a prescription</span>
+    <span>Send a gift</span><span>Vendor supplies</span><span>Documents</span>
+  </div>
 </a>
 
 <div class="tile" style="padding-bottom:14px">
@@ -368,12 +426,7 @@ document.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{
   <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
   <div><span>Powered by</span><b>GateWay Delivery</b></div>
 </div>
-<nav class="gw-nav">
-  <a href="/" class="on"><span>🏠</span>Home</a>
-  <a href="#restaurants" onclick="document.getElementById('restaurants').scrollIntoView({behavior:'smooth'});return false"><span>🍽</span>Order</a>
-  <a href="#" onclick="goTrack2();return false"><span>📍</span>Activity</a>
-  <a href="/me"><span>👤</span>Account</a>
-</nav>
-<script>function goTrack2(){const o=localStorage.getItem('gw_last_order');location.href=o?'/track/'+encodeURIComponent(o):'#';if(!o){document.getElementById('trk').focus();document.getElementById('trk').scrollIntoView({behavior:'smooth',block:'center'});}}</script>
+<nav class="gw-nav"><div class="gw-navin"><a href="/" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6h5v6H18a1 1 0 0 0 1-1V9.5"/></svg><span>Home</span></a><a href="/order" class=""><svg viewBox="0 0 24 24"><path d="M4 7h16l-1.2 12.1a2 2 0 0 1-2 1.9H7.2a2 2 0 0 1-2-1.9L4 7Z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg><span>Order</span></a><a href="#" class="" onclick="gwActivity();return false"><svg viewBox="0 0 24 24"><path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg><span>Activity</span></a><a href="/me" class=""><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg><span>Account</span></a></div></nav>
+<script>function gwActivity(){var o=null;try{o=localStorage.getItem("gw_last_order")}catch(e){}location.href = o ? "/track/"+encodeURIComponent(o) : "/me";}</script>
 </body>
 </html>

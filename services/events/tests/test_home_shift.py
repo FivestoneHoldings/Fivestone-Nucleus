@@ -39,7 +39,8 @@ def _patched(monkeypatch):
 def test_home_serves_launcher():
     r = client.get("/")
     assert r.status_code == 200
-    for needle in ("Place an order", "Track an order", "manifest.json"):
+    # v1.2: "Place an order" is no longer a tile — the storefront IS the order path.
+    for needle in ("Track an order", "manifest.json", "/courier"):
         assert needle in r.text
     # team entry relocated to /team (v1.1)
     t = client.get("/team")

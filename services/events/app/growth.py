@@ -87,9 +87,9 @@ BRAND_SEED = {
 
 DEMO_MERCHANTS = [
     ("riseshine",  "Rise & Shine Diner",    "Breakfast", "#e8a13a", "Biscuits, gravy & sunrise plates till 2pm",
-     "1200 Demo Ave, Maryville, TN"),
+     "1200 Demo Ave, Knoxville, TN"),
     ("summitcof",  "Summit Coffee Co.",     "Coffee",    "#6f4e37", "Small-batch roasts & morning pastries",
-     "88 Demo Ridge Rd, Maryville, TN"),
+     "88 Demo Ridge Rd, Knoxville, TN"),
     ("elcamino",   "El Camino Taqueria",    "Mexican",   "#d35400", "Street tacos, burritos & fresh salsa verde",
      "410 Demo Blvd, Alcoa, TN"),
     ("magnolia",   "Sweet Magnolia Bakery", "Desserts",  "#b56576", "Layer cakes, cookies & Southern pies",

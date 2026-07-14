@@ -29,7 +29,8 @@ def _patched(monkeypatch):
 def test_home_storefront_first_and_no_team_gate():
     html = client.get("/").text
     # restaurants section precedes the custom-order tile
-    assert html.index('id="restaurants"') < html.index("custom delivery")
+    # v1.2: the "custom delivery" tile grew up into GateWay Courier, its own surface.
+    assert html.index('id="restaurants"') < html.index("/courier")
     # v1.1: a food court does NOT ask its customers for a work badge at the door.
     # Team entry lives at /team; the home shows growth CTAs instead.
     assert "GateWay team" not in html

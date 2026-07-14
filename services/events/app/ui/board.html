@@ -560,7 +560,7 @@ async function phoneOrder(){
     placeholder:'17.50', confirm:'Next', body:'Just the food — the delivery fee is added automatically.'});
   if(subtotal === null) return;
   const address = await gwPrompt({title:'Delivery address', multiline:true,
-    placeholder:'123 Elm St, Maryville TN', confirm:'Next'});
+    placeholder:'123 Elm St, Knoxville TN', confirm:'Next'});
   if(!address) return;
   const name = await gwPrompt({title:'Their name', placeholder:'Ruth', confirm:'Next'});
   if(name === null) return;

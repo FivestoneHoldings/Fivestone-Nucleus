@@ -142,15 +142,45 @@ def test_cart_bar_shows_the_whole_money_story():
 
 def test_order_form_has_a_branded_splash():
     form = _page("order-form.html")
-    assert 'id="splash"' in form
-    assert "paintSplash" in form
+    assert "paintSplash" in form and "gwSplash(" in form
     assert "brand_color" in form
+    assert "/static/gw-splash.js" in form
 
 
 def test_splash_falls_back_to_gateway_when_the_merchant_has_no_brand():
     form = _page("order-form.html")
     assert "/static/gwd-emblem.png" in form
-    assert "Powered by GateWay" in form
+    js = open(os.path.join(ROOT, "app", "ui", "static", "gw-splash.js")).read()
+    assert "Powered by GateWay" in js
+
+
+def test_the_app_itself_opens_with_a_splash():
+    """Founder: 'when you open the DoorDash app you see the D and it loads.'"""
+    html = client.get("/").text
+    assert "gwSplash(" in html and "/static/gw-splash.js" in html
+
+
+def test_the_splash_has_a_real_progress_bar_and_is_not_a_glitchy_flash():
+    js = open(os.path.join(ROOT, "app", "ui", "static", "gw-splash.js")).read()
+    css = open(os.path.join(ROOT, "app", "ui", "static", "gw-splash.css")).read()
+    assert "gws-fill" in js and "gws-track" in js       # a real loading bar
+    assert "hold || 1500" in js                          # unhurried, not a flash
+    assert "readyState" in js                            # waits for the page
+    assert "prefers-reduced-motion" in css
+
+
+def test_the_splash_can_never_trap_someone_behind_it():
+    """A curtain that doesn't lift is worse than no curtain."""
+    js = open(os.path.join(ROOT, "app", "ui", "static", "gw-splash.js")).read()
+    assert "hard ceiling" in js
+
+
+def test_no_stale_cart_bar_renderer_can_stomp_the_layout():
+    """THE ACTUAL BUG behind the founder's screenshot: an old renderer was
+    overwriting the cart bar's DOM with flat markup on every update, so
+    'Subtotal' and '$9.00' collided. Fixing the CSS alone would never have held."""
+    form = _page("order-form.html")
+    assert "bar.innerHTML" not in form, "something is stomping the cart bar DOM again"
 
 
 def test_partner_api_exposes_the_brand_layer():

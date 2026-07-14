@@ -76,11 +76,6 @@
 
 
 
-.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:calc(100% - 28px);
-max-width:532px;z-index:70;background:#16337a;color:#fff;border-radius:16px;
-padding:14px 18px;display:none;justify-content:space-between;align-items:center;
-font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-top:16px}
-.cartbar .tot{font-family:'IBM Plex Mono',monospace}
 
 /* ===== GateWay design core v0.26 ===== */
 *{-webkit-tap-highlight-color:transparent}
@@ -122,8 +117,6 @@ letter-spacing:.01em}
 .mhero{width:100%;height:180px;object-fit:cover;border-radius:18px;margin-bottom:14px;
 box-shadow:0 6px 22px rgba(20,30,60,.14)}
 
-.cartbar{background:linear-gradient(135deg,#0e1526,#16337a);box-shadow:0 12px 34px rgba(10,20,50,.42);
-border-radius:18px}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#5a5e64}
 .opt{color:#9a9ea5;font-weight:400;font-size:.8em}
 
@@ -229,80 +222,118 @@ font-family:'IBM Plex Mono',monospace}
 .mitem.m86{opacity:.5}
 .soldout{font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:#d81f2a;font-weight:600;
 white-space:nowrap}
-.cartbar{display:none;flex-direction:column;gap:0;padding:12px 16px;cursor:pointer;
-padding-bottom:max(12px, env(safe-area-inset-bottom))}
+/* ===== CART BAR — ONE AUTHORITATIVE BLOCK (v1.2) =====
+   v1.1 shipped THREE stacked .cartbar rules (a fixed-column one, an old flex-ROW
+   one with align-items:center, and a gradient one). The row rule crushed each
+   label/value line to content width, so "Subtotal" and "$9.00" collided. Same
+   failure mode as the v0.51 triple .mitem block. Never again: .cartbar is now on
+   the CSS-sanity watchlist. */
+.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;
+width:calc(100% - 28px);max-width:532px;z-index:70;
+background:linear-gradient(135deg,#0e1526,#16337a);color:#fff;
+border-radius:18px;box-shadow:0 12px 34px rgba(10,20,50,.42);cursor:pointer;
+display:none;flex-direction:column;align-items:stretch;
+padding:13px 17px;padding-bottom:max(13px, env(safe-area-inset-bottom));
+transform-origin:bottom center;animation:cbIn .28s cubic-bezier(.2,1.1,.4,1)}
 .cartbar.show{display:flex}
-.cbline{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:#b9c6e6;
-font-family:'IBM Plex Mono',monospace;padding:2px 0}
-.cbtot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:8px;
-border-top:1px solid rgba(255,255,255,.16)}
-.cbtot b{font-size:1.06rem;font-weight:900}
-.cbtot .go{background:#fff;color:#16337a;border-radius:11px;padding:8px 15px;font-weight:900;font-size:.86rem}
-.cbcount{font-weight:800;font-size:.9rem;color:#fff}
-/* the bar floats over the page — give the page room so nothing hides beneath it */
-body{padding-bottom:150px}
-/* ===== BRANDED STOREFRONT SPLASH (v1.1) — entering the store, not popping a page ===== */
-#splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;
-justify-content:center;gap:16px;background:#0e1526;color:#fff;
-animation:splashOut .42s ease .78s forwards}
-#splash .slogo{width:96px;height:96px;border-radius:24px;display:flex;align-items:center;justify-content:center;
-box-shadow:0 18px 44px rgba(0,0,0,.42);animation:splashPop .5s cubic-bezier(.2,1.3,.4,1) both}
-#splash .slogo img{width:64%;height:auto}
-#splash .sname{font-size:1.35rem;font-weight:900;letter-spacing:-.02em;animation:splashUp .45s ease .1s both}
-#splash .stag{font-size:.8rem;color:#9fb0d4;max-width:74%;text-align:center;line-height:1.4;
-animation:splashUp .45s ease .18s both}
-#splash .spow{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.16em;
-text-transform:uppercase;color:#6b7793;animation:splashUp .45s ease .26s both}
-#splash .sdash{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}
-#splash .sdash i{width:13px;height:5px;border-radius:2px;transform:skewX(-18deg)}
-#splash .sdash i:nth-child(1){background:#2f6fe0}#splash .sdash i:nth-child(2){background:#e8eaf0}
-#splash .sdash i:nth-child(3){background:#d81f2a}
-@keyframes splashPop{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
-@keyframes splashUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
-@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
-@media (prefers-reduced-motion: reduce){#splash{animation:splashOut .01s linear .2s forwards}
-#splash .slogo,#splash .sname,#splash .stag,#splash .spow{animation:none}}
-/* ===== PROMO ===== */
-.promo{display:flex;gap:8px;margin-top:6px}
-.promo input{flex:1;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
-.promo button{flex:0 0 auto;padding:12px 16px;border-radius:11px;border:1.5px solid #16337a;
-background:#fff;color:#16337a;font-weight:800;font-family:'Archivo';cursor:pointer}
-.promo-ok{display:none;align-items:center;gap:8px;margin-top:9px;background:#eefaf3;border:1px solid #b7e6cd;
-color:#1c6b45;border-radius:11px;padding:10px 12px;font-size:.83rem;font-weight:700}
+@keyframes cbIn{from{opacity:0;transform:translateX(-50%) translateY(14px)}
+to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.cbline{display:flex;justify-content:space-between;align-items:baseline;width:100%;
+gap:12px;padding:3px 0;font-size:.8rem;color:#aebbd8;font-weight:600}
+.cbline > span:last-child{font-variant-numeric:tabular-nums;letter-spacing:.01em;
+font-weight:700;color:#d3ddf2;flex:0 0 auto}
+.cbcount{font-weight:800;color:#fff;font-size:.85rem;letter-spacing:.01em}
+.cbtot{display:flex;justify-content:space-between;align-items:center;width:100%;gap:12px;
+margin-top:9px;padding-top:10px;border-top:1px solid rgba(255,255,255,.18)}
+.cbtot .lbl{font-size:.72rem;color:#aebbd8;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.cbtot .amt{font-size:1.22rem;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;
+letter-spacing:-.01em;display:block;margin-top:1px}
+.cbtot .go{background:#fff;color:#16337a;border-radius:12px;padding:10px 16px;
+font-weight:900;font-size:.86rem;flex:0 0 auto;white-space:nowrap}
+body{padding-bottom:160px}
+/* ===== TWO STEPS (v1.2) — the menu and YOUR ORDER are different rooms.
+   Shopping and checking out are different jobs; stacking them on one screen made
+   the page feel like a form, not a store. ===== */
+#stepCheckout, #stepMenu{animation:stepIn .3s cubic-bezier(.22,1,.36,1)}
+@keyframes stepIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+header{position:relative}
+.gw-back{margin:0 0 10px;padding:6px 0}
+/* your-order review */
+.orv{background:#f7f8fb;border:1px solid #e3e8f2;border-radius:16px;padding:14px 16px;margin-bottom:18px}
+.orv h2{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;
+text-transform:uppercase;color:#7a7f87;font-weight:500;margin-bottom:10px}
+.orvline{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid #e8ecf4}
+.orvline:last-of-type{border-bottom:none}
+.orvq{font-family:'IBM Plex Mono',monospace;font-weight:700;color:#16337a;flex:0 0 auto;font-size:.85rem}
+.orvn{flex:1;font-size:.9rem;font-weight:700;line-height:1.3}
+.orvn small{display:block;font-weight:500;color:#7a7f87;font-size:.75rem;margin-top:2px}
+.orvp{font-variant-numeric:tabular-nums;font-weight:700;font-size:.88rem;flex:0 0 auto}
+.orvedit{width:100%;margin-top:12px;padding:11px;border-radius:11px;background:#fff;
+border:1.5px solid #d9deea;color:#16337a;font-weight:800;font-size:.84rem;font-family:'Archivo';cursor:pointer}
+.orvmoney{margin-top:12px;padding-top:11px;border-top:1.5px solid #dfe4ee}
+.orvm{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;
+font-size:.85rem;color:#5a5e64}
+.orvm span:last-child{font-variant-numeric:tabular-nums;font-weight:700;color:#16181b}
+.orvm.tot{margin-top:7px;padding-top:9px;border-top:1px solid #dfe4ee}
+.orvm.tot span{font-size:1.1rem;font-weight:900;color:#16181b}
+
+/* ===== PROMO (v1.2) — an offer, not a form field. The v1.1 version was a bare
+   input bolted under the payment box; it read like an afterthought. ===== */
+.promo{margin-top:14px;background:#f7f8fb;border:1.5px dashed #cbd4e4;border-radius:14px;
+padding:13px 14px;transition:border-color .2s ease,background .2s ease}
+.promo:focus-within{border-color:#2f6fe0;background:#fff}
+.promo-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.promo-head b{font-size:.86rem;font-weight:800;color:#16181b}
+.promo-head span{font-size:.98rem}
+.promo-head small{margin-left:auto;font-size:.7rem;color:#8a90a0;font-weight:600}
+.promo-row{display:flex;gap:8px}
+.promo-row input{flex:1;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;
+letter-spacing:.08em;font-size:.9rem;padding:12px 13px;border-radius:11px;
+border:1.5px solid #d9deea;background:#fff;min-width:0}
+.promo-row input::placeholder{letter-spacing:.06em;color:#b3b9c6}
+.promo-row button{flex:0 0 auto;padding:12px 18px;border-radius:11px;border:none;
+background:#16337a;color:#fff;font-weight:800;font-family:'Archivo';font-size:.87rem;
+cursor:pointer;box-shadow:0 4px 12px rgba(22,51,122,.22)}
+.promo-row button:active{transform:scale(.97)}
+.promo-ok{display:none;align-items:center;gap:10px;margin-top:14px;
+background:linear-gradient(135deg,#eefaf3,#e2f6ec);border:1.5px solid #a8e0c4;
+color:#12603c;border-radius:14px;padding:13px 14px;font-size:.86rem;font-weight:700;
+animation:promoPop .34s cubic-bezier(.2,1.2,.4,1)}
 .promo-ok.show{display:flex}
-.promo-ok .x{margin-left:auto;background:none;border:none;color:#1c6b45;font-weight:900;cursor:pointer;font-size:1rem;padding:0 4px}
+.promo-ok .big{font-size:1.25rem;line-height:1}
+.promo-ok .x{margin-left:auto;background:rgba(18,96,60,.08);border:none;color:#12603c;
+font-weight:900;cursor:pointer;font-size:.95rem;padding:5px 9px;border-radius:8px;flex:0 0 auto}
+@keyframes promoPop{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
 .gw-back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;
 font-weight:800;font-size:.86rem;background:none;border:none;cursor:pointer;padding:8px 0;
 font-family:'Archivo';margin-bottom:10px}
 .gw-back:active{transform:translateX(-2px)}
 </style>
+<link rel="stylesheet" href="/static/gw-splash.css">
 </head>
 <body>
-<div id="splash" aria-hidden="true">
-  <div class="slogo" id="splashLogo" style="background:linear-gradient(135deg,#16337a,#0e1526)">
-    <img id="splashImg" src="/static/gwd-emblem.png" alt=""></div>
-  <div class="sname" id="splashName">GateWay Delivery</div>
-  <div class="stag" id="splashTag">Local kitchens, delivered by your neighbors.</div>
-  <div class="spow">Powered by GateWay <span class="sdash"><i></i><i></i><i></i></span></div>
-</div>
-<div class="cartbar" id="cartbar" onclick="scrollToSend()">
+<script src="/static/gw-splash.js"></script>
+<div class="cartbar" id="cartbar" onclick="goCheckout()">
   <div class="cbline"><span id="cartCount" class="cbcount"></span><span id="cbSub"></span></div>
-  <div class="cbline"><span>Delivery</span><span id="cbFee"></span></div>
-  <div class="cbline"><span>Tip</span><span id="cbTip"></span></div>
-  <div class="cbline" id="cbDiscLine" style="display:none;color:#7ee2b0"><span>Discount</span><span id="cbDisc"></span></div>
-  <div class="cbtot"><b id="cartTot"></b><span class="go">Review order ›</span></div>
+  <div class="cbline"><span>Delivery fee</span><span id="cbFee"></span></div>
+  <div class="cbline"><span>Driver tip</span><span id="cbTip"></span></div>
+  <div class="cbline" id="cbDiscLine" style="display:none"><span style="color:#7ee2b0">Discount</span><span id="cbDisc" style="color:#7ee2b0"></span></div>
+  <div class="cbtot">
+    <div><span class="lbl">Total</span><span class="amt" id="cartTot">$0.00</span></div>
+    <span class="go">Review order ›</span>
+  </div>
 </div>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Order <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
-<button class="gw-back" onclick="gwBack()">‹ Back</button>
 <div class="card">
   <header>
+    <button class="gw-back" onclick="stepBack()" id="backBtn">‹ Back</button>
     <div class="mark">GateWay <span>Delivery</span></div>
-    <div class="tag">Blount County · Same-Day Courier</div>
+    <div class="tag">Knoxville · Same-Day Courier</div>
   </header>
 
-  <h1>Place a Delivery Order</h1>
+  <h1 id="pageH1">Place a Delivery Order</h1>
   <p class="sub" id="orderSub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
 
   <form method="GET" action="/v0/intake">
@@ -311,7 +342,11 @@ font-family:'Archivo';margin-bottom:10px}
     <input type="hidden" name="fee_cents" id="feeField" value="">
     <input type="hidden" name="total_cents" id="totalField" value="">
     <input type="hidden" name="tip_cents" id="tipField" value="">
-    <div id="menuZone" style="display:none"></div>
+    <div id="stepMenu">
+      <div id="menuZone" style="display:none"></div>
+    </div>
+    <div id="stepCheckout" style="display:none">
+    <div id="orderReview"></div>
     <div id="pausedBanner" style="display:none;background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem"></div>
     <fieldset id="itemsFs">
       <legend id="itemsLeg">The delivery</legend>
@@ -364,13 +399,17 @@ font-family:'Archivo';margin-bottom:10px}
         <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#16337a;color:#fff;font-weight:800;text-align:center">Pay at the door</div>
         <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d9deea;background:#f2f4fa;color:#9a9ea5;font-weight:800;text-align:center">Pay online<br><span style="font-size:.62rem;font-weight:500;letter-spacing:.06em">COMING SOON</span></div>
       </div>
-      <label for="promoIn" style="margin-top:14px">Promo or referral code</label>
-      <div class="promo">
-        <input id="promoIn" placeholder="WELCOME10" autocapitalize="characters" autocomplete="off">
-        <button type="button" onclick="applyPromo()">Apply</button>
+      <div class="promo" id="promoBox">
+        <div class="promo-head"><span>🎟️</span><b>Have a code?</b><small>optional</small></div>
+        <div class="promo-row">
+          <input id="promoIn" placeholder="WELCOME10" autocapitalize="characters"
+                 autocomplete="off" spellcheck="false" enterkeyhint="done"
+                 aria-label="Promo or referral code">
+          <button type="button" onclick="applyPromo()">Apply</button>
+        </div>
       </div>
       <div class="promo-ok" id="promoOk">
-        <span>🎉</span><span id="promoTxt"></span>
+        <span class="big">🎉</span><span id="promoTxt"></span>
         <button type="button" class="x" onclick="clearPromo()" aria-label="Remove code">✕</button>
       </div>
       <input type="hidden" name="promo_code" id="promoField" value="">
@@ -384,6 +423,7 @@ font-family:'Archivo';margin-bottom:10px}
     </fieldset>
 
     <button type="submit" id="sendBtnAnchor">Send Order to GateWay</button>
+    </div>
   </form>
 <div class="gwd-powered">
   <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
@@ -391,7 +431,7 @@ font-family:'Archivo';margin-bottom:10px}
 </div>
 
 
-  <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Maryville, Tennessee</p>
+  <p class="note">Orders are logged instantly to GateWay Dispatch.<br>A Fivestone Holdings company · Knoxville, Tennessee</p>
 </div>
 <script src="/static/gw-profile.js"></script>
 <script src="/static/gw-ui.js"></script>
@@ -418,36 +458,104 @@ function gwBack(){
   else { location.href = '/'; }
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
+/* ===== STEP MACHINE (v1.2) =====
+   Step 1 is the STORE (browse, add, change your mind). Step 2 is YOUR ORDER
+   (confirm, where, when, how you're paying). They were the same screen; that made
+   a storefront feel like a tax form. The generic courier form has no menu, so it
+   is a single step and never pretends otherwise. ===== */
+let STEP = 'menu';
+const HAS_MENU = !!new URLSearchParams(location.search).get('partner');
+
+function goCheckout(){
+  if(!HAS_MENU) return;
+  if(!Object.keys(CART).length){ gwToast('Add something first.', false); return; }
+  STEP = 'checkout';
+  paintReview();
+  document.getElementById('stepMenu').style.display = 'none';
+  document.getElementById('stepCheckout').style.display = '';
+  document.getElementById('cartbar').classList.remove('show');
+  document.getElementById('pageH1').textContent = 'Your order';
+  document.getElementById('orderSub').textContent =
+    "Check it over, tell us where it's going, and we'll get moving.";
+  document.getElementById('backBtn').textContent = '‹ Back to menu';
+  window.scrollTo({top: 0, behavior: 'instant'});
+}
+
+function goMenu(){
+  STEP = 'menu';
+  document.getElementById('stepCheckout').style.display = 'none';
+  document.getElementById('stepMenu').style.display = '';
+  document.getElementById('pageH1').textContent = PARTNER_NAME || 'Place a Delivery Order';
+  document.getElementById('orderSub').textContent = MENU_SUB;
+  document.getElementById('backBtn').textContent = '‹ Back';
+  compose();
+  window.scrollTo({top: 0, behavior: 'instant'});
+}
+
+/* Back means back one ROOM, not out of the building. */
+function stepBack(){
+  if(STEP === 'checkout'){ goMenu(); return; }
+  gwBack();
+}
+
+let PARTNER_NAME = '', MENU_SUB = "Fill in the details below. You'll get a confirmation the moment we receive it.";
+
+function paintReview(){
+  const entries = Object.entries(CART);
+  const sub = subtotalCents();
+  const total = sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS;
+  document.getElementById('orderReview').innerHTML = `
+    <div class="orv">
+      <h2>Your order${PARTNER_NAME ? ' · ' + PARTNER_NAME.replace(/</g,'&lt;') : ''}</h2>
+      ${entries.map(([id,e])=>`
+        <div class="orvline">
+          <span class="orvq">${e.qty}&times;</span>
+          <span class="orvn">${e.name.replace(/</g,'&lt;')}
+            ${NOTES[id]?`<small>📝 ${String(NOTES[id]).replace(/</g,'&lt;')}</small>`:''}</span>
+          <span class="orvp">${money(e.cents * e.qty)}</span>
+        </div>`).join('')}
+      <button type="button" class="orvedit" onclick="goMenu()">＋ Add more / change items</button>
+      <div class="orvmoney">
+        <div class="orvm"><span>Subtotal</span><span>${money(sub)}</span></div>
+        <div class="orvm"><span>Delivery fee</span><span>${FEE_CENTS?money(FEE_CENTS):'Free'}</span></div>
+        <div class="orvm"><span>Driver tip</span><span>${money(TIP_CENTS)}</span></div>
+        ${DISCOUNT_CENTS?`<div class="orvm" style="color:#1c6b45"><span>Discount</span><span style="color:#1c6b45">&minus;${money(DISCOUNT_CENTS)}</span></div>`:''}
+        <div class="orvm tot"><span>Total</span><span>${money(total)}</span></div>
+      </div>
+    </div>`;
+}
+
+/* --- The merchant's door (v1.2) --- Walking into THEIR store: their logo, their
+   color, their words, on the same deep engine as the GateWay app splash. Shows
+   once per merchant per session — bouncing back from checkout shouldn't make you
+   re-enter the building. --- */
+function paintSplash(d){
+  if(!d || !HAS_MENU) return;
+  const seen = 'gw_door_' + (d.code || 'x');
+  try{ if(sessionStorage.getItem(seen)) return; sessionStorage.setItem(seen, '1'); }catch(e){}
+  const theme = document.querySelector('meta[name="theme-color"]');
+  if(theme && d.brand_color) theme.setAttribute('content', d.brand_color);
+  gwSplash({
+    once: false,                      // gated per-merchant above, not per-session
+    name: d.display_name || 'GateWay',
+    sub:  d.tagline || d.about_blurb || 'Local kitchens, delivered by your neighbors',
+    logo: d.logo_url || d.hero_url || '/static/gwd-emblem.png',
+    tint: d.brand_color || '#16337a',
+    hold: 1350,
+  });
+}
+
 function scrollToSend(){
   const b = document.getElementById('sendBtnAnchor');
   if(b) b.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
-/* --- Branded storefront splash: you are ENTERING this merchant's store --- */
-function paintSplash(d){
-  if(!d) return;
-  const tint = d.brand_color || '#16337a';
-  document.getElementById('splash').style.background =
-    `linear-gradient(160deg, ${tint} 0%, #0e1526 78%)`;
-  document.getElementById('splashLogo').style.background = '#fff';
-  if(d.logo_url || d.hero_url){
-    const img = document.getElementById('splashImg');
-    img.src = d.logo_url || d.hero_url;
-    img.style.width = '100%'; img.style.height = '100%';
-    img.style.objectFit = 'cover'; img.style.borderRadius = '24px';
-    img.onerror = () => { img.src = '/static/gwd-emblem.png'; img.style.width='64%';
-      img.style.height='auto'; img.style.objectFit='contain'; };
-  }
-  document.getElementById('splashName').textContent = d.display_name || 'GateWay';
-  document.getElementById('splashTag').textContent =
-    d.tagline || d.about_blurb || 'Local kitchens, delivered by your neighbors.';
-  const theme = document.querySelector('meta[name="theme-color"]');
-  if(theme) theme.setAttribute('content', tint);
-}
-/* No partner in the URL? It's the generic courier form — don't fake a storefront. */
-if(!new URLSearchParams(location.search).get('partner')){
-  const sp = document.getElementById('splash');
-  if(sp) sp.style.animationDelay = '.1s';
+/* No partner in the URL? It's the generic courier form — no menu, no store to
+   walk into, so it is ONE step and never pretends otherwise. */
+if(!HAS_MENU){
+  document.getElementById('stepMenu').style.display = 'none';
+  document.getElementById('stepCheckout').style.display = '';
+  const rv = document.getElementById('orderReview'); if(rv) rv.style.display = 'none';
 }
 
 /* --- PROMO: the client only PREVIEWS. app/intake.py re-computes the discount
@@ -467,17 +575,23 @@ async function applyPromo(){
     document.getElementById('promoField').value = code;
     document.getElementById('promoTxt').textContent = `${d.description} — you save ${money(d.discount_cents)}`;
     document.getElementById('promoOk').classList.add('show');
-    document.querySelector('.promo').style.display = 'none';
+    document.getElementById('promoBox').style.display = 'none';
     compose();
   }catch(e){ gwToast("We couldn't check that code. Try again.", false); }
 }
+document.addEventListener('DOMContentLoaded', () => {
+  const pi = document.getElementById('promoIn');
+  if(pi) pi.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); applyPromo(); }
+  });
+});
 function clearPromo(){
   PROMO_CODE = ''; DISCOUNT_CENTS = 0;
   document.getElementById('promoField').value = '';
   document.getElementById('discountField').value = '';
   document.getElementById('promoIn').value = '';
   document.getElementById('promoOk').classList.remove('show');
-  document.querySelector('.promo').style.display = 'flex';
+  document.getElementById('promoBox').style.display = '';
   compose();
 }
 let FEE_CENTS = 0, TIP_CENTS = 0, TIP_MODE = 'pct', TIP_PCT = 18;
@@ -534,6 +648,12 @@ function setWhen(sched){
 function applyPartnerMeta(d){
   if(!d) return;
   window._PARTNER_META = d;
+  PARTNER_NAME = d.display_name || '';
+  MENU_SUB = d.tagline || d.about_blurb || 'Tap ＋ to build your order.';
+  const h1 = document.getElementById('pageH1');
+  if(h1 && STEP === 'menu'){ h1.textContent = PARTNER_NAME; }
+  const sb = document.getElementById('orderSub');
+  if(sb && STEP === 'menu'){ sb.textContent = MENU_SUB; }
   FEE_CENTS = d.delivery_fee_cents || 0;
   if(d.accepting_orders === false){
     const b = document.getElementById('pausedBanner');
@@ -737,7 +857,8 @@ function compose(){
       const note = NOTES[id] ? ` [${NOTES[id]}]` : '';
       return `${e.qty}× ${e.name}${note} (${money(e.cents*e.qty)})`;
     }).join(', ') + ` — subtotal ${money(sub)}`;
-  bar.classList.add('show');
+  if(STEP === 'checkout'){ bar.classList.remove('show'); paintReview(); }
+  else if(HAS_MENU) bar.classList.add('show');
   if(TIP_MODE === 'pct') TIP_CENTS = Math.round(sub * TIP_PCT / 100);
   paintTips();
   const total = sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS;
@@ -748,15 +869,10 @@ function compose(){
   else { dl.style.display='none'; }
   document.getElementById('cbFee').textContent = FEE_CENTS ? money(FEE_CENTS) : 'Free';
   document.getElementById('cbTip').textContent = money(TIP_CENTS);
-  document.getElementById('cartTot').textContent = 'Total ' + money(total);
+  document.getElementById('cartTot').textContent = money(total);
   document.getElementById('cartCount').textContent = n + (n===1?' item':' items');
   const sendBtn = document.querySelector('button[type="submit"]');
   if(sendBtn && !sendBtn.disabled) sendBtn.textContent = `Place order · ${money(total)}`;
-  bar.innerHTML =
-    `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85"><span>Subtotal</span><span class="tot">${money(sub)}</span></div>` +
-    `<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Delivery fee</span><span class="tot">${money(FEE_CENTS)}</span></div>` +
-    (TIP_CENTS>0?`<div style="display:flex;justify-content:space-between;font-size:.82rem;opacity:.85;margin-top:4px"><span>Driver tip</span><span class="tot">${money(TIP_CENTS)}</span></div>`:'') +
-    `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25);font-size:1rem"><span>${n} ${n===1?'item':'items'} · Total</span><span class="tot">${money(total)}</span></div>`;
 }
 </script>
 </body>

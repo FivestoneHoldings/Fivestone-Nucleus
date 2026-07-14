@@ -83,7 +83,7 @@ text-transform:uppercase;letter-spacing:.08em}}</style></head>
 <h1>{headline}</h1>
 <div class="oid">{order_id}</div>
 <p>{message}</p>
-<p class="foot">GateWay Delivery · Fivestone Holdings<br>Blount &amp; Knox County, Tennessee</p>
+<p class="foot">GateWay Delivery · Fivestone Holdings<br>Knoxville, Tennessee &amp; surrounding areas</p>
 </div></body></html>"""
 
 
