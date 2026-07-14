@@ -107,7 +107,20 @@ img,svg,video{max-width:100%;height:auto}
 .gw-bar{box-sizing:border-box;max-width:100vw}
 .catnav{max-width:100%}
 pre,code{white-space:pre-wrap;word-break:break-word}
-</style></head>"""
+.gw-back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;
+font-weight:800;font-size:.86rem;background:none;border:none;cursor:pointer;padding:8px 0;
+font-family:'Archivo';margin-bottom:10px}
+</style>
+<script>
+/* BACK (v1.1): prefer real history so the customer keeps their place; fall back
+   to home so a deep link from a text message never dead-ends. */
+function gwBack(){
+  if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
+     && history.length > 1){ history.back(); }
+  else { location.href = '/'; }
+}
+</script>
+</head>"""
 
 _MAP_SCRIPT = """
 <div id="mapwrap" style="display:none;margin:20px 0">
@@ -267,6 +280,7 @@ async def track(order_id: str):
     if not recs:
         body = (f'<body data-oid="{_esc(oid)}">'
             f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
+            f'<button class="gw-back" onclick="gwBack()">&lsaquo; Back to GateWay</button>'
             f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
                 f'<div class="oid">{_esc(oid)}</div>'
                 f'<div class="status">Order not found</div>'
@@ -407,6 +421,7 @@ async def track(order_id: str):
                     if received_ts and active else "")
     body = (f'<body data-oid="{_esc(oid)}">'
             f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
+            f'<button class="gw-back" onclick="gwBack()">&lsaquo; Back to GateWay</button>'
             f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
             f'<div class="oid">{_esc(oid)}</div>'
             f'{celebrate_html}'

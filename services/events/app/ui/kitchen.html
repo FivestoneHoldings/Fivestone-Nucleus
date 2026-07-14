@@ -78,6 +78,10 @@ img,svg,video{max-width:100%;height:auto}
 .gw-bar{box-sizing:border-box;max-width:100vw}
 .catnav{max-width:100%}
 pre,code{white-space:pre-wrap;word-break:break-word}
+.undo{width:100%;margin-top:8px;padding:11px;border-radius:11px;background:transparent;
+border:1.5px solid #d9deea;color:#5a5e64;font-weight:800;font-size:.82rem;font-family:'Archivo';
+cursor:pointer;box-shadow:none}
+.undo:active{transform:scale(.98)}
 </style>
 </head>
 <body>
@@ -234,15 +238,62 @@ async function load(){
       ${o.notes?`<div class="notes">📝 ${esc(o.notes)}</div>`:''}
       <div class="when">${fmtWhen(o)}</div>
       ${o.ready
-        ? '<div class="done-label">✓ READY — driver notified</div>'
+        ? `<div class="done-label">✓ READY — driver notified</div>
+           <button class="undo" id="undo-${o.id}" onclick="undoReady('${o.id}')"
+             style="display:none">↩ Undo — not ready yet</button>`
         : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`}
     </div>`).join('') :
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">Kitchen's quiet</div><div style="font-size:.82rem;margin-top:4px">No open orders. New tickets ring in here automatically. 🔔</div></div>`;
 }
+/* --- UNDO (v1.1) --- A thumb slips. For 120 seconds, and only while the food is
+   still in this kitchen, the cook can take it back. After that the button tells
+   the truth instead of pretending: call dispatch. --- */
+const UNDO_WINDOW_MS = 120000;
+const READY_AT = {};   // id -> ms, this session only
+
 async function markReady(id){
   const r = await fetch(api(`/orders/${id}/ready`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body:'{}'});
-  if(r.ok) load();
+  if(r.ok){
+    READY_AT[id] = Date.now();
+    await load();
+    showUndo(id);
+    gwToast('Marked ready — the driver has been told. You can undo for 2 minutes.', true);
+  } else {
+    gwToast("That didn't go through. Try again.", false);
+  }
+}
+
+function showUndo(id){
+  const b = document.getElementById('undo-' + id);
+  if(!b || !READY_AT[id]) return;
+  const tick = () => {
+    const left = UNDO_WINDOW_MS - (Date.now() - READY_AT[id]);
+    if(left <= 0){ b.style.display = 'none'; return; }
+    b.style.display = '';
+    b.textContent = `↩ Undo — not ready yet (${Math.ceil(left/1000)}s)`;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+async function undoReady(id){
+  const ok = await gwConfirm({
+    title: 'Take this ticket back?',
+    body: "It'll go back on the rail as still cooking, and the driver will be told to wait.",
+    confirm: 'Yes, undo', cancel: 'Never mind'});
+  if(!ok) return;
+  const r = await fetch(api(`/orders/${id}/unready`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:'{}'});
+  if(r.ok){
+    delete READY_AT[id];
+    await load();
+    gwToast('Taken back — the ticket is cooking again.', true);
+  } else {
+    let msg = "Couldn't undo that one.";
+    try{ const d = await r.json(); if(d.detail) msg = d.detail; }catch(e){}
+    gwToast(msg, false);
+  }
 }
 function netDown(){
   if(document.getElementById('netB')) return;
@@ -252,6 +303,14 @@ function netDown(){
   document.body.prepend(b);
 }
 function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
+const _rawPaintUndo = load;
+load = async function(){
+  await _rawPaintUndo();
+  Object.keys(READY_AT).forEach(id => {
+    if(Date.now() - READY_AT[id] < UNDO_WINDOW_MS) showUndo(id);
+    else delete READY_AT[id];
+  });
+};
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
 load(); setInterval(load, 20000);

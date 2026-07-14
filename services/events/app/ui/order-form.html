@@ -271,6 +271,10 @@ background:#fff;color:#16337a;font-weight:800;font-family:'Archivo';cursor:point
 color:#1c6b45;border-radius:11px;padding:10px 12px;font-size:.83rem;font-weight:700}
 .promo-ok.show{display:flex}
 .promo-ok .x{margin-left:auto;background:none;border:none;color:#1c6b45;font-weight:900;cursor:pointer;font-size:1rem;padding:0 4px}
+.gw-back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;
+font-weight:800;font-size:.86rem;background:none;border:none;cursor:pointer;padding:8px 0;
+font-family:'Archivo';margin-bottom:10px}
+.gw-back:active{transform:translateX(-2px)}
 </style>
 </head>
 <body>
@@ -291,6 +295,7 @@ color:#1c6b45;border-radius:11px;padding:10px 12px;font-size:.83rem;font-weight:
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Order <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
+<button class="gw-back" onclick="gwBack()">‹ Back</button>
 <div class="card">
   <header>
     <div class="mark">GateWay <span>Delivery</span></div>
@@ -402,6 +407,15 @@ if(p){
   fetch('/v0/partners/' + encodeURIComponent(p) + '/menu')
     .then(r => r.ok ? r.json() : null)
     .then(renderMenu).catch(()=>{});
+}
+
+/* --- BACK (v1.1) --- Every screen you can go INTO, you can come back OUT of.
+   Prefers real history (keeps the customer's scroll position); falls back to
+   home so a deep link from a text message never dead-ends. --- */
+function gwBack(){
+  if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
+     && history.length > 1){ history.back(); }
+  else { location.href = '/'; }
 }
 function money(c){ return '$' + (c/100).toFixed(2); }
 function scrollToSend(){

@@ -13,7 +13,16 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="theme-color" content="#0e1526">
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
+<script>
+/* --- BACK (v1.1) --- Every screen you can go INTO, you can come back OUT of.
+   Prefers real history (keeps the customer's scroll position); falls back to
+   home so a deep link from a text message never dead-ends. --- */
+function gwBack(){
+  if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
+     && history.length > 1){ history.back(); }
+  else { location.href = '/'; }
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 :root{--paper:#f7f8fb;--ink:#14181f;--blue:#16337a;--line:#dfe4ee;--dim:#5a5e64}
@@ -73,10 +82,15 @@ img,svg,video{max-width:100%;height:auto}
 .gw-bar{box-sizing:border-box;max-width:100vw}
 .catnav{max-width:100%}
 pre,code{white-space:pre-wrap;word-break:break-word}
+.gw-back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;
+font-weight:800;font-size:.86rem;background:none;border:none;cursor:pointer;padding:8px 0;
+font-family:'Archivo';margin-bottom:10px}
+.gw-back:active{transform:translateX(-2px)}
 </style>
 </head>
 <body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">My GateWay <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<button class="gw-back" onclick="gwBack()">‹ Back</button>
 
 <h1 id="hello">My GateWay</h1>
 <p class="priv">Your profile lives <b>only on this device</b>. We don't harvest it, sell it,

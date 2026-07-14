@@ -111,6 +111,8 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <div id="dayopen"></div>
   <button onclick="showReadiness()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚦 Launch readiness</button>
   <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
+  <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
+  <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
@@ -423,6 +425,59 @@ async function load(){
   paintStats(d.stats);
   maybeDayOpen();
 }
+/* --- INBOX (v1.1) --- Leads and support tickets are worthless in a database
+   nobody reads. Every hand raised lands here, in front of the founder. --- */
+async function showInbox(){
+  const el = document.getElementById('inboxPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="skel" style="height:90px"></div>';
+  try{
+    const [L, T] = await Promise.all([
+      fetch(`/v0/leads?key=${encodeURIComponent(key)}`).then(r=>r.json()),
+      fetch(`/v0/support-tickets?key=${encodeURIComponent(key)}`).then(r=>r.json()),
+    ]);
+    const leads = L.leads || [], tix = T.tickets || [];
+    const when = s => { try{ return new Date(s).toLocaleString('en-US',
+      {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }catch(e){ return ''; } };
+    const reach = x => [x.phone, x.email].filter(Boolean).join(' · ') || 'no contact given';
+    const drv = leads.filter(l=>l.kind==='driver'), mer = leads.filter(l=>l.kind==='merchant');
+
+    const block = (title, rows, icon, render) => `
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+        text-transform:uppercase;color:#8b93a7;margin:14px 0 8px">${icon} ${title} · ${rows.length}</div>
+      ${rows.length ? rows.map(render).join('') :
+        `<div style="color:#5f6a85;font-size:.8rem;padding:4px 0">Nobody yet.</div>`}`;
+
+    el.innerHTML = `<div class="card">
+      ${block('Merchants who want in', mer, '🏪', l=>`
+        <div class="ev" style="display:block;padding:9px 0;border-bottom:1px solid #1e2942">
+          <b style="color:#e8eaf0">${esc(l.name)}</b>
+          <div style="color:#8b93a7;font-size:.76rem">${esc(reach(l))} · ${when(l.created_at)}</div>
+          ${l.message?`<div style="color:#b9c1d4;font-size:.79rem;margin-top:4px;white-space:pre-wrap">${esc(l.message)}</div>`:''}
+          ${l.phone?`<a href="tel:${esc(l.phone)}" style="display:inline-block;margin-top:6px;color:#57c68f;font-weight:800;font-size:.78rem">📞 Call ${esc(l.name.split(' ')[0])}</a>`:''}
+        </div>`)}
+      ${block('Drivers who want to drive', drv, '🚗', l=>`
+        <div class="ev" style="display:block;padding:9px 0;border-bottom:1px solid #1e2942">
+          <b style="color:#e8eaf0">${esc(l.name)}</b>
+          <div style="color:#8b93a7;font-size:.76rem">${esc(reach(l))} · ${when(l.created_at)}</div>
+          ${l.message?`<div style="color:#b9c1d4;font-size:.79rem;margin-top:4px;white-space:pre-wrap">${esc(l.message)}</div>`:''}
+          ${l.phone?`<a href="tel:${esc(l.phone)}" style="display:inline-block;margin-top:6px;color:#57c68f;font-weight:800;font-size:.78rem">📞 Call ${esc(l.name.split(' ')[0])}</a>`:''}
+        </div>`)}
+      ${block('Neighbors who need help', tix, '💬', t=>`
+        <div class="ev" style="display:block;padding:9px 0;border-bottom:1px solid #1e2942">
+          <b style="color:#e8eaf0">${esc(t.name || 'Someone')}</b>
+          ${t.order_id?`<span style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#f0a04b;margin-left:6px">${esc(t.order_id)}</span>`:''}
+          <div style="color:#8b93a7;font-size:.76rem">${esc(t.phone||'no phone')} · ${when(t.created_at)}</div>
+          <div style="color:#b9c1d4;font-size:.79rem;margin-top:4px;white-space:pre-wrap">${esc(t.message)}</div>
+          ${t.phone?`<a href="tel:${esc(t.phone)}" style="display:inline-block;margin-top:6px;color:#57c68f;font-weight:800;font-size:.78rem">📞 Call them back</a>`:''}
+        </div>`)}
+    </div>`;
+  }catch(e){
+    el.innerHTML = `<div class="card" style="color:#f0a04b">Couldn't load the inbox. Refresh and try again.</div>`;
+  }
+}
+
 async function showReadiness(){
   const el = document.getElementById('readyPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
