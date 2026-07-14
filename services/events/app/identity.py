@@ -121,6 +121,12 @@ def list_partners(key: str):
                           "thank_you_note": p.thank_you_note,
                           "about_blurb": p.about_blurb,
                           "hero_url": p.hero_url,
+                          "cuisine": p.cuisine,
+                          "tagline": p.tagline,
+                          "brand_color": p.brand_color,
+                          "logo_url": p.logo_url,
+                          "featured": p.featured,
+                          "demo": p.demo,
                           "special": _todays_special(p)}
                          for p in rows]}
 
@@ -147,12 +153,26 @@ async def upsert_partner(key: str, request: Request):
                 p.address = str(body["address"])[:300]
             if body.get("delivery_fee_cents") is not None:
                 p.delivery_fee_cents = max(0, int(body["delivery_fee_cents"]))
+            for f, cap in (("cuisine", 40), ("tagline", 120),
+                           ("brand_color", 9), ("logo_url", 500)):
+                if body.get(f) is not None:
+                    setattr(p, f, str(body[f]).strip()[:cap])
+            if body.get("featured") is not None:
+                p.featured = bool(body["featured"])
+            if body.get("demo") is not None:
+                p.demo = bool(body["demo"])
         else:
             db.add(Partner(code=code, display_name=name,
                            status=str(body.get("status", "pilot"))[:30],
                            contact=str(body.get("contact", ""))[:200],
                            address=str(body.get("address", ""))[:300],
-                           delivery_fee_cents=max(0, int(body.get("delivery_fee_cents", 399)))))
+                           delivery_fee_cents=max(0, int(body.get("delivery_fee_cents", 399))),
+                           cuisine=str(body.get("cuisine", ""))[:40],
+                           tagline=str(body.get("tagline", ""))[:120],
+                           brand_color=str(body.get("brand_color", ""))[:9],
+                           logo_url=str(body.get("logo_url", ""))[:500],
+                           featured=bool(body.get("featured", False)),
+                           portal_token=_new_portal_token()))
         db.commit()
     finally:
         db.close()
@@ -302,3 +322,69 @@ async def _flush_reopen_alerts(code: str, display_name: str):
                               f"{display_name} is taking orders again on GateWay. "
                               f"Order now: https://fivestone-nucleus-production.up.railway.app/order?partner={code}")
     return len(phones)
+
+
+@router.get("/api/board/{key}/partners/{code}/go-live")
+def go_live_checklist(key: str, code: str):
+    """What is STILL blocking this merchant from being visible to a customer?
+
+    A partner can sit in the registry for weeks, invisible, and nobody knows why.
+    This endpoint answers that in one place — it is the difference between
+    'Asia Cafe is onboarded' and 'Asia Cafe can actually take an order Monday'.
+    """
+    from .models import MenuItem
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        items = (db.query(MenuItem)
+                 .filter(MenuItem.partner_code == p.code,
+                         MenuItem.available.is_(True)).count())
+        priced = (db.query(MenuItem)
+                  .filter(MenuItem.partner_code == p.code,
+                          MenuItem.available.is_(True),
+                          MenuItem.price_cents > 0).count())
+        checks = [
+            {"id": "menu", "ok": items > 0, "blocking": True,
+             "label": f"Menu has items ({items})",
+             "fix": "Add at least one item — a merchant with no menu is HIDDEN from "
+                    "customers entirely, no matter what else is set."},
+            {"id": "priced", "ok": items > 0 and priced == items, "blocking": True,
+             "label": f"Every item is priced ({priced}/{items})",
+             "fix": "A $0.00 item will be ordered — and the driver will collect $0 "
+                    "at the door. Price everything before go-live."},
+            {"id": "address", "ok": bool(p.address.strip()), "blocking": True,
+             "label": "Pickup address set",
+             "fix": "Without it the driver has nowhere to go."},
+            {"id": "accepting", "ok": bool(p.accepting_orders), "blocking": True,
+             "label": "Accepting orders (not paused)",
+             "fix": "Resume orders when the kitchen is ready."},
+            {"id": "brand", "ok": bool(p.brand_color.strip() and p.cuisine.strip()),
+             "blocking": False,
+             "label": "Brand set (color + cuisine)",
+             "fix": "Without a color and cuisine they get the generic GateWay splash "
+                    "and won't appear under any category chip."},
+            {"id": "tagline", "ok": bool(p.tagline.strip()), "blocking": False,
+             "label": "Tagline written",
+             "fix": "One line telling a neighbor why to eat here."},
+            {"id": "photo", "ok": bool(p.hero_url.strip()), "blocking": False,
+             "label": "Hero photo",
+             "fix": "A kitchen with no photo gets the GateWay emblem."},
+            {"id": "notdemo", "ok": not p.demo, "blocking": False,
+             "label": "Not a PREVIEW placeholder",
+             "fix": "Clear the demo flag once this is a real signed merchant."},
+        ]
+        blocking = [c for c in checks if c["blocking"] and not c["ok"]]
+        return {
+            "code": p.code,
+            "display_name": p.display_name,
+            "visible_to_customers": len(blocking) == 0,
+            "blocking": [c["id"] for c in blocking],
+            "checks": checks,
+            "order_link": f"/order?partner={p.code}",
+            "kitchen_link": f"/kitchen/{p.portal_token}",
+        }
+    finally:
+        db.close()

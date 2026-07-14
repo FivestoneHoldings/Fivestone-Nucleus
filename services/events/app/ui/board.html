@@ -142,6 +142,8 @@ function show(v){
 
 async function loadPartners(){
   const d = await (await fetch(api('/partners'))).json();
+  window.__PARTNERS = {};
+  (d.partners||[]).forEach(p => { window.__PARTNERS[p.code] = p; });
   document.getElementById('partners').innerHTML = `
     <div class="card"><div class="line"><b>Add / update partner</b></div>
       <div class="row"><input id="pCode" placeholder="code (e.g. asiacafe)">
@@ -172,6 +174,10 @@ async function loadPartners(){
         <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button>
         <button class="ghost" onclick="openLink(api('/statement/${x.code}').replace(location.origin,''))">Statement ↗</button></div>
       <div class="row">
+        <button class="${x.__live===false?'warn':'ghost'}" onclick="goLive('${x.code}')">🚦 Go-live check</button>
+        <button class="ghost" onclick="editBrand('${x.code}')">🎨 Brand ✎</button></div>
+      <div id="golive-${x.code}" style="display:none;margin-top:8px"></div>
+      <div class="row">
         <button class="ghost" onclick="demoOrder('${x.code}')">＋ Demo order</button>
         <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button>
         <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button>
@@ -188,6 +194,55 @@ async function addPartner(){
   if(!code || !name) return;
   if(await post('/partners',{code, display_name:name})) loadPartners();
 }
+/* --- GO-LIVE (v1.1) --- A merchant can sit in the registry for weeks, invisible
+   to every customer, and nobody knows why. This says exactly what's blocking them.
+   It is the difference between "Asia Cafe is onboarded" and "Asia Cafe can take
+   an order Monday." --- */
+async function goLive(code){
+  const el = document.getElementById('golive-' + code);
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="skel" style="height:80px"></div>';
+  try{
+    const d = await (await fetch(api(`/partners/${code}/go-live`))).json();
+    el.innerHTML = `<div class="card" style="margin:0">
+      <div style="font-weight:900;margin-bottom:10px;color:${d.visible_to_customers?'#57c68f':'#f0a04b'}">
+        ${d.visible_to_customers
+          ? '✓ LIVE — customers can order from them right now'
+          : `⚠ HIDDEN from customers — ${d.blocking.length} thing${d.blocking.length===1?'':'s'} left`}</div>
+      ${(d.checks||[]).map(c=>`
+        <div style="padding:7px 0;border-bottom:1px solid #1e2942">
+          <div style="display:flex;gap:8px;align-items:baseline">
+            <span style="color:${c.ok?'#57c68f':(c.blocking?'#d81f2a':'#f0a04b')};font-weight:900">
+              ${c.ok?'✓':(c.blocking?'✕':'○')}</span>
+            <span style="color:#e8eaf0;font-size:.84rem;font-weight:${c.blocking?'800':'600'}">${esc(c.label)}</span>
+            ${!c.blocking && !c.ok ? '<span style="color:#5f6a85;font-size:.66rem;margin-left:auto">optional</span>' : ''}
+          </div>
+          ${!c.ok?`<div style="color:#8b93a7;font-size:.76rem;margin-top:3px;padding-left:20px;line-height:1.4">${esc(c.fix)}</div>`:''}
+        </div>`).join('')}
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" onclick="openLink('${d.order_link}')">Customer page ↗</button>
+        <button class="ghost" onclick="openLink('${d.kitchen_link}')">Kitchen screen ↗</button>
+      </div>
+    </div>`;
+  }catch(e){
+    el.innerHTML = '<div class="card" style="margin:0;color:#f0a04b">Could not run the check.</div>';
+  }
+}
+
+async function editBrand(code){
+  const cur = (window.__PARTNERS||{})[code] || {};
+  const cuisine = await gwPrompt({title:'Category', body:'Which chip should they appear under? (Burgers, BBQ, Pizza, Asian, Breakfast, Coffee, Mexican, Desserts, Healthy)', value: cur.cuisine||'', confirm:'Next'});
+  if(cuisine === null) return;
+  const tagline = await gwPrompt({title:'Tagline', body:'One line telling a neighbor why to eat here.', value: cur.tagline||'', confirm:'Next'});
+  if(tagline === null) return;
+  const color = await gwPrompt({title:'Brand color', body:'Hex color for their splash screen and tile, e.g. #c0392b', value: cur.brand_color||'#16337a', confirm:'Save'});
+  if(color === null) return;
+  const ok = await post('/partners', {code, display_name: cur.display_name || code,
+                                      cuisine, tagline, brand_color: color});
+  if(ok){ gwToast('Brand saved ✓', true); loadPartners(); }
+}
+
 async function toggleMenu(code){
   const el = document.getElementById('menu-'+code);
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
