@@ -10,9 +10,14 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 CHECKS = {
  "app/ui/home.html": [
    "/static/logo.png", "gw-bar", "gw_last_partner", "gw_last_order",
-   "Driver day code", "Kitchen code", "Dispatch key", "/v0/partners", "manifest.json",
-   "Local kitchens", "rrow paused", "notifyMe", "<details", "gw-profile.js", "/me",
+   "/v0/partners", "manifest.json",
+   "Local kitchens", "rrow paused", "notifyMe", "gw-profile.js", "/me",
    "YOUR USUAL", "og:title", "localImpact", "quickReorder", "notifyMe", "viewport guard",
+   # v1.1 storefront: team codes moved OFF the consumer home; CTAs + nav took their place
+   "gw-nav", "/drive-with-us", "/partner-with-us", "/support", "/team",
+ ],
+ "app/ui/team.html": [
+   "Driver day code", "Kitchen code", "Dispatch key", "gw-bar", "Back to GateWay",
  ],
  "app/ui/order-form.html": [
    "gw-bar", "menuZone", "pausedBanner", "setWhen", "tip_cents", "cartbar",

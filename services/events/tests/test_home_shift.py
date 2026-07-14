@@ -39,9 +39,13 @@ def _patched(monkeypatch):
 def test_home_serves_launcher():
     r = client.get("/")
     assert r.status_code == 200
-    for needle in ("Place an order", "Track an order", "Driver day code", "Dispatch key",
-                   "Kitchen code", "manifest.json"):
+    for needle in ("Place an order", "Track an order", "manifest.json"):
         assert needle in r.text
+    # team entry relocated to /team (v1.1)
+    t = client.get("/team")
+    assert t.status_code == 200
+    for needle in ("Driver day code", "Dispatch key", "Kitchen code"):
+        assert needle in t.text
 
 
 def test_shift_toggle_on_off():

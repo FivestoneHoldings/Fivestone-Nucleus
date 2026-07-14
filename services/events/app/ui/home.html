@@ -104,9 +104,14 @@ border-radius:9px;padding:3px 7px;letter-spacing:.1em;font-weight:500}
 .rrow.paused{opacity:.72}
 .rpausebtn{width:100%;padding:10px;border-radius:11px;border:1.5px solid #16337a;background:#fff;
 color:#16337a;font-weight:800;font-family:inherit;font-size:.8rem;margin-top:8px;cursor:pointer}
+.gw-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:4px;background:#0e1526;border-radius:26px;padding:7px 10px;box-shadow:0 10px 30px rgba(10,15,30,.4);padding-bottom:max(7px, env(safe-area-inset-bottom))}
+.gw-nav a{display:flex;flex-direction:column;align-items:center;gap:1px;color:#8b93a7;text-decoration:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;padding:5px 13px;border-radius:18px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.gw-nav a span{font-size:1.05rem}
+.gw-nav a.on{background:#1b2740;color:#fff}
+body{padding-bottom:110px !important}
 </style>
 </head>
-\1
+<body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Delivery <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
@@ -141,23 +146,17 @@ color:#16337a;font-weight:800;font-family:inherit;font-size:.8rem;margin-top:8px
   </div>
 </div>
 
-<details class="gate" style="border:none">
-  <summary style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#9a9ea5;font-weight:800;cursor:pointer;list-style:none;padding:6px 0">GateWay team ▸</summary>
-  <div class="row">
-    <input id="drv" placeholder="Driver day code">
-    <button onclick="go('driver','drv')">Drive</button>
-  </div>
-  <div class="row">
-    <input id="kit" placeholder="Kitchen code">
-    <button onclick="go('kitchen','kit')">Kitchen</button>
-  </div>
-  <div class="row">
-    <input id="brd" placeholder="Dispatch key">
-    <button onclick="go('board','brd')">Board</button>
-  </div>
-</details>
+<div style="display:flex;gap:10px;margin-top:26px">
+  <a href="/drive-with-us" style="flex:1;text-decoration:none;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)">
+    <div style="font-size:1.3rem">🚗</div><b style="font-size:.85rem">Drive with us</b>
+    <div style="font-size:.68rem;color:var(--dim);margin-top:2px">Earn on your schedule</div></a>
+  <a href="/partner-with-us" style="flex:1;text-decoration:none;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)">
+    <div style="font-size:1.3rem">🏪</div><b style="font-size:.85rem">Partner with us</b>
+    <div style="font-size:.68rem;color:var(--dim);margin-top:2px">Grow your kitchen</div></a>
+</div>
+<div style="text-align:center;margin-top:14px"><a href="/support" style="font-size:.78rem;color:#16337a;font-weight:700;text-decoration:none">💬 Help &amp; support</a></div>
 
-<div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
+<div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus · <a href="/team" style="color:#9a9ea5">Team sign-in</a></div>
 <script src="/static/gw-profile.js"></script>
 <script src="/static/gw-ui.js"></script>
 <script>
@@ -263,18 +262,6 @@ async function notifyMe(code, name){
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone})});
   gwToast(r.ok ? "You're on the list — we'll text you ✓" : 'Enter a valid phone number.', r.ok);
 }
-function go(path, id){
-  const v = document.getElementById(id).value.trim();
-  if(!v) return;
-  try{ localStorage.setItem('gw_'+id, v); }catch(e){}
-  location.href = '/' + path + '/' + encodeURIComponent(v);
-}
-try{
-  for(const id of ['drv','kit','brd']){
-    const saved = localStorage.getItem('gw_'+id);
-    if(saved) document.getElementById(id).value = saved;
-  }
-}catch(e){}
 function goTrack(){
   let v = document.getElementById(trk.id||'trk').value.trim().toUpperCase();
   if(!v) return;
@@ -289,5 +276,12 @@ document.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{
   <img src="/static/gwd-emblem.png" alt="GateWay Delivery">
   <div><span>Powered by</span><b>GateWay Delivery</b></div>
 </div>
+<nav class="gw-nav">
+  <a href="/" class="on"><span>🏠</span>Home</a>
+  <a href="#restaurants" onclick="document.getElementById('restaurants').scrollIntoView({behavior:'smooth'});return false"><span>🍽</span>Order</a>
+  <a href="#" onclick="goTrack2();return false"><span>📍</span>Activity</a>
+  <a href="/me"><span>👤</span>Account</a>
+</nav>
+<script>function goTrack2(){const o=localStorage.getItem('gw_last_order');location.href=o?'/track/'+encodeURIComponent(o):'#';if(!o){document.getElementById('trk').focus();document.getElementById('trk').scrollIntoView({behavior:'smooth',block:'center'});}}</script>
 </body>
 </html>

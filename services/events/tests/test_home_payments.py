@@ -26,11 +26,15 @@ def _patched(monkeypatch):
     yield
 
 
-def test_home_storefront_first_and_gate_collapsed():
+def test_home_storefront_first_and_no_team_gate():
     html = client.get("/").text
-    # restaurants section precedes the custom-order tile; team gate is a disclosure
+    # restaurants section precedes the custom-order tile
     assert html.index('id="restaurants"') < html.index("custom delivery")
-    assert "<details" in html and "GateWay team" in html
+    # v1.1: a food court does NOT ask its customers for a work badge at the door.
+    # Team entry lives at /team; the home shows growth CTAs instead.
+    assert "GateWay team" not in html
+    assert "Driver day code" not in html and "Dispatch key" not in html
+    assert "/drive-with-us" in html and "/partner-with-us" in html
     assert "Local kitchens, delivered by your neighbors" in html
     assert "rrow paused" in html and "notifyMe" in html  # paused kitchens keep the customer
 

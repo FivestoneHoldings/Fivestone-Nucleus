@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay — Support</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta name="description" content="Help and support for GateWay Delivery. A real person reads every message.">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0e1526">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#f7f8fb;--green:#16337a;--red:#d81f2a;--line:#d9deea;--dim:#5a5e64}
+*{box-sizing:border-box;margin:0;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{max-width:100%;overflow-x:hidden}
+img,svg{max-width:100%;height:auto}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+max-width:460px;margin:0 auto;padding:96px 22px 120px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;
+justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));
+box-shadow:0 2px 14px rgba(10,15,30,.28);max-width:100vw}
+.gw-bar img{height:34px;display:block}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.14em}
+.gw-dash{display:inline-flex;gap:3px;vertical-align:middle}
+.gw-dash i{width:14px;height:5px;border-radius:2px;transform:skewX(-18deg)}
+.gw-dash i:nth-child(1){background:#2f6fe0}.gw-dash i:nth-child(2){background:#e8eaf0}.gw-dash i:nth-child(3){background:#d81f2a}
+.back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;font-weight:800;font-size:.85rem;margin-bottom:16px}
+h1{font-size:1.5rem;font-weight:900;letter-spacing:-.02em;margin-bottom:6px}
+.lede{font-size:.92rem;color:var(--dim);line-height:1.5;margin-bottom:24px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 3px 16px rgba(20,30,60,.07);padding:18px;margin-bottom:14px}
+label{display:block;font-family:'IBM Plex Mono',monospace;font-size:.6rem;text-transform:uppercase;
+letter-spacing:.1em;color:var(--dim);font-weight:500;margin:12px 0 5px}
+input,textarea{width:100%;padding:12px;border-radius:11px;border:1.5px solid var(--line);
+font-family:'Archivo';font-size:.95rem;background:#fff;color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+button.primary{width:100%;padding:15px;border-radius:13px;border:none;background:var(--green);color:#fff;
+font-weight:800;font-family:'Archivo';font-size:1rem;cursor:pointer;margin-top:18px;
+box-shadow:0 8px 22px rgba(22,51,122,.28)}
+button:active{transform:scale(.98)}
+button, a{transition:transform .16s ease}
+:focus-visible{outline:3px solid #2f6fe0;outline-offset:2px;border-radius:8px}
+.perk{display:flex;gap:11px;align-items:flex-start;margin-bottom:12px}
+.perk div:first-child{font-size:1.15rem;line-height:1.2}
+.perk b{font-size:.9rem;display:block}
+.perk p{font-size:.79rem;color:var(--dim);line-height:1.45}
+.ok{display:none;text-align:center;padding:32px 18px}
+.ok .big{font-size:2.6rem;margin-bottom:10px}
+.foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:30px;
+text-transform:uppercase;letter-spacing:.08em;text-align:center}
+.gw-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:4px;
+background:#0e1526;border-radius:26px;padding:7px 10px;box-shadow:0 10px 30px rgba(10,15,30,.4);
+padding-bottom:max(7px, env(safe-area-inset-bottom))}
+.gw-nav a{display:flex;flex-direction:column;align-items:center;gap:1px;color:#8b93a7;text-decoration:none;
+font-size:.58rem;font-weight:700;letter-spacing:.04em;padding:5px 13px;border-radius:18px;
+text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.gw-nav a span{font-size:1.05rem}
+.gw-nav a.on{background:#1b2740;color:#fff}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Delivery">
+<span class="surf">Support <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<a class="back" href="/">‹ Back to GateWay</a>
+<h1>Help &amp; support</h1>
+<div class="lede">A real person reads every message. Tell us what happened and we'll make it right.</div>
+
+<div class="card" id="formCard">
+  <label for="sname">Your name</label>
+  <input id="sname" placeholder="Patrick" autocomplete="name">
+  <label for="sphone">Phone <span style="text-transform:none;letter-spacing:0">(so we can call you back)</span></label>
+  <input id="sphone" placeholder="865-555-0100" inputmode="tel" autocomplete="tel">
+  <label for="sorder">Order number <span style="text-transform:none;letter-spacing:0">(if it's about an order)</span></label>
+  <input id="sorder" placeholder="ORD-XXXXXXXX" autocapitalize="characters">
+  <label for="smsg">What's going on?</label>
+  <textarea id="smsg" placeholder="Tell us what happened — the more detail, the faster we can fix it."></textarea>
+  <button class="primary" onclick="sendTicket()">Send to GateWay</button>
+</div>
+
+<div class="ok" id="okCard">
+  <div class="big">✅</div>
+  <h1 style="font-size:1.2rem">We've got it.</h1>
+  <div class="lede" style="margin-top:8px">Your message is in front of a human. If you left a number, we'll reach out.</div>
+  <a class="back" href="/" style="margin-top:8px">‹ Back to GateWay</a>
+</div>
+
+<div class="card">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;text-transform:uppercase;
+    letter-spacing:.1em;color:#9a9ea5;font-weight:500;margin-bottom:12px">Common questions</div>
+  <div class="perk"><div>📍</div><div><b>Where's my order?</b>
+    <p>Every order has a live tracking link — it's in your confirmation text. Or tap Activity below.</p></div></div>
+  <div class="perk"><div>💵</div><div><b>How do I pay?</b>
+    <p>Cash at the door works today. Card payments are coming soon — nobody gets left out.</p></div></div>
+  <div class="perk"><div>🍽</div><div><b>Something was wrong with my food.</b>
+    <p>Tell us above. Your words go straight to the kitchen that cooked it — and we make it right.</p></div></div>
+  <div class="perk"><div>⭐</div><div><b>Why no public star ratings?</b>
+    <p>One bad night shouldn't sink a family kitchen forever. Your feedback goes to the cook, privately.</p></div></div>
+</div>
+
+<div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus</div>
+<nav class="gw-nav">
+  <a href="/"><span>🏠</span>Home</a>
+  <a href="/order"><span>🍽</span>Order</a>
+  <a href="/me"><span>📍</span>Activity</a>
+  <a href="/me"><span>👤</span>Account</a>
+</nav>
+<script src="/static/gw-ui.js"></script>
+<script>
+async function sendTicket(){
+  const msg = document.getElementById('smsg').value.trim();
+  if(msg.length < 3){ gwToast('Tell us a little about what happened.', false); document.getElementById('smsg').focus(); return; }
+  const body = { name: document.getElementById('sname').value.trim(),
+                 phone: document.getElementById('sphone').value.trim(),
+                 order_id: document.getElementById('sorder').value.trim(),
+                 message: msg };
+  const r = await fetch('/v0/support', {method:'POST', headers:{'Content-Type':'application/json'},
+                                        body: JSON.stringify(body)});
+  if(r.ok){ document.getElementById('formCard').style.display='none';
+            document.getElementById('okCard').style.display='block';
+            window.scrollTo({top:0,behavior:'smooth'}); }
+  else { gwToast("That didn't send. Try again in a moment.", false); }
+}
+try{ const o = localStorage.getItem('gw_last_order'); if(o) document.getElementById('sorder').value = o; }catch(e){}
+
+</script>
+</body>
+</html>

@@ -70,6 +70,12 @@ def public_partner_directory():
                     "hero_url": p.hero_url,
                     "about_blurb": p.about_blurb,
                     "special": _todays_special(p),
+                    "cuisine": p.cuisine,
+                    "tagline": p.tagline,
+                    "brand_color": p.brand_color,
+                    "logo_url": p.logo_url,
+                    "featured": p.featured,
+                    "demo": p.demo,
                 })
     finally:
         db.close()
@@ -91,6 +97,11 @@ def partner_lookup(code: str):
             "accepting_orders": p.accepting_orders,
             "about_blurb": p.about_blurb,
             "hero_url": p.hero_url,
+            "cuisine": p.cuisine,
+            "tagline": p.tagline,
+            "brand_color": p.brand_color,
+            "logo_url": p.logo_url,
+            "demo": p.demo,
             "special": _todays_special(p)}
 
 

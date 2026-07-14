@@ -96,6 +96,6 @@ def test_assign_flow():
 
 def test_ui_pages_serve():
     assert client.get("/driver/tok123").status_code == 200
-    assert "Day Sheet" in client.get("/driver/tok123").text
+    assert "Driver Hub" in client.get("/driver/tok123").text
     assert client.get("/board/anything").status_code == 200
     assert client.get("/order").status_code == 200

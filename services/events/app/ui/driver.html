@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>GateWay — Day Sheet</title>
+<title>GateWay — Driver Hub</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -89,12 +89,12 @@ font-size:.9rem;margin:7px 0;letter-spacing:.01em}
 letter-spacing:.06em;text-transform:uppercase}
 </style>
 </head>
-\1
+<body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
-<span class="surf">Day Sheet <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<span class="surf">Driver Hub <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
 <div class="top">
-  <div class="mark" style="display:none">GateWay <span>Day Sheet</span></div>
+  <div class="mark" style="display:none">GateWay <span>Driver Hub</span></div>
   <div class="who" id="who">…</div>
 </div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
@@ -123,7 +123,7 @@ async function load(){
   if(typeof LASTN === 'number' && n > LASTN){
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     document.title = '🔔 New delivery — GateWay';
-    setTimeout(()=>{ document.title = 'GateWay — Day Sheet'; }, 8000);
+    setTimeout(()=>{ document.title = 'GateWay — Driver Hub'; }, 8000);
   }
   LASTN = n;
   HAS_ACTIVE = (d.orders||[]).some(o=>o.status==='in_transit');

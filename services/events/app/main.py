@@ -34,10 +34,16 @@ app.include_router(track_router)
 app.include_router(kitchen_router)
 app.include_router(guides_router)
 app.include_router(menu_router)
+from .growth import (router as growth_router, migrate_brand_columns,
+                     seed_brands_and_demos, seed_promos)
+app.include_router(growth_router)
+migrate_brand_columns()
 seed_partners()
 seed_menus()
 from .menu import migrate_real_menus
 migrate_real_menus()
+seed_brands_and_demos()
+seed_promos()
 from .dispatch import retention_sweep
 retention_sweep(force=True)
 
@@ -123,13 +129,35 @@ def board_ui(key: str):
     return _page("board.html")
 
 
+@app.get("/team", response_class=HTMLResponse)
+def team_page():
+    """Team sign-in — moved OFF the consumer home (v1.1): a food court
+    doesn't ask its customers for a work badge at the front door."""
+    return _page("team.html")
+
+
+@app.get("/support", response_class=HTMLResponse)
+def support_page():
+    return _page("support.html")
+
+
+@app.get("/drive-with-us", response_class=HTMLResponse)
+def drive_lead_page():
+    return _page("lead-driver.html")
+
+
+@app.get("/partner-with-us", response_class=HTMLResponse)
+def merchant_lead_page():
+    return _page("lead-merchant.html")
+
+
 @app.get("/order", response_class=HTMLResponse)
 def order_form():
     """Public partner order form — posts to the canonical intake webhook."""
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.0.1"
+NUCLEUS_VERSION = "1.1.0"
 
 
 @app.middleware("http")

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay — Team</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#f7f8fb;--green:#16337a;--line:#d9deea;--dim:#5a5e64}
+*{box-sizing:border-box;margin:0;min-width:0}
+html,body{max-width:100%;overflow-x:hidden}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+max-width:460px;margin:0 auto;padding:96px 22px 60px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28)}
+.gw-bar img{height:34px;display:block}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.14em}
+.gw-dash{display:inline-flex;gap:3px;vertical-align:middle}
+.gw-dash i{width:14px;height:5px;border-radius:2px;transform:skewX(-18deg)}
+.gw-dash i:nth-child(1){background:#2f6fe0}.gw-dash i:nth-child(2){background:#e8eaf0}.gw-dash i:nth-child(3){background:#d81f2a}
+.back{display:inline-flex;align-items:center;gap:6px;color:#16337a;text-decoration:none;font-weight:800;font-size:.85rem;margin-bottom:18px}
+h1{font-size:1.4rem;font-weight:900;margin-bottom:4px}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:26px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 3px 16px rgba(20,30,60,.07);padding:18px;margin-bottom:14px}
+.card h2{font-size:.95rem;font-weight:800;margin-bottom:4px}
+.card p{font-size:.78rem;color:var(--dim);margin-bottom:10px}
+.row{display:flex;gap:8px}
+input{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:.85rem;background:#fff}
+button{padding:12px 18px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:800;font-family:'Archivo';cursor:pointer}
+:focus-visible{outline:3px solid #2f6fe0;outline-offset:2px;border-radius:8px}
+.foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:34px;text-transform:uppercase;letter-spacing:.08em;text-align:center}
+</style>
+</head>
+<body>
+<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
+<span class="surf">Team <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+
+<a class="back" href="/">‹ Back to GateWay</a>
+<h1>Team sign-in</h1>
+<div class="sub">Drivers · Merchants · Dispatch</div>
+
+<div class="card">
+  <h2>🚗 Driver Hub</h2>
+  <p>Enter the day code your dispatcher sent you.</p>
+  <div class="row"><input id="drv" placeholder="Driver day code" autocomplete="off">
+  <button onclick="go('driver','drv')">Open</button></div>
+</div>
+
+<div class="card">
+  <h2>👨‍🍳 Merchant screen</h2>
+  <p>Your kitchen code — orders appear the moment they land.</p>
+  <div class="row"><input id="kit" placeholder="Kitchen code" autocomplete="off">
+  <button onclick="go('kitchen','kit')">Open</button></div>
+</div>
+
+<div class="card">
+  <h2>🎛 Dispatch board</h2>
+  <p>Operations key — the whole day at a glance.</p>
+  <div class="row"><input id="brd" placeholder="Dispatch key" autocomplete="off">
+  <button onclick="go('board','brd')">Open</button></div>
+</div>
+
+<div class="foot">GateWay Delivery · Fivestone Holdings · Built on Nucleus</div>
+<script>
+function go(path, id){
+  const v = document.getElementById(id).value.trim();
+  if(!v) return;
+  try{ localStorage.setItem('gw_'+id, v); }catch(e){}
+  location.href = '/' + path + '/' + encodeURIComponent(v);
+}
+try{
+  for(const id of ['drv','kit','brd']){
+    const saved = localStorage.getItem('gw_'+id);
+    if(saved) document.getElementById(id).value = saved;
+  }
+}catch(e){}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{
+  if(e.key==='Enter') i.parentElement.querySelector('button').click();
+}));
+</script>
+</body>
+</html>

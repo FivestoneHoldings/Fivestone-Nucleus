@@ -63,6 +63,12 @@ class Partner(Base):
     hero_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     special_text: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     special_date: Mapped[str] = mapped_column(String(10), nullable=False, default="")
+    cuisine: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    tagline: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    brand_color: Mapped[str] = mapped_column(String(9), nullable=False, default="")
+    logo_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
@@ -115,3 +121,47 @@ class ReopenAlert(Base):
     phone: Mapped[str] = mapped_column(String(40), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     notified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class PromoCode(Base):
+    """A discount the founder stands behind. Server is the only authority on
+    what a code is worth — the driver's cash-due must never trust the client."""
+    __tablename__ = "promo_codes"
+
+    code: Mapped[str] = mapped_column(String(30), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False, default="percent")  # percent | cents
+    value: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    description: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, default="")  # "" = all merchants
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 0 = unlimited
+    uses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Lead(Base):
+    """Someone raised their hand — a driver who wants to drive, a merchant who
+    wants in. Customer service is everything; nothing gets lost."""
+    __tablename__ = "leads"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)  # driver | merchant
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    email: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    message: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class SupportTicket(Base):
+    """A neighbor needs help. Every message lands somewhere a human will read."""
+    __tablename__ = "support_tickets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    order_id: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    message: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

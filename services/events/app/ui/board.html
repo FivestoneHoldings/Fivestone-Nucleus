@@ -87,7 +87,7 @@ img,svg,video{max-width:100%;height:auto}
 pre,code{white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
-\1
+<body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
 <span class="surf">Command <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 
@@ -626,7 +626,7 @@ async function loadDrivers(){
       <div class="line"><b>Day sheet</b> <span class="oid">/driver/${x.day_token}</span></div>
       <div class="row">
         <button class="ghost" onclick="openLink('/driver/${x.day_token}')">Open ↗</button>
-        <button class="ghost" onclick="shareLink('Your GateWay day sheet — ${esc(x.name)}','/driver/${x.day_token}')">Share / copy</button>
+        <button class="ghost" onclick="shareLink('Your GateWay Driver Hub link — ${esc(x.name)}','/driver/${x.day_token}')">Share / copy</button>
         <button class="warn" onclick="rotate('${x.id}')">Rotate ↻</button>
       </div>
     </div>`).join('');
