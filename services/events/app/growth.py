@@ -23,6 +23,32 @@ from .models import Event, Lead, Partner, PromoCode, SupportTicket
 router = APIRouter()
 
 
+# ---------- abuse guard ----------
+# The founder's inbox is a real inbox. A bot that can post 10,000 fake merchant
+# leads doesn't just make noise — it BURIES the one real message from a restaurant
+# owner who actually wants in. Rate-limiting this is protecting a relationship,
+# not just a database.
+_LEAD_HITS: dict = {}
+_PROMO_HITS: dict = {}
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return (fwd.split(",")[0].strip() if fwd else
+            (request.client.host if request.client else "unknown"))
+
+
+def _throttled(bucket: dict, ip: str, limit: int, window_s: int = 60) -> bool:
+    import time
+    now = time.time()
+    hits = [t for t in bucket.get(ip, []) if now - t < window_s]
+    hits.append(now)
+    bucket[ip] = hits
+    if len(bucket) > 5000:      # bound memory
+        bucket.clear()
+    return len(hits) > limit
+
+
 # ---------- idempotent column migration (create_all won't ALTER) ----------
 
 _PARTNER_COLS = [
@@ -182,8 +208,12 @@ def promo_discount_cents(code: str, partner_code: str, subtotal_cents: int, db: 
 
 
 @router.get("/v0/promo/{code}")
-def check_promo(code: str, partner: str = "", subtotal_cents: int = 0):
+def check_promo(request: Request, code: str, partner: str = "", subtotal_cents: int = 0):
     """Client-side PREVIEW of a promo. The same math re-runs at intake."""
+    # 20/min: enough for a customer fumbling a code, far too slow to brute-force
+    # the referral-code space.
+    if _throttled(_PROMO_HITS, _client_ip(request), 20):
+        raise HTTPException(429, "Too many code attempts — wait a minute and try again.")
     db: Session = SessionLocal()
     try:
         disc, desc = promo_discount_cents(code, partner, max(0, subtotal_cents), db)
@@ -205,7 +235,9 @@ class LeadIn(BaseModel):
 
 
 @router.post("/v0/leads", status_code=201)
-def create_lead(body: LeadIn):
+def create_lead(request: Request, body: LeadIn):
+    if _throttled(_LEAD_HITS, _client_ip(request), 5):
+        raise HTTPException(429, "We've got your message — give us a minute to read it.")
     if not body.phone.strip() and not body.email.strip():
         raise HTTPException(422, "Leave a phone number or an email so we can reach you.")
     db: Session = SessionLocal()
@@ -232,7 +264,9 @@ class SupportIn(BaseModel):
 
 
 @router.post("/v0/support", status_code=201)
-def create_ticket(body: SupportIn):
+def create_ticket(request: Request, body: SupportIn):
+    if _throttled(_LEAD_HITS, _client_ip(request), 5):
+        raise HTTPException(429, "We've got your message — give us a minute to read it.")
     db: Session = SessionLocal()
     try:
         t = SupportTicket(id=str(uuid.uuid4()), name=body.name.strip(),

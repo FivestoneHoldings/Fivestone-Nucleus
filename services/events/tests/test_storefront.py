@@ -279,3 +279,47 @@ def test_no_surface_lost_its_body_tag():
         html = _page(name)
         assert "<body>" in html, f"{name} has no <body>"
         assert "\\1" not in html, f"{name} still has the leaked backreference"
+
+
+# ---------------- abuse: the founder's inbox is a real inbox ----------------
+
+def test_a_bot_cannot_bury_a_real_merchant_under_fake_leads():
+    """If a script can post 10,000 fake leads, the ONE message from a restaurant
+    owner who actually wants in gets buried. Throttling this protects a
+    relationship, not just a table."""
+    from app import growth as growth_mod
+    growth_mod._LEAD_HITS.clear()
+    codes = []
+    for i in range(9):
+        r = client.post("/v0/leads", json={"kind": "merchant", "name": f"Bot {i}",
+                                           "phone": "8655550100"},
+                        headers={"x-forwarded-for": "9.9.9.9"})
+        codes.append(r.status_code)
+    assert 429 in codes, "a bot could flood the founder's inbox unchecked"
+    growth_mod._LEAD_HITS.clear()
+
+
+def test_a_real_person_filling_the_form_once_is_never_throttled():
+    from app import growth as growth_mod
+    growth_mod._LEAD_HITS.clear()
+    r = client.post("/v0/leads", json={"kind": "merchant", "name": "Phillip Lim",
+                                       "phone": "8655550111"},
+                    headers={"x-forwarded-for": "7.7.7.7"})
+    assert r.status_code == 201
+    growth_mod._LEAD_HITS.clear()
+
+
+def test_referral_codes_cannot_be_brute_forced():
+    from app import growth as growth_mod
+    growth_mod._PROMO_HITS.clear()
+    codes = [client.get(f"/v0/promo/GW-{i:04d}", params={"subtotal_cents": 2000},
+                        headers={"x-forwarded-for": "6.6.6.6"}).status_code
+             for i in range(25)]
+    assert 429 in codes, "the referral-code space was brute-forceable"
+    growth_mod._PROMO_HITS.clear()
+
+
+def test_promo_ignores_a_negative_subtotal():
+    """A negative subtotal must never produce a 'discount' that pays the customer."""
+    d = client.get("/v0/promo/WELCOME10", params={"subtotal_cents": -9999}).json()
+    assert d["valid"] is False
