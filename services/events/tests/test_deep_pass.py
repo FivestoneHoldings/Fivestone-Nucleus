@@ -136,8 +136,8 @@ def test_public_partner_directory():
     d = client.get("/v0/partners").json()
     codes = [p["code"] for p in d["partners"]]
     assert "burgerboys" in codes and "friendsbbq" in codes and "stephens" in codes
-    # asiacafe has no menu → not in the directory
-    assert "asiacafe" not in codes
+    # v1.2: Asia Cafe now has a real, sourced menu + address — it went LIVE, not hidden.
+    assert "asiacafe" in codes and "asiacafexpress" in codes
 
 
 def test_driver_sheet_reports_done_today():

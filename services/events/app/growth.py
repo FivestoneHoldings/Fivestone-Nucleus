@@ -78,11 +78,21 @@ def migrate_brand_columns():
 # marketplace reads as a full picture. Demo rows carry demo=True and a PREVIEW
 # badge in the UI — they are swapped out as real merchants sign in each category.
 BRAND_SEED = {
-    "burgerboys":      dict(cuisine="Burgers",   brand_color="#b3202c", tagline="Half-pound burgers · home of the FREE fries", featured=True),
-    "friendsbbq":      dict(cuisine="BBQ",       brand_color="#5c3a21", tagline="Slow-smoked meats & family packs", featured=True),
-    "stephens":        dict(cuisine="Pizza",     brand_color="#1d6f42", tagline="NY-style pies, made from scratch", featured=True),
-    "asiacafe":        dict(cuisine="Asian",     brand_color="#c0392b", tagline="Knoxville's neighborhood Asian kitchen"),
-    "asiacafexpress":  dict(cuisine="Asian",     brand_color="#c0392b", tagline="Asia Cafe, to go — fast"),
+    "burgerboys":      dict(cuisine="Burgers",   brand_color="#1e5fa8",
+                            tagline="Half-pound burgers · home of the FREE fries", featured=True,
+                            logo_url="/static/logos/burgerboys.png"),
+    "friendsbbq":      dict(cuisine="BBQ",       brand_color="#e8791a",
+                            tagline="Slow-smoked meats & family packs", featured=True,
+                            logo_url="/static/logos/friendsbbq.png"),
+    "stephens":        dict(cuisine="Pizza",     brand_color="#c8202e",
+                            tagline="Life, happiness, pizza — NY-style, made from scratch", featured=True,
+                            logo_url="/static/logos/stephens.png"),
+    "asiacafe":        dict(cuisine="Asian",     brand_color="#c0392b",
+                            tagline="Amerasian cuisine — Knoxville's neighborhood Asian kitchen",
+                            logo_url="/static/logos/asiacafe.png"),
+    "asiacafexpress":  dict(cuisine="Asian",     brand_color="#5aa7d6",
+                            tagline="Asia Cafe, to go — fast, amerasian cuisine",
+                            logo_url="/static/logos/asiacafexpress.png"),
 }
 
 DEMO_MERCHANTS = [
@@ -141,6 +151,8 @@ def seed_brands_and_demos():
                     p.brand_color = brand.get("brand_color", "")
                 if not p.tagline:
                     p.tagline = brand.get("tagline", "")
+                if not p.logo_url and brand.get("logo_url"):
+                    p.logo_url = brand["logo_url"]
                 if brand.get("featured") and not p.featured:
                     p.featured = True
         for code, name, cuisine, color, tagline, addr in DEMO_MERCHANTS:

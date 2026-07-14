@@ -314,13 +314,21 @@ const CAT_ICON = {Burgers:'🍔', BBQ:'🍖', Pizza:'🍕', Asian:'🥡', Breakf
 function esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 function fee(p){ return p.delivery_fee_cents ? '$'+(p.delivery_fee_cents/100).toFixed(2)+' delivery' : 'Free delivery'; }
 
+/* Photo of the food beats the logo; the logo beats the generic GateWay emblem;
+   the emblem is the only thing that's always safe to fall back to. */
 function thumb(p, cls){
   const tint = p.brand_color || '#16337a';
   const bg = `background:linear-gradient(135deg, ${esc(tint)}, #0e1526)`;
-  return p.hero_url
-    ? `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.hero_url)}" alt="" loading="lazy"
-         onerror="this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))"></div>`
-    : `<div class="${cls}" style="${bg}"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
+  const fallback = `this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))`;
+  if(p.hero_url){
+    return `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.hero_url)}" alt="" loading="lazy"
+      onerror="${fallback}"></div>`;
+  }
+  if(p.logo_url){
+    return `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.logo_url)}" alt=""
+      loading="lazy" style="object-fit:contain;padding:14%;background:#fff" onerror="${fallback}"></div>`;
+  }
+  return `<div class="${cls}" style="${bg}"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
 }
 
 function paintChips(){

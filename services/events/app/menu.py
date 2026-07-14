@@ -111,9 +111,106 @@ SEED_PARTNERS = [
     ("burgerboys", "Burger Boys", "3000 N Broadway, Knoxville, TN 37917"),
     ("friendsbbq", "Friends BBQ", "2580 E Magnolia Ave, Knoxville, TN 37914"),
     ("stephens", "Stephen's Pizzeria", "5049 Bobby Hicks Hwy #105, Gray, TN 37615"),
+    # Real pricing sourced from Asia Cafe's own delivery listings (Cedar Bluff /
+    # Callahan locations) — DRAFT until Phillip confirms at go-live.
+    ("asiacafe", "Asia Cafe", "1708 Callahan Dr, Knoxville, TN 37912"),
+    ("asiacafexpress", "Asia Cafe Xpress", "8926 Town and Country Cir, Knoxville, TN 37923"),
 ]
 
 SEED_MENUS = {
+    # DRAFT — built from Asia Cafe's own published/delivery-platform listings
+    # (asiacafe.org, and verified item codes/prices from their live delivery
+    # menus). Phillip confirms/corrects everything via the board editor before
+    # go-live; nothing here has been priced by us.
+    "asiacafe": [
+        ("Appetizers", [
+            ("Crab Rangoons (8 pc)", "Cream cheese wontons, sweet & sour sauce", 1195),
+            ("Gyoza (6 pc)", "Pan-seared pork dumplings, ponzu", 1065),
+            ("Spring Rolls (4 pc)", "Lettuce, cilantro, shrimp, bean sprouts, rice noodles in rice paper, peanut sauce", 805),
+            ("Egg Rolls (4 pc)", "Classic pork & vegetable", 795),
+            ("Edamame", "Steamed, sea salt", 595),
+            ("Seaweed Salad", "", 695),
+            ("Wonton Soup", "", 495),
+            ("Hot & Sour Soup", "", 495),
+        ]),
+        ("Pho — House-Made Broth", [
+            ("Pho Tai", "Rare steak, rice noodles, bean sprouts, jalapeños, lime, basil, hoisin & sriracha", 1495),
+            ("Pho Ga", "White meat chicken, rice noodles, herbs & broth", 1395),
+            ("Pho Chicken Meatball", "Beef meatballs, rice noodles & broth", 1395),
+            ("Pho Combo VA8", "Rare steak, flank steak, meatballs & tendon", 2525),
+            ("Pho Shrimp", "", 1595),
+        ]),
+        ("Hibachi & Teriyaki", [
+            ("Chicken Hibachi", "Zucchini, onions, mushrooms, broccoli; fried rice, mushroom soup, vegetables & sweet carrots", 1735),
+            ("Steak Hibachi", "", 1935),
+            ("Shrimp Hibachi", "", 1935),
+            ("Steak & Shrimp Combo", "", 1865),
+            ("Tofu Hibachi", "", 1595),
+        ]),
+        ("Curry — Prepared Spicy", [
+            ("Panang Curry", "Peanut sauce, broccoli, carrots, onions, peppers — choice of chicken, steak, tofu, veg or shrimp", 1735),
+            ("Red Curry", "Coconut milk, potatoes, broccoli, lime leaves", 1735),
+            ("Yellow Curry", "Coconut milk, potatoes, onions, pineapple, peanuts", 1735),
+            ("Massaman Curry", "Carrots, peppers, eggplant, coconut milk", 1735),
+        ]),
+        ("Chinese Kitchen", [
+            ("Sweet & Sour Chicken", "", 1735),
+            ("Chinese Fried Rice", "", 1735),
+            ("Chinese Lo Mein", "", 1735),
+            ("Kung Pao Chicken", "Onions, peppers, carrots, zucchini, mushrooms & cashews", 1735),
+            ("Broccoli Beef", "", 1735),
+            ("Mongolian Beef", "", 1735),
+            ("Egg Foo Young", "", 1595),
+        ]),
+        ("Sushi Rolls", [
+            ("California Roll", "", 795),
+            ("Spicy Salmon Roll", "", 995),
+            ("Rainbow Roll", "", 1495),
+            ("Volcano Roll", "Baked, spicy crab, tempura crunch", 1395),
+            ("Philadelphia Roll", "Salmon, cream cheese, avocado", 995),
+            ("Shrimp Tempura Roll", "", 1195),
+        ]),
+        ("Bento Boxes", [
+            ("Chicken Teriyaki Bento", "Mushroom soup, steamed rice, fried banana, vegetable & shrimp tempura, orange", 1795),
+            ("Sushi Combo Bento", "", 1995),
+        ]),
+        ("Desserts & Drinks", [
+            ("Chinese Doughnuts (10 pc)", "", 695),
+            ("Cheesecake", "", 595),
+            ("Thai Tea", "", 495),
+            ("Bubble Tea", "", 550),
+        ]),
+    ],
+    "asiacafexpress": [
+        # Counter-service / drive-thru "Best Sellers" concept — a tighter,
+        # faster menu than the flagship restaurant.
+        ("Best Sellers", [
+            ("Pad Thai", "Rice noodles, egg, bean sprouts, peanuts — choice of protein", 1735),
+            ("Drunken Noodles", "Wide rice noodles, basil, peppers, garlic — choice of protein", 1735),
+            ("Sweet & Sour Chicken", "", 1735),
+            ("Chinese Fried Rice", "", 1735),
+            ("Broccoli Beef", "", 1735),
+            ("Chinese Lo Mein", "", 1735),
+        ]),
+        ("Quick Apps", [
+            ("Crab Rangoons (8 pc)", "", 1195),
+            ("Gyoza (6 pc)", "", 1065),
+            ("Spring Rolls (Goi Con, 2 pc)", "", 805),
+            ("French Fries", "", 495),
+        ]),
+        ("Kids Menu", [
+            ("Kids Hibachi or Teriyaki", "Small portion, fried rice", 1065),
+        ]),
+        ("AC Coffee", [
+            ("Drip Coffee", "", 350),
+            ("Vietnamese Iced Coffee", "", 495),
+            ("Thai Tea", "", 495),
+        ]),
+        ("Drinks", [
+            ("Fountain Drink", "", 275),
+            ("Bottled Water", "", 200),
+        ]),
+    ],
     # VERIFIED from Burger Boys' live Toast ordering page (3000 N Broadway), July 2026.
     "burgerboys": [
         ("Burgers — ½ lb fresh 80/20 · Home of the FREE Fries", [

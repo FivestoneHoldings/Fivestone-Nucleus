@@ -23,7 +23,9 @@ def test_seeded_partners_and_menus():
 
 
 def test_menu_404_for_partner_without_menu():
-    assert client.get("/v0/partners/asiacafe/menu").status_code == 404
+    """A partner that genuinely has no menu yet must 404 — not asiacafe, which
+    now has a real one and belongs in the directory (see test_go_live)."""
+    assert client.get("/v0/partners/ghost-partner-code/menu").status_code == 404
 
 
 def test_upsert_86_and_delete():
