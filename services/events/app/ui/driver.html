@@ -98,7 +98,7 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="who" id="who">…</div>
 </div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
-<button onclick="toggleProfile()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">⭐ My profile — what customers see</button>
+<button onclick="toggleProfile()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">⭐ My profile — what customers see <span id="profBadge"></span></button>
 <div id="profilePanel" style="display:none;margin-bottom:14px"></div>
 <div id="earnPanel" style="display:none;margin-bottom:14px"></div>
 <div id="runline"></div>
@@ -200,6 +200,15 @@ function paintProfile(){
   </div>`;
 }
 function pickAvatar(a){ PROFILE.avatar = a; PROFILE.photo_url=''; paintProfile(); }
+function profComplete(p){ return !!(p && (p.avatar || p.photo_url) && p.vehicle); }
+function paintProfBadge(p){
+  const el = document.getElementById('profBadge');
+  if(!el) return;
+  el.innerHTML = profComplete(p)
+    ? '<span style="color:#1a7f4b;font-size:.68rem;font-weight:800">\u2605 READY</span>'
+    : '<span style="color:#a86a1f;font-size:.68rem;font-weight:800">SET UP \u2192</span>';
+}
+(async()=>{ try{ paintProfBadge(await (await fetch(api('/profile'))).json()); }catch(e){} })();
 async function saveProfile(){
   const body = {
     avatar: PROFILE.avatar || '',
@@ -212,6 +221,7 @@ async function saveProfile(){
       headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})).json();
     if(window.gwToast) gwToast("Profile saved \u2014 that\u2019s what customers see now");
     paintProfile();
+    paintProfBadge(PROFILE);
   }catch(e){ alert('Could not save. Try again.'); }
 }
 async function showEarnings(){

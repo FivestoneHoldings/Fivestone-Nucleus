@@ -19,6 +19,13 @@ body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:va
 .card.ready{border-color:var(--green);background:#eef2fc}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--dim)}
 .chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.64rem;padding:4px 10px;border-radius:20px;text-transform:uppercase;background:#eee}
+.agebadge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:700;
+letter-spacing:.04em;padding:3px 9px;border-radius:20px;margin-bottom:8px}
+.agebadge.age-ok{background:#eef4ee;color:#3a7a4a}
+.agebadge.age-warm{background:#fdf1de;color:#9a5f10}
+.agebadge.age-hot{background:#fde3e3;color:#b5202a;animation:ageHot 1.4s ease-in-out infinite}
+@keyframes ageHot{0%,100%{opacity:1}50%{opacity:.5}}
+@media (prefers-reduced-motion:reduce){.agebadge.age-hot{animation:none}}
 .chip.in_transit{background:#fdf1e3;color:#a86a1f}.chip.assigned{background:#efe9fa;color:#6d4fa8}
 .items{font-size:1.08rem;font-weight:700;line-height:1.5;margin:10px 0}
 .notes{font-size:.88rem;color:#8a6d3b;background:#fdf6e3;border-radius:8px;padding:8px 12px;margin-bottom:10px}
@@ -290,6 +297,7 @@ async function load(){
   document.getElementById('list').innerHTML = d.orders.length ? d.orders.map(o=>`
     <div class="card ${o.ready?'ready':''} ${!wasFirst && freshIds.has(o.order_id)?'new':''}" id="${o.id}">
       <span class="chip ${o.status}">${KLABEL[o.status]||o.status.replace('_',' ')}</span>
+      ${o.ready ? '' : ageBadge(o.received_at)}
       <div class="oid">${o.order_id}</div>
       <div class="items">${esc(o.items)||'—'}</div>
       ${o.notes?`<div class="notes">📝 ${esc(o.notes)}</div>`:''}
@@ -301,6 +309,17 @@ async function load(){
         : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`}
     </div>`).join('') :
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">Kitchen's quiet</div><div style="font-size:.82rem;margin-top:4px">No open orders. New tickets ring in here automatically. 🔔</div></div>`;
+}
+/* A ticket that's sat too long is the one thing a busy line can lose track of.
+   Green under 10 min, amber 10-20, red pulsing past 20 — impossible to miss. */
+function ageBadge(receivedAt){
+  if(!receivedAt) return '';
+  const mins = Math.floor((Date.now() - new Date(receivedAt).getTime()) / 60000);
+  if(mins < 0) return '';
+  let cls = 'age-ok', label = mins + ' min';
+  if(mins >= 20){ cls = 'age-hot'; label = mins + ' min \u2014 check this'; }
+  else if(mins >= 10){ cls = 'age-warm'; label = mins + ' min'; }
+  return `<span class="agebadge ${cls}">${label}</span>`;
 }
 /* --- UNDO (v1.1) --- A thumb slips. For 120 seconds, and only while the food is
    still in this kitchen, the cook can take it back. After that the button tells

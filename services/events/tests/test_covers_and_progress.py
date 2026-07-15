@@ -43,3 +43,18 @@ def test_tracking_progress_bar_present():
     t = _f("track.py", APP)
     assert 'class="prog"' in t
     assert "_PROG" in t and '"in_transit": 3' in t
+
+
+def test_kitchen_has_urgency_age_badge():
+    """A busy kitchen line must never lose track of an old ticket."""
+    k = _f("kitchen.html")
+    assert "function ageBadge" in k
+    assert "age-hot" in k and "age-warm" in k and "age-ok" in k
+    assert "mins >= 20" in k  # escalation threshold exists
+
+
+def test_driver_hub_shows_profile_completeness_badge():
+    d = _f("driver.html")
+    assert 'id="profBadge"' in d
+    assert "function profComplete" in d
+    assert "paintProfBadge" in d
