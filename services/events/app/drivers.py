@@ -36,7 +36,11 @@ _SAFE_STR = 300
 
 
 def _clean(s, n=_SAFE_STR):
-    return ("" if s is None else str(s))[:n].strip()
+    # length-cap AND strip angle brackets: the customer card escapes on render,
+    # but stripping here means stored data is clean even if a future surface
+    # forgets to escape. Belt and suspenders on the one field a stranger sees.
+    v = ("" if s is None else str(s))[:n].strip()
+    return v.replace("<", "").replace(">", "")
 
 
 def _profile_dict(p: DriverProfile) -> dict:

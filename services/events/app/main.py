@@ -184,7 +184,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.7.7"
+NUCLEUS_VERSION = "1.7.8"
 
 
 @app.middleware("http")
