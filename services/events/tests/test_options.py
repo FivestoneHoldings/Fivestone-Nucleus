@@ -294,3 +294,44 @@ def test_option_priced_lines_can_be_individually_removed_from_review():
     form = open(os.path.join(ROOT, "app", "ui", "order-form.html")).read()
     assert "removeCartLine" in form
     assert "id.includes('::')" in form
+
+
+# ---------------- Asia Cafe: real menu with real protein options ----------------
+
+def test_asia_cafe_entrees_carry_real_protein_options():
+    """Asia Cafe's own menu prices these as 'Chicken $13.05+, Steak $14.05+,
+    Shrimp $15.05+' — a required choice, not a flat price. Confirms the seed
+    data actually attached option groups, not just base prices."""
+    m = client.get("/v0/partners/asiacafe/menu").json()
+    with_opts = [it for cat in m["categories"] for it in cat["items"] if it["options"]]
+    assert len(with_opts) >= 15, "protein options did not seed onto the real menu"
+    names = {c["name"] for c in with_opts[0]["options"][0]["choices"]}
+    assert {"Chicken", "Steak", "Shrimp"}.issubset(names)
+
+
+def test_asia_cafe_protein_upcharges_are_never_negative():
+    m = client.get("/v0/partners/asiacafe/menu").json()
+    for cat in m["categories"]:
+        for it in cat["items"]:
+            for g in it["options"]:
+                for c in g["choices"]:
+                    assert c["price_delta_cents"] >= 0
+
+
+def test_asia_cafe_xpress_has_its_own_real_menu_not_a_copy():
+    """Xpress is a different location with different real pricing (verified
+    from DoorDash) — it must not just mirror the flagship's prices."""
+    flagship = client.get("/v0/partners/asiacafe/menu").json()
+    xpress = client.get("/v0/partners/asiacafexpress/menu").json()
+    f_items = {it["name"]: it["price_cents"] for cat in flagship["categories"] for it in cat["items"]}
+    x_items = {it["name"]: it["price_cents"] for cat in xpress["categories"] for it in cat["items"]}
+    shared = set(f_items) & set(x_items)
+    assert shared, "no overlapping D-codes between locations — data likely wrong"
+    assert any(f_items[n] != x_items[n] for n in shared), \
+        "Xpress prices are identical to the flagship — real per-location pricing was not used"
+
+
+def test_both_asia_cafe_locations_clear_their_own_go_live_checklist():
+    for code in ("asiacafe", "asiacafexpress"):
+        d = client.get(f"/api/board/{KEY}/partners/{code}/go-live").json()
+        assert d["visible_to_customers"] is True, (code, d["blocking"])
