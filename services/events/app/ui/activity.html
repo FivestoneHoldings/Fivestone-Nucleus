@@ -163,7 +163,7 @@ function render(){
     if(dl !== lastDay){ html += `<div class="date">${esc(dl)}</div>`; lastDay = dl; }
     const live = isLive(h.at);
     const nm = h.partnerName || h.partner || 'GateWay order';
-    const reHref = h.partner ? `/order?partner=${encodeURIComponent(h.partner)}` : '/order';
+    const reHref = h.partner ? `/order?partner=${encodeURIComponent(h.partner)}&reorder=1` : '/order';
     html += `<div class="card">
       <div class="otop">
         <div>

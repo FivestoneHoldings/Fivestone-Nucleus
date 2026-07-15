@@ -316,8 +316,9 @@ try{
   const lp = JSON.parse(localStorage.getItem('gw_last_partner') || 'null');
   const btn = document.getElementById('againBtn');
   if(btn && lp && lp.code){
-    btn.href = '/order?partner=' + encodeURIComponent(lp.code);
-    btn.textContent = 'Order again — ' + (lp.name || 'same kitchen');
+    const hasCart = !!localStorage.getItem('gw_cart_' + lp.code);
+    btn.href = '/order?partner=' + encodeURIComponent(lp.code) + (hasCart ? '&reorder=1' : '');
+    btn.textContent = (hasCart ? 'Order it again — ' : 'Order again — ') + (lp.name || 'same kitchen');
     btn.style.display = 'block';
   } else if(btn){ btn.style.display = 'block'; }
 }catch(e){}
