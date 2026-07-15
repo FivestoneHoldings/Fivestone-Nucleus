@@ -24,13 +24,21 @@ def _page(name):
 # ---------------- home sectioning ----------------
 
 def test_courier_tile_lives_inside_a_named_section():
-    """Founder: 'Under the menus on the main page there's just a GateWay
-    courier tab that's just like there. It should be like a section?'"""
+    """Founder originally: 'there's just a GateWay courier tab that's just like
+    there. It should be like a section?' — so it became a real card.
+
+    v1.7 update: the founder then asked for it to be 'much more prominent and
+    independent'. It's now a standalone hero card promoted above the restaurant
+    list AND a first-class bottom-nav destination — no longer tucked in a
+    'More ways to get things done' footnote."""
     home = _page("home.html")
-    section_idx = home.index("More ways to get things done")
-    courier_idx = home.index('class="courier"')
-    assert section_idx < courier_idx
-    assert courier_idx - section_idx < 400, "section header is not actually attached to the tile"
+    # standalone, prominent card exists and is a link to its own surface
+    assert 'class="courier"' in home
+    assert 'href="/courier"' in home
+    # promoted above the restaurant list, not below it
+    assert home.index('class="courier"') < home.index('id="restaurants"')
+    # and it's an independent nav destination
+    assert "<span>Courier</span>" in home
 
 
 def test_tracking_tile_also_has_a_section_header():
