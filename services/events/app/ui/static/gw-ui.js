@@ -82,3 +82,80 @@
     setTimeout(()=>{ t.classList.remove('on'); setTimeout(()=>t.remove(), 250); }, 2400);
   };
 })();
+
+/* ===== SCROLL RESTORATION (v1.5) =====
+   Founder: "when I go back to a page, it goes straight to the top... I'd love
+   to be exactly where I was, for fluidity."
+
+   Root cause: our pages load content ASYNCHRONOUSLY (menu items, merchant
+   list, order history all arrive via fetch, after first paint). The browser's
+   native back/forward scroll restoration fires against the page's height AT
+   THAT MOMENT — if the async content hasn't rendered yet, the page is still
+   short, the saved scroll target doesn't exist, and it silently snaps to top.
+   This is a classic SPA failure mode, not a browser bug.
+
+   Fix: save scroll position ourselves (throttled, per-path, in sessionStorage
+   — survives back/forward but not a fresh tab, which is the right scope).
+   On load, poll document height until it stops growing (content has settled)
+   before restoring — so we're never restoring against a page that's still
+   shorter than where the customer actually was. */
+(function(){
+  try{ if('scrollRestoration' in history) history.scrollRestoration = 'manual'; }catch(e){}
+  const KEY = 'gw_scroll:' + location.pathname + location.search;
+  let saveT = null;
+  function save(){
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      try{ sessionStorage.setItem(KEY, String(window.scrollY)); }catch(e){}
+    }, 120);
+  }
+  window.addEventListener('scroll', save, {passive: true});
+  window.addEventListener('pagehide', () => {
+    try{ sessionStorage.setItem(KEY, String(window.scrollY)); }catch(e){}
+  });
+
+  let target = 0;
+  try{ target = parseInt(sessionStorage.getItem(KEY) || '0', 10) || 0; }catch(e){}
+  if(!target) return;
+
+  let lastHeight = -1, stableFrames = 0;
+  const MAX_FRAMES = 90;   // ~1.5s ceiling — never hang waiting for content that won't come
+  let frames = 0;
+  function tryRestore(){
+    frames++;
+    const h = document.documentElement.scrollHeight;
+    if(h === lastHeight) stableFrames++; else stableFrames = 0;
+    lastHeight = h;
+    // Height has held steady for 3 frames AND is tall enough to reach the
+    // target, OR we've hit the ceiling — restore with whatever we've got.
+    if((stableFrames >= 3 && h >= target + window.innerHeight * 0.5) || frames >= MAX_FRAMES){
+      window.scrollTo({top: target, behavior: 'instant'});
+      return;
+    }
+    requestAnimationFrame(tryRestore);
+  }
+  requestAnimationFrame(tryRestore);
+})();
+
+/* ===== NAV ACTIVE STATE (v1.5) =====
+   Founder: "the activity button is messed up." Root cause: each page's bottom
+   nav was static HTML with the "on" class hand-baked in — home.html always
+   showed Home as active, and every OTHER page (support, courier, lead pages)
+   ALSO showed Home as active because that markup was copy-pasted from
+   home.html without updating which tab should really be lit. me.html had the
+   opposite bug: nothing was marked active at all.
+
+   Fix: compute it once, from wherever the customer actually is, instead of
+   trusting whatever got baked into that page's copy. */
+(function(){
+  const links = document.querySelectorAll('.gw-nav .gw-navin > a');
+  if(!links.length) return;
+  const path = location.pathname;
+  links.forEach(a => a.classList.remove('on'));
+  let match = null;
+  if(path === '/') match = links[0];
+  else if(path.startsWith('/order') || path.startsWith('/courier')) match = links[1];
+  else if(path.startsWith('/track/')) match = links[2];
+  else if(path.startsWith('/me')) match = links[3];
+  if(match) match.classList.add('on');
+})();
