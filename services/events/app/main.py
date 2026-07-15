@@ -184,7 +184,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.7.3"
+NUCLEUS_VERSION = "1.7.4"
 
 
 @app.middleware("http")
@@ -220,13 +220,41 @@ _METRICS = {"count": 0, "total_ms": 0.0, "max_ms": 0.0, "errors": 0}
 
 @app.get("/metrics")
 def metrics():
-    """Lightweight ops pulse — no PII, safe to hit from an uptime monitor."""
+    """Lightweight ops pulse — no PII, safe to hit from an uptime monitor.
+    Now also summarizes slow requests from the last 24h so a latency incident is
+    visible here, not just buried in the event log."""
     c = _METRICS["count"] or 1
+    slow_24h = 0
+    slow_paths: dict = {}
+    try:
+        import json as _json
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        from .models import Event
+        db = SessionLocal()
+        cutoff = _dt.now(_tz.utc) - _td(hours=24)
+        rows = (db.query(Event)
+                .filter(Event.event_type == "system.slow_request",
+                        Event.occurred_at >= cutoff).all())
+        slow_24h = len(rows)
+        for e in rows:
+            try:
+                ms = int(_json.loads(e.payload).get("ms", 0))
+            except Exception:
+                ms = 0
+            # keep the worst ms seen per path
+            if e.entity_ref not in slow_paths or ms > slow_paths[e.entity_ref]:
+                slow_paths[e.entity_ref] = ms
+        db.close()
+    except Exception:
+        pass
+    worst = sorted(slow_paths.items(), key=lambda kv: kv[1], reverse=True)[:5]
     return {
         "requests": _METRICS["count"],
         "avg_ms": round(_METRICS["total_ms"] / c, 1),
         "max_ms": round(_METRICS["max_ms"], 1),
         "errors_5xx": _METRICS["errors"],
+        "slow_requests_24h": slow_24h,
+        "slowest_paths": [{"path": p, "ms": m} for p, m in worst],
         "version": NUCLEUS_VERSION,
     }
 

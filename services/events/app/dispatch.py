@@ -397,11 +397,28 @@ def _check_key(key: str):
 @router.get("/api/board/{key}/orders")
 async def board_orders(key: str):
     _check_key(key)
-    records = await at.list_records(
-        at.ORDERS,
-        formula="NOT(OR({status}='closed',{status}='cancelled'))",
-        max_records=100,
-    )
+    # These two Airtable reads are independent — firing them sequentially made
+    # the board's poll wait one round-trip, then another (this is the
+    # system.slow_request the founder saw on the log). Run them concurrently.
+    import asyncio
+    _drivers_cached = _cget("drivers:active")
+    if _drivers_cached is not None:
+        records = await at.list_records(
+            at.ORDERS,
+            formula="NOT(OR({status}='closed',{status}='cancelled'))",
+            max_records=100,
+        )
+        drivers = _drivers_cached
+    else:
+        records, drivers = await asyncio.gather(
+            at.list_records(
+                at.ORDERS,
+                formula="NOT(OR({status}='closed',{status}='cancelled'))",
+                max_records=100,
+            ),
+            at.list_records(at.DRIVERS, formula="{status}!='inactive'"),
+        )
+        _cput("drivers:active", drivers, 45)
     # failed orders surface for recovery (reassign/cancel)
     all_ids = [r["fields"].get("order_id", "") for r in records]
     ready_ids: set = set()
@@ -414,7 +431,6 @@ async def board_orders(key: str):
             ready_ids = {e.entity_ref for e in _rws}
         finally:
             _dbb.close()
-    drivers = await at.list_records(at.DRIVERS, formula="{status}!='inactive'")
     return {
         "orders": [{
             "id": r["id"],
@@ -924,14 +940,18 @@ async def board_snapshot(key: str):
     """One round-trip board load: open orders + drivers + today's stats.
     Orders arrive urgency-sorted: needs-attention first, oldest first within a group."""
     _check_key(key)
+    import asyncio
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    records = await at.list_records(
-        at.ORDERS, formula="NOT(OR({status}='closed',{status}='cancelled'))",
-        max_records=100)
-    today_records = await at.list_records(
-        at.ORDERS,
-        formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
-        max_records=100)
+    # open orders and today's orders are two independent reads — fetch together.
+    records, today_records = await asyncio.gather(
+        at.list_records(
+            at.ORDERS, formula="NOT(OR({status}='closed',{status}='cancelled'))",
+            max_records=100),
+        at.list_records(
+            at.ORDERS,
+            formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
+            max_records=100),
+    )
     drivers = _cget("drivers:list")
     if drivers is None:
         drivers = await at.list_records(at.DRIVERS)
