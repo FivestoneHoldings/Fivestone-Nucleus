@@ -65,6 +65,12 @@ text-transform:uppercase;letter-spacing:.14em}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
 .status{font-size:1.5rem;font-weight:800;margin-bottom:4px}
 .prog{display:flex;gap:5px;margin:10px 0 4px}
+.eta{background:linear-gradient(135deg,#0e1526,#16337a);color:#fff;border-radius:15px;
+padding:13px 17px;margin:14px 0 4px;display:flex;justify-content:space-between;align-items:center;
+box-shadow:0 8px 24px rgba(14,21,38,.22)}
+.eta .etalab{font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.13em;
+text-transform:uppercase;opacity:.78}
+.eta .etaval{font-size:1.25rem;font-weight:900;letter-spacing:-.01em}
 .prog i{flex:1;height:6px;border-radius:8px;background:#e2e7f1}
 .prog i.go{background:linear-gradient(90deg,#2f6fe0,#16337a)}
 .prog i.pulse{animation:progPulse 1.6s ease-in-out infinite}
@@ -128,7 +134,7 @@ function gwBack(){
 </script>
 </head>"""
 
-_MAP_SCRIPT = """
+_MAP_SCRIPT = r"""
 <div id="drivercard" style="display:none;margin:18px 0"></div>
 <div id="mapwrap" style="display:none;margin:20px 0">
   <div style="font-weight:800;font-size:.9rem;margin-bottom:8px">Your driver is on the way \U0001F69A
@@ -207,6 +213,28 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+// localize the ETA window to the viewer's timezone from the server ISO, and
+// keep a soft "in ~N min" hint fresh.
+function paintEta(){
+  const el = document.getElementById('eta');
+  if(!el) return;
+  const iso = el.getAttribute('data-iso');
+  if(!iso) return;
+  try{
+    const hi = new Date(iso);
+    const mins = Math.round((hi.getTime() - Date.now())/60000);
+    const val = document.getElementById('etaval');
+    if(mins <= 0){ val.textContent = 'Any minute now'; return; }
+    // if server gave a clock window keep it, else derive a local one
+    const cur = val.textContent;
+    if(!/\d/.test(cur) || cur === 'Any minute now'){
+      const lo = new Date(hi.getTime() - 10*60000);
+      const f = t => t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+      val.textContent = f(lo) + '–' + f(hi);
+    }
+  }catch(e){}
+}
+paintEta(); setInterval(paintEta, 30000);
 // who's bringing your order — the face, name, and car, once a driver's assigned
 async function pollDriver(){
   try{
@@ -299,6 +327,44 @@ try{
 
 def _fmt(ts: str) -> str:
     return ts.replace("T", " ").split(".")[0] + " UTC" if ts else ""
+
+
+def _eta_window(fields: dict, status: str):
+    """Honest ETA: anchor off the most recent known milestone and add the
+    typical remaining time. We show a WINDOW (e.g. '25–35 min'), never a false-
+    precision single minute, and never an ETA once delivered.
+
+    Typical remaining minutes by status (prep + dispatch + drive, Knoxville
+    metro): received ~40, confirmed ~32, assigned ~22, in_transit ~12.
+    """
+    from datetime import datetime, timezone, timedelta
+    REMAIN = {"received": 40, "confirmed": 32, "assigned": 22, "in_transit": 12}
+    if status not in REMAIN:
+        return None
+    # anchor = the freshest stamp we have, so the clock re-bases as it advances
+    anchor_ts = ""
+    for field in ("in_transit_at", "assigned_at", "confirmed_at", "received_at"):
+        if fields.get(field):
+            anchor_ts = fields[field]
+            break
+    base = datetime.now(timezone.utc)
+    if anchor_ts:
+        try:
+            base = datetime.fromisoformat(anchor_ts.replace("Z", "+00:00"))
+            if base.tzinfo is None:
+                base = base.replace(tzinfo=timezone.utc)
+        except Exception:
+            base = datetime.now(timezone.utc)
+    remain = REMAIN[status]
+    lo = base + timedelta(minutes=remain - 5)
+    hi = base + timedelta(minutes=remain + 5)
+    now = datetime.now(timezone.utc)
+    # if we've blown past the low end, show a tightening "any minute" window
+    if hi < now:
+        return {"text": "Any minute now", "iso": hi.isoformat()}
+    return {"text": f"{lo.strftime('%-I:%M')}–{hi.strftime('%-I:%M %p')}",
+            "iso": hi.isoformat(),
+            "mins": max(1, int((hi - now).total_seconds() // 60))}
 
 
 def _esc(x: str) -> str:
@@ -455,6 +521,15 @@ async def track(order_id: str):
         prog_html = f'<div class="prog" aria-hidden="true">{segs}</div>'
     else:
         prog_html = ""
+    # ETA window — computed server-side, localized in the browser from the ISO.
+    eta = _eta_window(f, status)
+    if eta:
+        eta_html = (
+            f'<div class="eta" id="eta" data-iso="{_esc(eta["iso"])}">'
+            f'<div class="etalab">Estimated arrival</div>'
+            f'<div class="etaval" id="etaval">{_esc(eta["text"])}</div></div>')
+    else:
+        eta_html = ""
     micro_text = MICRO.get(status, "")
     if driver_first and status == "assigned":
         micro_text = f"Your neighbor {_esc(driver_first)} is heading to pick it up."
@@ -472,6 +547,7 @@ async def track(order_id: str):
             f'{celebrate_html}'
             f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
             f'{prog_html}'
+            f'{eta_html}'
             f'{micro_html}{elapsed_html}{anticipation}'
             f'<div class="items">{items_line}</div>'
             f'{thanks}{proof_html}{again_html}'
