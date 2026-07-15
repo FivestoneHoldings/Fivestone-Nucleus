@@ -39,6 +39,8 @@ from .growth import (router as growth_router, migrate_brand_columns,
 app.include_router(growth_router)
 from .options import router as options_router
 app.include_router(options_router)
+from .drivers import router as drivers_router, seed_driver_profiles
+app.include_router(drivers_router)
 migrate_brand_columns()
 seed_partners()
 seed_menus()
@@ -46,6 +48,7 @@ from .menu import migrate_real_menus
 migrate_real_menus()
 seed_brands_and_demos()
 seed_promos()
+seed_driver_profiles()
 from .dispatch import retention_sweep
 retention_sweep(force=True)
 
@@ -174,7 +177,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.7.1"
+NUCLEUS_VERSION = "1.7.2"
 
 
 @app.middleware("http")

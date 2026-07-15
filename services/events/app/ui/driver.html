@@ -98,6 +98,8 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="who" id="who">…</div>
 </div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
+<button onclick="toggleProfile()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">⭐ My profile — what customers see</button>
+<div id="profilePanel" style="display:none;margin-bottom:14px"></div>
 <div id="earnPanel" style="display:none;margin-bottom:14px"></div>
 <div id="runline"></div>
 <div id="list"><div class="empty">Loading your route…</div></div>
@@ -160,6 +162,57 @@ async function load(){
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
       </div>
     </div>`}).join('');
+}
+const DRIVER_AVATARS = ['😎','🚗','🧢','🕶️','🤠','🥳','😊','🙂','👩','👨','🧔','🦊','🐻','🦁','🌟','🔥','💙','🧡','🛵'];
+let PROFILE = null;
+async function toggleProfile(){
+  const el = document.getElementById('profilePanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading…</div>';
+  try{ PROFILE = await (await fetch(api('/profile'))).json(); }
+  catch(e){ el.innerHTML="<div class=\"card\">Couldn\u2019t load your profile. Try again.</div>"; return; }
+  paintProfile();
+}
+function paintProfile(){
+  const p = PROFILE || {};
+  const av = DRIVER_AVATARS.map(a =>
+    `<button type="button" onclick="pickAvatar('${a}')" style="font-size:1.5rem;width:42px;height:42px;border-radius:11px;border:1.5px solid ${p.avatar===a?'#16337a':'#dfe4ee'};background:${p.avatar===a?'#eef2fc':'#fff'};cursor:pointer">${a}</button>`
+  ).join('');
+  const face = p.photo_url
+    ? `<img src="${p.photo_url}" alt="" style="width:64px;height:64px;border-radius:16px;object-fit:cover">`
+    : `<div style="width:64px;height:64px;border-radius:16px;background:#eef1f7;display:flex;align-items:center;justify-content:center;font-size:2rem;border:1.5px solid #dfe4ee">${p.avatar||'🧑'}</div>`;
+  document.getElementById('profilePanel').innerHTML = `<div class="card">
+    <div style="display:flex;gap:13px;align-items:center;margin-bottom:14px">
+      ${face}
+      <div><div style="font-weight:800;font-size:1.05rem">${(p.display_name||'You')}</div>
+        <div style="font-size:.78rem;color:#8a8e95">This is how neighbors see you on their tracking screen.</div></div>
+    </div>
+    <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a8e95">Pick a face</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 14px">${av}</div>
+    <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a8e95">Your car</label>
+    <div style="display:flex;gap:8px;margin:6px 0 14px">
+      <input id="pfColor" placeholder="Color" value="${esc(p.vehicle_color||'')}" style="flex:.6;padding:11px;border:1.5px solid #dfe4ee;border-radius:10px;font-family:inherit">
+      <input id="pfVehicle" placeholder="Make & model" value="${esc(p.vehicle||'')}" style="flex:1;padding:11px;border:1.5px solid #dfe4ee;border-radius:10px;font-family:inherit">
+    </div>
+    <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a8e95">A line about you</label>
+    <textarea id="pfBio" maxlength="300" placeholder="Keep it friendly — customers read this while they wait." style="width:100%;margin-top:6px;padding:11px;border:1.5px solid #dfe4ee;border-radius:10px;font-family:inherit;min-height:70px;resize:vertical">${esc(p.bio||'')}</textarea>
+    <button onclick="saveProfile()" class="b-del" style="width:100%;margin-top:12px;padding:14px;border-radius:11px">Save my profile</button>
+  </div>`;
+}
+function pickAvatar(a){ PROFILE.avatar = a; PROFILE.photo_url=''; paintProfile(); }
+async function saveProfile(){
+  const body = {
+    avatar: PROFILE.avatar || '',
+    vehicle: document.getElementById('pfVehicle').value,
+    vehicle_color: document.getElementById('pfColor').value,
+    bio: document.getElementById('pfBio').value,
+  };
+  try{
+    PROFILE = await (await fetch(api('/profile'), {method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})).json();
+    if(window.gwToast) gwToast("Profile saved \u2014 that\u2019s what customers see now");
+    paintProfile();
+  }catch(e){ alert('Could not save. Try again.'); }
 }
 async function showEarnings(){
   const el = document.getElementById('earnPanel');

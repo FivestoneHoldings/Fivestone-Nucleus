@@ -123,6 +123,7 @@ function gwBack(){
 </head>"""
 
 _MAP_SCRIPT = """
+<div id="drivercard" style="display:none;margin:18px 0"></div>
 <div id="mapwrap" style="display:none;margin:20px 0">
   <div style="font-weight:800;font-size:.9rem;margin-bottom:8px">Your driver is on the way \U0001F69A
     <span class="livebadge" style="float:right;margin-top:3px"><i></i>LIVE</span></div>
@@ -200,6 +201,31 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+// who's bringing your order — the face, name, and car, once a driver's assigned
+async function pollDriver(){
+  try{
+    const d = await (await fetch('/v0/order/' + encodeURIComponent(OID) + '/driver')).json();
+    const el = document.getElementById('drivercard');
+    if(!el) return;
+    if(!d || !d.assigned){ el.style.display='none'; return; }
+    const face = d.photo_url
+      ? '<img src="'+esc(d.photo_url)+'" alt="" style="width:56px;height:56px;border-radius:16px;object-fit:cover;flex:0 0 auto">'
+      : '<div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#eef1f7,#e2e7f2);display:flex;align-items:center;justify-content:center;font-size:1.9rem;flex:0 0 auto;border:1.5px solid #dfe4ee">'+(esc(d.avatar)||'🧑')+'</div>';
+    const car = [d.vehicle_color, d.vehicle].filter(Boolean).map(esc).join(' ');
+    const verb = d.status === 'in_transit' ? 'is on the way to you' : 'has your order';
+    el.innerHTML =
+      '<div style="font-family:monospace;font-size:.56rem;letter-spacing:.13em;text-transform:uppercase;color:#16337a;margin-bottom:9px">Your driver</div>'
+      + '<div style="display:flex;gap:13px;align-items:center;background:#fff;border:1.5px solid #e4e8f2;border-radius:16px;padding:14px 15px;box-shadow:0 3px 16px rgba(20,30,60,.06)">'
+      + face
+      + '<div style="min-width:0">'
+      + '<div style="font-weight:800;font-size:1.02rem;line-height:1.2">'+esc(d.first_name||d.display_name)+' <span style="font-weight:600;color:#6b7280;font-size:.86rem">'+verb+'</span></div>'
+      + (car ? '<div style="font-size:.82rem;color:#44474d;margin-top:3px">🚗 '+car+'</div>' : '')
+      + (d.bio ? '<div style="font-size:.8rem;color:#6b7280;margin-top:6px;line-height:1.45">'+esc(d.bio)+'</div>' : '')
+      + '</div></div>';
+    el.style.display = '';
+  }catch(e){}
+}
+pollDriver(); setInterval(pollDriver, 20000);
 async function feedback(good){
   const note = await gwPrompt({title: good ? 'What did you love?' : 'What went wrong?',
     multiline: true, confirm: 'Send privately',
