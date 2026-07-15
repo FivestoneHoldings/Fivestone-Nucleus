@@ -262,3 +262,35 @@ def test_kitchen_can_86_a_single_choice_they_ran_out_of(_item_with_protein_optio
             if it["id"] == item_id:
                 names = {c["name"] for c in it["options"][0]["choices"]}
                 assert "Shrimp" not in names
+
+
+# ---------------- customer-facing options UI ----------------
+
+def test_order_form_has_a_working_options_sheet():
+    """Founder: 'I'd love an options feature to each item selection... that
+    process should be more fluid and in depth.' Not a bare quantity stepper —
+    a real picker sheet with required-group enforcement and live pricing."""
+    form = open(os.path.join(ROOT, "app", "ui", "order-form.html")).read()
+    for needle in ("openOptions", "confirmOptions", "optToggle", "optAllRequiredMet",
+                  "paintOptionsSheet", "cartJsonField"):
+        assert needle in form
+
+
+def test_the_add_button_is_disabled_until_required_groups_are_answered():
+    form = open(os.path.join(ROOT, "app", "ui", "order-form.html")).read()
+    assert "ready?" in form and "disabled" in form
+    assert "Choose required options" in form
+
+
+def test_cart_json_is_rebuilt_from_every_cart_entry_including_plain_items():
+    """Items with no options must also flow through cart_json (itemId/choiceIds
+    set to [] by bump()), so the server can validate the WHOLE cart uniformly —
+    not just the items that happen to have an options sheet."""
+    form = open(os.path.join(ROOT, "app", "ui", "order-form.html")).read()
+    assert "itemId:id, choiceIds:[]" in form
+
+
+def test_option_priced_lines_can_be_individually_removed_from_review():
+    form = open(os.path.join(ROOT, "app", "ui", "order-form.html")).read()
+    assert "removeCartLine" in form
+    assert "id.includes('::')" in form
