@@ -85,6 +85,8 @@ async def kitchen_orders(token: str):
             db.close()
     return {
         "kitchen": p.display_name,
+        "logo_url": p.logo_url,
+        "brand_color": p.brand_color,
         "accepting": p.accepting_orders,
         "picked_up_today": picked_up_today,
         "delivered_today": delivered_today,

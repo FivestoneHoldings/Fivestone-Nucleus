@@ -248,7 +248,13 @@ async function load(){
     '<div class="empty">This kitchen link isn\'t valid. Ask GateWay for a fresh one.</div>';
     document.getElementById('who').textContent = '—'; return; }
   const d = await r.json();
-  document.getElementById('who').textContent = d.kitchen.toUpperCase() + ' · TODAY';
+  const who = document.getElementById('who');
+  if(d.logo_url){
+    who.innerHTML = '<img src="' + d.logo_url + '" alt="" style="height:26px;width:26px;border-radius:7px;object-fit:contain;background:#fff;vertical-align:middle;margin-right:8px;border:1px solid #e4e8f2">' +
+      '<span style="vertical-align:middle">' + esc(d.kitchen.toUpperCase()) + ' · TODAY</span>';
+  } else {
+    who.textContent = d.kitchen.toUpperCase() + ' · TODAY';
+  }
   const rev = d.revenue_today_cents ? '$' + (d.revenue_today_cents/100).toFixed(0) : '$0';
   const peak = d.peak_hour !== '' ? (((+d.peak_hour%12)||12) + (d.peak_hour<12?'a':'p')) : '—';
   document.getElementById('pride').innerHTML =
