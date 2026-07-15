@@ -42,6 +42,22 @@ button, a{transition:transform .16s ease}
 .perk div:first-child{font-size:1.15rem;line-height:1.2}
 .perk b{font-size:.9rem;display:block}
 .perk p{font-size:.79rem;color:var(--dim);line-height:1.45}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.6rem;text-transform:uppercase;
+letter-spacing:.1em;color:#9a9ea5;font-weight:500;margin-bottom:12px}
+.steps{display:flex;flex-direction:column;gap:16px}
+.stepitem{display:flex;gap:12px;align-items:flex-start}
+.stepno{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;
+font-weight:900;font-size:.8rem;display:flex;align-items:center;justify-content:center;
+font-family:'IBM Plex Mono',monospace}
+.stepitem b{font-size:.88rem;display:block;margin-bottom:2px}
+.stepitem p{font-size:.79rem;color:var(--dim);line-height:1.45}
+.faq{border-bottom:1px solid #eef0f5;padding:12px 0}
+.faq summary{font-weight:800;font-size:.86rem;cursor:pointer;list-style:none;
+display:flex;justify-content:space-between;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:1.1rem;color:var(--green);font-weight:400}
+.faq[open] summary::after{content:'−'}
+.faq p{font-size:.81rem;color:var(--dim);line-height:1.5;margin-top:8px}
 .ok{display:none;text-align:center;padding:32px 18px}
 .ok .big{font-size:2.6rem;margin-bottom:10px}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:30px;
@@ -80,17 +96,66 @@ body{padding-bottom:112px}
 <span class="surf">Drive <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 <a class="back" href="/">‹ Back to GateWay</a>
 <h1>Drive with GateWay</h1>
-<div class="lede">Deliver for kitchens in your own neighborhood. Keep every dollar of your tips — we don't take a cut.</div>
+<div class="lede">Good music, good food smells, and every dollar of your tips —
+  we're not going to lie and pretend it's more complicated than that.</div>
 
 <div class="card">
+  <div class="eyebrow">The actual perks</div>
   <div class="perk"><div>💰</div><div><b>Tips are 100% yours</b>
-    <p>We take nothing from what a neighbor hands you at the door. Not a penny.</p></div></div>
-  <div class="perk"><div>🗓</div><div><b>Your schedule</b>
-    <p>Pick up a day sheet when you want one. No quotas, no punishment for saying no.</p></div></div>
+    <p>We take nothing from what a neighbor hands you at the door. Not a penny,
+    not a "service fee," nothing.</p></div></div>
+  <div class="perk"><div>🗓</div><div><b>Your schedule, really</b>
+    <p>Pick up a day sheet when you want one. No quotas, no algorithm punishing
+    you for saying no to a run.</p></div></div>
   <div class="perk"><div>📍</div><div><b>Close to home</b>
-    <p>Knoxville and the surrounding areas. Short hops, local kitchens, people you'll recognize.</p></div></div>
+    <p>Knoxville and the surrounding areas. Short hops, local kitchens, people
+    you'll start to recognize by their second order.</p></div></div>
   <div class="perk"><div>👋</div><div><b>You talk to a human</b>
-    <p>Dispatch is a person, not an algorithm. Something goes wrong, you call us.</p></div></div>
+    <p>Dispatch is a person, not a chatbot. Something's wrong on a run? You
+    call us and a real person picks up.</p></div></div>
+  <div class="perk"><div>🚗</div><div><b>Live map, no guessing</b>
+    <p>Turn-by-turn is built into your Driver Hub — no juggling a second app
+    while you're holding somebody's dinner.</p></div></div>
+  <div class="perk"><div>🎒</div><div><b>Bring your own energy</b>
+    <p>Some drivers blast music between stops, some drive in total silence.
+    It's your car, your playlist, your ten minutes of peace between runs.</p></div></div>
+</div>
+
+<div class="card">
+  <div class="eyebrow">How a shift actually goes</div>
+  <div class="steps">
+    <div class="stepitem"><span class="stepno">1</span>
+      <div><b>Tell us you're in</b><p>Fill out the form below — dispatch reaches
+        out to get you a day code and walk you through the Driver Hub.</p></div></div>
+    <div class="stepitem"><span class="stepno">2</span>
+      <div><b>Claim a day sheet</b><p>See what's on the board, pick a window
+        that works for your day. No shift you didn't choose.</p></div></div>
+    <div class="stepitem"><span class="stepno">3</span>
+      <div><b>Pick up, deliver, repeat</b><p>Live map, one tap to mark delivered,
+        a photo for proof — no second app, no separate login.</p></div></div>
+    <div class="stepitem"><span class="stepno">4</span>
+      <div><b>Cash out</b><p>Tips are yours the moment you collect them. Your
+        earnings ledger is right there in the Driver Hub — no mystery math.</p></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="eyebrow">Real talk — what people ask</div>
+  <details class="faq"><summary>Do I need my own car?</summary>
+    <p>Yes — any reliable vehicle that can hold food safely. No specific make
+    or year requirement; we care that it runs and the food stays upright.</p></details>
+  <details class="faq"><summary>Is this full-time or side money?</summary>
+    <p>Whatever you want it to be. Some drivers do a couple of runs after work,
+    some build most of their week around it. No minimum hours, ever.</p></details>
+  <details class="faq"><summary>How do I actually get paid?</summary>
+    <p>Tips are cash (or noted) in your hand the moment you deliver — 100% yours,
+    always. Base pay per run is set with dispatch when you're onboarded.</p></details>
+  <details class="faq"><summary>What if something goes wrong on a run?</summary>
+    <p>Call dispatch. A real person answers — not a form, not a bot, not a
+    72-hour email queue.</p></details>
+  <details class="faq"><summary>Can I say no to a run?</summary>
+    <p>Yes. No penalty, no score dinged, no algorithm quietly punishing you
+    later. It's genuinely fine.</p></details>
 </div>
 
 <div class="card" id="formCard">

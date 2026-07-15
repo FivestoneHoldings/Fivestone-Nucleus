@@ -42,6 +42,29 @@ button, a{transition:transform .16s ease}
 .perk div:first-child{font-size:1.15rem;line-height:1.2}
 .perk b{font-size:.9rem;display:block}
 .perk p{font-size:.79rem;color:var(--dim);line-height:1.45}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.6rem;text-transform:uppercase;
+letter-spacing:.1em;color:#9a9ea5;font-weight:500;margin-bottom:12px}
+.steps{display:flex;flex-direction:column;gap:16px}
+.stepitem{display:flex;gap:12px;align-items:flex-start}
+.stepno{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;
+font-weight:900;font-size:.8rem;display:flex;align-items:center;justify-content:center;
+font-family:'IBM Plex Mono',monospace}
+.stepitem b{font-size:.88rem;display:block;margin-bottom:2px}
+.stepitem p{font-size:.79rem;color:var(--dim);line-height:1.45}
+.cmp{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:12px}
+.cmp th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
+letter-spacing:.06em;color:#9a9ea5;padding:6px 6px;border-bottom:1.5px solid var(--line);font-weight:500}
+.cmp td{padding:9px 6px;border-bottom:1px solid #eef0f5;font-weight:600}
+.cmp td.yes{color:#1c6b45}
+.cmp td.no{color:#9a9ea5}
+.fine{font-size:.76rem;color:var(--dim);line-height:1.5}
+.faq{border-bottom:1px solid #eef0f5;padding:12px 0}
+.faq summary{font-weight:800;font-size:.86rem;cursor:pointer;list-style:none;
+display:flex;justify-content:space-between;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:1.1rem;color:var(--green);font-weight:400}
+.faq[open] summary::after{content:'−'}
+.faq p{font-size:.81rem;color:var(--dim);line-height:1.5;margin-top:8px}
 .ok{display:none;text-align:center;padding:32px 18px}
 .ok .big{font-size:2.6rem;margin-bottom:10px}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:30px;
@@ -80,17 +103,82 @@ body{padding-bottom:112px}
 <span class="surf">Partner <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
 <a class="back" href="/">‹ Back to GateWay</a>
 <h1>Put your kitchen on GateWay</h1>
-<div class="lede">Local delivery that doesn't take a bite out of your margin. Built here, for kitchens here.</div>
+<div class="lede">Local delivery infrastructure that doesn't take a bite out of your margin.
+  Built in Knoxville, run by people who actually pick up the phone.</div>
 
 <div class="card">
+  <div class="eyebrow">Why kitchens choose GateWay</div>
   <div class="perk"><div>🏪</div><div><b>Your name, out front</b>
-    <p>Your storefront, your colors, your food. We're the rails — you're the restaurant.</p></div></div>
+    <p>Your storefront, your colors, your food, your branded splash screen when
+    a customer opens your page. We're the rails — you're the restaurant.</p></div></div>
   <div class="perk"><div>📞</div><div><b>Phone orders still work</b>
-    <p>The big apps have no phone number. We take a neighbor's call and put it on the same board.</p></div></div>
+    <p>The big apps have no phone number. We take a neighbor's call and put it
+    on the same dispatch board as an app order — nothing falls through the cracks.</p></div></div>
   <div class="perk"><div>💵</div><div><b>Cash on delivery, for real</b>
-    <p>Card-only platforms shut out the unbanked. We don't.</p></div></div>
+    <p>Card-only platforms shut out the unbanked and the cash-preferring. We don't.
+    Your driver collects it, it's tracked, and it's yours.</p></div></div>
   <div class="perk"><div>💬</div><div><b>No public star ratings</b>
-    <p>Feedback goes to you, privately. One bad night won't follow you around forever.</p></div></div>
+    <p>Feedback goes to you privately, not a permanent public scoreboard.
+    One bad night with a supplier shouldn't follow a kitchen around forever.</p></div></div>
+  <div class="perk"><div>🍽</div><div><b>Real menu tools</b>
+    <p>Required option groups (protein choices, sizes, add-ons) priced exactly
+    the way you already price them in-house — not flattened into one generic price.</p></div></div>
+  <div class="perk"><div>🎨</div><div><b>Featured placement, earned not bought</b>
+    <p>Kitchens with a complete menu, real photos, and good standing get
+    featured on the home page — we don't auction the spot to the highest bidder.</p></div></div>
+</div>
+
+<div class="card">
+  <div class="eyebrow">How it works</div>
+  <div class="steps">
+    <div class="stepitem"><span class="stepno">1</span>
+      <div><b>Send us your menu</b><p>Send what you have — a PDF, a photo of the wall menu,
+        a link to your site. We build the first draft; you correct anything we got wrong.</p></div></div>
+    <div class="stepitem"><span class="stepno">2</span>
+      <div><b>We build your storefront</b><p>Your name, your colors, your logo, your branded
+        splash screen. Usually ready within a couple of days.</p></div></div>
+    <div class="stepitem"><span class="stepno">3</span>
+      <div><b>15-minute walkthrough</b><p>We show you the kitchen screen — where orders land,
+        how to 86 an item in one tap, how undo works if a ticket gets marked ready by mistake.</p></div></div>
+    <div class="stepitem"><span class="stepno">4</span>
+      <div><b>You're live</b><p>One supervised test order first, then real orders start landing.
+        A person, not a support ticket queue, is who you call if something's wrong.</p></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="eyebrow">The honest comparison</div>
+  <table class="cmp">
+    <tr><th></th><th>GateWay</th><th>The big apps</th></tr>
+    <tr><td>Monthly fee</td><td class="yes">None</td><td class="no">Often required</td></tr>
+    <tr><td>Phone orders</td><td class="yes">On the same board</td><td class="no">No phone line</td></tr>
+    <tr><td>Cash on delivery</td><td class="yes">Yes</td><td class="no">Rarely</td></tr>
+    <tr><td>Public star ratings</td><td class="yes">No — private feedback</td><td class="no">Permanent, public</td></tr>
+    <tr><td>Who you call</td><td class="yes">A local person</td><td class="no">A support queue</td></tr>
+  </table>
+  <p class="fine">We're not claiming to out-scale DoorDash or Uber Eats — they
+    have more drivers in more cities. What we're building is the option that
+    treats a Knoxville kitchen like a neighbor, not an account number.</p>
+</div>
+
+<div class="card">
+  <div class="eyebrow">Questions kitchens actually ask</div>
+  <details class="faq"><summary>What does it cost?</summary>
+    <p>No signup fee, no monthly fee. We take a commission per delivered order —
+    we'll walk through the exact number with you before you ever go live, in plain terms.</p></details>
+  <details class="faq"><summary>Do I need my own delivery drivers?</summary>
+    <p>No — GateWay drivers cover your deliveries. If you already have your own
+    driver, we can route around them instead; tell us what setup works for you.</p></details>
+  <details class="faq"><summary>Can I change my menu myself?</summary>
+    <p>Yes, anytime, through your own kitchen screen — no waiting on us to push
+    an update. Ran out of an item mid-shift? One tap and it's off the menu.</p></details>
+  <details class="faq"><summary>What if I already have a POS system?</summary>
+    <p>Tell us what you use — we're not trying to replace it, just add a
+    delivery channel on top of what already works for you.</p></details>
+  <details class="faq"><summary>How fast can I actually go live?</summary>
+    <p>The bottleneck is almost always the menu — the faster we get real
+    pricing from you, the faster you're live. Some kitchens have gone live in
+    under a week.</p></details>
 </div>
 
 <div class="card" id="formCard">
