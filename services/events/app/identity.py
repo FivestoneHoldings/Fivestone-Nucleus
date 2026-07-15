@@ -435,3 +435,37 @@ def search_gateway(q: str = ""):
         }
     finally:
         db.close()
+
+
+@router.get("/v0/featured-items")
+def featured_items():
+    """A hand-picked cross-marketplace rail — 'this is genuinely good, from
+    whichever kitchen makes it,' not a generic 'top sellers' fed by fake data.
+    Selection: items explicitly marked featured=True by the board, one per
+    merchant so no single kitchen crowds the rail, capped for a mobile scroll.
+    """
+    from .models import MenuItem
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(MenuItem, Partner)
+                .join(Partner, Partner.code == MenuItem.partner_code)
+                .filter(MenuItem.featured.is_(True), MenuItem.available.is_(True),
+                        Partner.accepting_orders.is_(True))
+                .order_by(MenuItem.category).all())
+        seen_partners: set = set()
+        out = []
+        for item, p in rows:
+            if p.code in seen_partners:
+                continue
+            seen_partners.add(p.code)
+            out.append({
+                "id": item.id, "name": item.name, "description": item.description,
+                "price_cents": item.price_cents, "image_url": item.image_url,
+                "partner_code": p.code, "partner_name": p.display_name,
+                "brand_color": p.brand_color,
+            })
+            if len(out) >= 12:
+                break
+        return {"items": out}
+    finally:
+        db.close()

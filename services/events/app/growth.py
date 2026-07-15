@@ -62,7 +62,8 @@ _PARTNER_COLS = [
 
 
 def migrate_brand_columns():
-    """ALTER partners to add brand columns, once, on both SQLite and Postgres."""
+    """ALTER partners AND menu_items to add brand/featured columns, once, on
+    both SQLite and Postgres."""
     with engine.connect() as conn:
         for col, ddl in _PARTNER_COLS:
             try:
@@ -70,6 +71,11 @@ def migrate_brand_columns():
                 conn.commit()
             except Exception:
                 conn.rollback()  # already exists — fine
+        try:
+            conn.execute(text("ALTER TABLE menu_items ADD COLUMN featured BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
 
 # ---------- brand + demo-merchant seeds ----------
@@ -170,6 +176,20 @@ def seed_brands_and_demos():
                 for name, desc, cents in items:
                     db.add(MenuItem(partner_code=code, category=section, name=name,
                                     description=desc, price_cents=cents, available=True))
+        db.commit()
+        # ---------- Featured Products (v1.5) ----------
+        # One genuinely good pick per REAL pilot (never a demo/PREVIEW placeholder)
+        # so the featured rail reads as curated, not padded.
+        FEATURED_PICKS = {
+            "burgerboys": "Kobe Burger",
+            "asiacafe": "Pad Thai D73",
+            "asiacafexpress": "Xpress Combo",
+        }
+        for code, item_name in FEATURED_PICKS.items():
+            item = (db.query(MenuItem)
+                    .filter(MenuItem.partner_code == code, MenuItem.name == item_name).first())
+            if item and not item.featured:
+                item.featured = True
         db.commit()
     finally:
         db.close()

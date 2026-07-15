@@ -28,7 +28,7 @@ def _grouped(items, db=None):
         cats.setdefault(i.category, []).append({
             "id": i.id, "name": i.name, "description": i.description,
             "price_cents": i.price_cents, "available": i.available,
-            "image_url": i.image_url, "options": opts.get(i.id, [])})
+            "image_url": i.image_url, "featured": i.featured, "options": opts.get(i.id, [])})
     return [{"name": c, "items": v} for c, v in cats.items()]
 
 
@@ -86,6 +86,8 @@ async def upsert_item(key: str, code: str, request: Request):
             item.image_url = url
         if body.get("available") is not None:
             item.available = bool(body["available"])
+        if body.get("featured") is not None:
+            item.featured = bool(body["featured"])
         db.commit()
         return {"ok": True, "id": item.id}
     finally:

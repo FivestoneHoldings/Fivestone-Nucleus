@@ -112,6 +112,17 @@ border-radius:22px;padding:9px 14px;font-size:.84rem;font-weight:800;color:var(-
 text-decoration:none;white-space:nowrap;font-family:'Archivo'}
 .chip.on{background:#0e1526;color:#fff;border-color:#0e1526}
 .chip span{font-size:1rem}
+.prail{display:flex;gap:11px;overflow-x:auto;margin:0 -22px 4px;padding:2px 22px 8px;scrollbar-width:none}
+.prail::-webkit-scrollbar{display:none}
+.ptile{flex:0 0 auto;width:150px;background:#fff;border:1px solid var(--line);border-radius:16px;
+overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 3px 12px rgba(20,30,60,.07)}
+.phero{height:96px;display:flex;align-items:center;justify-content:center}
+.phero img{width:100%;height:100%;object-fit:cover;display:block}
+.pbody{padding:10px 11px 12px}
+.pname{font-weight:800;font-size:.82rem;line-height:1.25;
+display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pfrom{font-size:.68rem;color:var(--dim);margin-top:4px}
+.pprice{font-weight:900;font-size:.86rem;margin-top:5px;color:#16337a}
 .frail{display:flex;gap:12px;overflow-x:auto;margin:0 -22px 4px;padding:2px 22px 8px;scrollbar-width:none}
 .frail::-webkit-scrollbar{display:none}
 .ftile{flex:0 0 78%;max-width:290px;background:#fff;border:1px solid var(--line);border-radius:18px;
@@ -238,6 +249,9 @@ gwSplash({name:'GateWay Delivery',
 
 </div><!-- /browseWrap -->
 
+<div id="featuredProducts"></div>
+
+<div class="rsec">More ways to get things done</div>
 <a class="courier" href="/courier">
   <div class="crhead">
     <div class="cricon">📦</div>
@@ -246,11 +260,12 @@ gwSplash({name:'GateWay Delivery',
     <span class="crgo">→</span>
   </div>
   <div class="crchips">
-    <span>Forgot an item?</span><span>Pick up a prescription</span>
+    <span>Forgot an item?</span><span>Groceries</span><span>Pick up a prescription</span>
     <span>Send a gift</span><span>Vendor supplies</span><span>Documents</span>
   </div>
 </a>
 
+<div class="rsec">Your account</div>
 <div class="tile" style="padding-bottom:14px">
   <h2>Track an order</h2>
   <p style="margin-bottom:10px">Enter the order number from your confirmation or text.</p>
@@ -467,6 +482,25 @@ async function runSearch(q){
       '<div class="sr-empty">Search hiccuped — try again.</div>';
   }
 }
+
+function paintFeaturedProducts(items){
+  const el = document.getElementById('featuredProducts');
+  if(!items || !items.length){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="rsec">🔥 Featured products</div><div class="prail">' + items.map(it => {
+    const tint = it.brand_color || '#16337a';
+    const img = it.image_url
+      ? `<img src="${esc(it.image_url)}" alt="" loading="lazy" onerror="this.remove()">`
+      : `<div style="width:100%;height:100%;background:linear-gradient(135deg,${esc(tint)},#0e1526)"></div>`;
+    return `<a class="ptile" href="/order?partner=${encodeURIComponent(it.partner_code)}">
+      <div class="phero">${img}</div>
+      <div class="pbody">
+        <div class="pname">${esc(it.name)}</div>
+        <div class="pfrom">${esc(it.partner_name)}</div>
+        <div class="pprice">$${(it.price_cents/100).toFixed(2)}</div>
+      </div></a>`;
+  }).join('') + '</div>';
+}
+fetch('/v0/featured-items').then(r=>r.json()).then(d=>paintFeaturedProducts(d.items)).catch(()=>{});
 
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
   ALL = d.partners || [];

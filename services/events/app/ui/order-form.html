@@ -279,22 +279,23 @@ font-size:.85rem;color:#5a5e64}
 
 /* ===== PROMO (v1.2) — an offer, not a form field. The v1.1 version was a bare
    input bolted under the payment box; it read like an afterthought. ===== */
-.promo{margin-top:14px;background:#f7f8fb;border:1.5px dashed #cbd4e4;border-radius:14px;
-padding:13px 14px;transition:border-color .2s ease,background .2s ease}
-.promo:focus-within{border-color:#2f6fe0;background:#fff}
-.promo-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
-.promo-head b{font-size:.86rem;font-weight:800;color:#16181b}
-.promo-head span{font-size:.98rem}
-.promo-head small{margin-left:auto;font-size:.7rem;color:#8a90a0;font-weight:600}
-.promo-row{display:flex;gap:8px}
-.promo-row input{flex:1;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;
-letter-spacing:.08em;font-size:.9rem;padding:12px 13px;border-radius:11px;
-border:1.5px solid #d9deea;background:#fff;min-width:0}
-.promo-row input::placeholder{letter-spacing:.06em;color:#b3b9c6}
-.promo-row button{flex:0 0 auto;padding:12px 18px;border-radius:11px;border:none;
-background:#16337a;color:#fff;font-weight:800;font-family:'Archivo';font-size:.87rem;
-cursor:pointer;box-shadow:0 4px 12px rgba(22,51,122,.22)}
-.promo-row button:active{transform:scale(.97)}
+/* v1.5 — one unified pill instead of a dashed 'debug box' floating apart from
+   the payment section above it. Icon lives inside the input; Apply starts quiet
+   (outline) and only turns solid once there's something to submit. */
+.promo{margin-top:14px}
+.promo-row{position:relative;display:flex;align-items:stretch;background:#fff;
+border:1.5px solid #d9deea;border-radius:14px;overflow:hidden;transition:border-color .2s ease}
+.promo-row:focus-within{border-color:#2f6fe0;box-shadow:0 0 0 3px rgba(47,111,224,.1)}
+.promo-ic{display:flex;align-items:center;padding:0 4px 0 14px;font-size:1rem;color:#9a9ea5;flex:0 0 auto}
+.promo-row input{flex:1;min-width:0;border:none;background:transparent;
+padding:13px 8px;font-size:.88rem;font-family:'Archivo';color:#16181b}
+.promo-row input::placeholder{color:#b3b9c6;font-weight:500}
+.promo-row input:focus{outline:none}
+.promo-row button{flex:0 0 auto;margin:6px 6px 6px 0;padding:0 16px;border-radius:9px;
+border:none;background:#eef1f7;color:#8a90a0;font-weight:800;font-family:'Archivo';
+font-size:.82rem;cursor:pointer;transition:background .15s ease,color .15s ease}
+.promo-row button.ready{background:#16337a;color:#fff;box-shadow:0 3px 10px rgba(22,51,122,.25)}
+.promo-row button:active{transform:scale(.96)}
 .promo-ok{display:none;align-items:center;gap:10px;margin-top:14px;
 background:linear-gradient(135deg,#eefaf3,#e2f6ec);border:1.5px solid #a8e0c4;
 color:#12603c;border-radius:14px;padding:13px 14px;font-size:.86rem;font-weight:700;
@@ -375,8 +376,8 @@ cursor:pointer;flex:0 0 auto}
 <div class="card">
   <header>
     <button class="gw-back" onclick="stepBack()" id="backBtn">‹ Back</button>
-    <div class="mark">GateWay <span>Delivery</span></div>
-    <div class="tag">Knoxville · Same-Day Courier</div>
+    <div class="mark" id="headerMark">GateWay <span>Delivery</span></div>
+    <div class="tag" id="headerTag">Knoxville · Same-Day Courier</div>
   </header>
 
   <h1 id="pageH1">Place a Delivery Order</h1>
@@ -446,12 +447,12 @@ cursor:pointer;flex:0 0 auto}
         <div style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d9deea;background:#f2f4fa;color:#9a9ea5;font-weight:800;text-align:center">Pay online<br><span style="font-size:.62rem;font-weight:500;letter-spacing:.06em">COMING SOON</span></div>
       </div>
       <div class="promo" id="promoBox">
-        <div class="promo-head"><span>🎟️</span><b>Have a code?</b><small>optional</small></div>
         <div class="promo-row">
-          <input id="promoIn" placeholder="WELCOME10" autocapitalize="characters"
+          <span class="promo-ic">🎟️</span>
+          <input id="promoIn" placeholder="Promo or referral code" autocapitalize="characters"
                  autocomplete="off" spellcheck="false" enterkeyhint="done"
-                 aria-label="Promo or referral code">
-          <button type="button" onclick="applyPromo()">Apply</button>
+                 oninput="paintPromoBtn()" aria-label="Promo or referral code">
+          <button type="button" id="promoBtn" onclick="applyPromo()">Apply</button>
         </div>
       </div>
       <div class="promo-ok" id="promoOk">
@@ -489,8 +490,10 @@ if(p){
   document.getElementById('partnerField').value = p;
   fetch('/v0/partners/' + encodeURIComponent(p))
     .then(r => r.ok ? r.json() : null)
-    .then(d => { document.querySelector('.tag').textContent =
-      (d ? d.display_name : p) + ' × GateWay Delivery'; paintSplash(d); applyPartnerMeta(d); }).catch(()=>{});
+    .then(d => {
+      if(d) document.title = d.display_name + ' — Order on GateWay';
+      paintSplash(d); applyPartnerMeta(d);
+    }).catch(()=>{});
   fetch('/v0/partners/' + encodeURIComponent(p) + '/menu')
     .then(r => r.ok ? r.json() : null)
     .then(renderMenu).catch(()=>{});
@@ -593,6 +596,10 @@ function paintSplash(d){
   });
 }
 
+function paintPromoBtn(){
+  const v = (document.getElementById('promoIn').value || '').trim();
+  document.getElementById('promoBtn').classList.toggle('ready', v.length > 0);
+}
 function scrollToSend(){
   const b = document.getElementById('sendBtnAnchor');
   if(b) b.scrollIntoView({behavior:'smooth', block:'center'});
@@ -702,6 +709,13 @@ function applyPartnerMeta(d){
   if(h1 && STEP === 'menu'){ h1.textContent = PARTNER_NAME; }
   const sb = document.getElementById('orderSub');
   if(sb && STEP === 'menu'){ sb.textContent = MENU_SUB; }
+  /* The header shouldn't say GateWay on a merchant's own storefront — it's
+     THEIR page. GateWay stays as the small "Powered by" credit at the bottom. */
+  const hm = document.getElementById('headerMark');
+  if(hm && PARTNER_NAME){ hm.textContent = ''; hm.innerHTML =
+    PARTNER_NAME.replace(/</g,'&lt;') + ' <span>· GateWay</span>'; }
+  const ht = document.getElementById('headerTag');
+  if(ht && d.cuisine){ ht.textContent = d.cuisine + ' · Delivered by GateWay'; }
   FEE_CENTS = d.delivery_fee_cents || 0;
   if(d.accepting_orders === false){
     const b = document.getElementById('pausedBanner');

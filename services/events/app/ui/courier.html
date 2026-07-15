@@ -56,6 +56,17 @@ input,textarea,select{width:100%;padding:13px;border-radius:12px;border:1.5px so
 font-family:'Archivo';font-size:.95rem;background:#fff;color:var(--ink)}
 textarea{min-height:82px;resize:vertical}
 .hint{font-size:.75rem;color:#9a9ea5;margin-top:5px;line-height:1.4}
+.sizerow{display:flex;gap:7px;margin-top:5px}
+.sizerow button{flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid var(--line);
+background:#fff;color:var(--dim);font-weight:800;font-family:'Archivo';font-size:.82rem;cursor:pointer;
+line-height:1.25}
+.sizerow button small{display:block;font-weight:500;font-size:.66rem;opacity:.75;margin-top:1px}
+.sizerow button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.careopts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.careopt{display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line);
+border-radius:12px;padding:9px 13px;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--dim)}
+.careopt.on{background:#fdf1ee;border-color:#e0a99a;color:#c0392b}
+.careopt input{display:none}
 .tips{display:flex;gap:7px;margin-top:5px}
 .tips button{flex:1;padding:11px 4px;border-radius:11px;border:1.5px solid var(--line);
 background:#fff;color:var(--dim);font-weight:800;font-family:'Archivo';font-size:.85rem;cursor:pointer}
@@ -84,6 +95,15 @@ margin-top:9px;padding-top:10px;border-top:1px solid rgba(255,255,255,.18)}
 .qtot .amt{font-size:1.22rem;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;
 display:block;margin-top:1px}
 .qnote{font-size:.68rem;color:#8fa0c4;margin-top:7px;line-height:1.4}
+.qdetails-btn{background:#fff;color:#16337a;border-radius:12px;padding:10px 16px;
+font-weight:900;font-size:.86rem;white-space:nowrap;border:none;font-family:'Archivo';cursor:pointer}
+.qbreak{display:none;flex-direction:column;gap:0;margin-top:10px;padding-top:10px;
+border-top:1px solid rgba(255,255,255,.14);animation:qbIn .22s ease}
+.qbreak.show{display:flex}
+@keyframes qbIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.qbline{display:flex;justify-content:space-between;gap:14px;padding:5px 0;font-size:.72rem}
+.qbline span:first-child{color:#fff;font-weight:800;flex:0 0 auto}
+.qbline span:last-child{color:#9fb0d4;text-align:right}
 .foot{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:#9a9ea5;margin-top:28px;
 text-transform:uppercase;letter-spacing:.08em;text-align:center;line-height:1.7}
 .ok{display:none;text-align:center;padding:40px 18px}
@@ -118,8 +138,12 @@ gwSplash({name:'GateWay Courier', sub:"If it fits in a car, we'll move it.",
 
   <label for="what">What is it?</label>
   <textarea id="what" placeholder="One sealed envelope. Or: two bags of restaurant supplies, about 20 lbs."></textarea>
-  <div class="hint">The more we know, the better we pack the car. If it's fragile,
-    heavy, hot, cold, or can't be left at a door — say so here.</div>
+  <div class="hint">The more we know, the better we pack the car.</div>
+
+  <label>How big is it, roughly?</label>
+  <div class="sizerow" id="sizerow"></div>
+
+  <div class="careopts" id="careopts"></div>
 
   <label for="pickup">Pick it up from</label>
   <textarea id="pickup" placeholder="Street, City, TN — plus any door/suite/gate detail"></textarea>
@@ -167,8 +191,13 @@ gwSplash({name:'GateWay Courier', sub:"If it fits in a car, we'll move it.",
   <div class="qline"><span>Driver tip</span><span id="qTip"></span></div>
   <div class="qtot">
     <div><span class="lbl">Estimated total</span><span class="amt" id="qTot">$0.00</span></div>
-    <span style="background:#fff;color:#16337a;border-radius:12px;padding:10px 16px;
-      font-weight:900;font-size:.86rem;white-space:nowrap" onclick="document.getElementById('what').focus()">Details ›</span>
+    <button type="button" class="qdetails-btn" onclick="toggleQuoteDetails()" id="qDetailsBtn">Details ›</button>
+  </div>
+  <div class="qbreak" id="qBreak" style="display:none">
+    <div class="qbline"><span>Base fare</span><span>Covers pickup + the first few miles</span></div>
+    <div class="qbline"><span>Distance</span><span>Added per mile once dispatch sees both addresses</span></div>
+    <div class="qbline"><span>What you're moving</span><span>Bulky or heavy items may add a bit</span></div>
+    <div class="qbline"><span>Your tip</span><span>100% goes to the driver, always</span></div>
   </div>
   <div class="qnote">A courier run is quoted by distance and what you're moving.
     Dispatch confirms the final price before a driver rolls — you'll never be
@@ -189,26 +218,77 @@ gwSplash({name:'GateWay Courier', sub:"If it fits in a car, we'll move it.",
    loud before anyone drives anywhere. */
 
 const BASE_CENTS = 999;          // a courier run starts here; dispatch confirms
+const SIZE_ADD = {small: 0, medium: 0, large: 300, xlarge: 600};   // rough steer, not final price
 const TASKS = [
-  ['forgot',  '🔑', 'Forgot an item'],
-  ['rx',      '💊', 'Prescription'],
-  ['gift',    '🎁', 'Send a gift'],
-  ['supply',  '📦', 'Vendor supplies'],
-  ['docs',    '📄', 'Documents'],
-  ['other',   '✨', 'Something else'],
+  ['forgot',   '🔑', 'Forgot an item'],
+  ['rx',       '💊', 'Prescription'],
+  ['grocery',  '🛒', 'Groceries / errand'],
+  ['gift',     '🎁', 'Send a gift'],
+  ['flowers',  '💐', 'Flowers'],
+  ['return',   '🔄', 'Return / exchange'],
+  ['laundry',  '🧺', 'Laundry / dry cleaning'],
+  ['pet',      '🐾', 'Pet supplies'],
+  ['supply',   '📦', 'Vendor supplies'],
+  ['office',   '💼', 'Office / business run'],
+  ['furniture','🛋', 'Furniture / large item'],
+  ['docs',     '📄', 'Documents'],
+  ['other',    '✨', 'Something else'],
 ];
 const TASK_HINT = {
-  forgot: 'Left something at home or at work? Tell us exactly where it is and who can hand it over.',
-  rx:     "We'll pick it up if the pharmacy will release it. Have your ID ready at the door.",
-  gift:   "We'll keep it upright and out of the sun. Tell us if there's a card to keep with it.",
-  supply: 'Restaurant, salon, shop — tell us roughly how heavy and how many boxes.',
-  docs:   "Time-sensitive papers. Tell us if a signature is needed and by when.",
-  other:  "Anything legal that fits in a car. Say what it is and we'll tell you straight if we can.",
+  forgot:    'Left something at home or at work? Tell us exactly where it is and who can hand it over.',
+  rx:        "We'll pick it up if the pharmacy will release it. Have your ID ready at the door.",
+  grocery:   "Give us a list and a budget cap — we'll shop it or pick up what you've already ordered.",
+  gift:      "We'll keep it upright and out of the sun. Tell us if there's a card to keep with it.",
+  flowers:   "Tell us the arrangement and who it's for — we'll keep it upright the whole way.",
+  return:    "Tell us the store, the item, and whether you have the receipt or a return label.",
+  laundry:   "Which cleaners, and is it a drop-off, pickup, or both?",
+  pet:       "Food, litter, a prescription from the vet — tell us the brand and amount.",
+  supply:    'Restaurant, salon, shop — tell us roughly how heavy and how many boxes.',
+  office:    "Mail, a check, keys to drop at a job site — treat it like it matters, because it does.",
+  furniture: "Tell us the size and weight as best you can — a driver may need a hand or a bigger vehicle.",
+  docs:      "Time-sensitive papers. Tell us if a signature is needed and by when.",
+  other:     "Anything legal that fits in a car. Say what it is and we'll tell you straight if we can.",
 };
-let TASK = '', TIP = 300, PAY = 'cod';
+let TASK = '', TIP = 300, PAY = 'cod', SIZE = 'medium';
+const CARE = new Set();
 const TIPS = [0, 200, 300, 500];
+const SIZES = [
+  ['small',  'Small', 'Fits on a lap'],
+  ['medium', 'Medium', 'A grocery bag or two'],
+  ['large',  'Large', 'Needs the trunk'],
+  ['xlarge', 'Extra large', 'May need a hand'],
+];
+const CARE_OPTS = [
+  ['fragile', '🔔 Fragile'],
+  ['hot',     '🔥 Keep hot'],
+  ['cold',    '🧊 Keep cold'],
+  ['upright', '⬆ Keep upright'],
+  ['signature','✍️ Signature required'],
+];
+function paintSizes(){
+  document.getElementById('sizerow').innerHTML = SIZES.map(([id,label,sub]) =>
+    `<button type="button" class="${SIZE===id?'on':''}" onclick="SIZE='${id}';paintSizes();paintQuote()">
+       ${label}<small>${sub}</small></button>`).join('');
+}
+function paintCare(){
+  document.getElementById('careopts').innerHTML = CARE_OPTS.map(([id,label]) => `
+    <label class="careopt ${CARE.has(id)?'on':''}">
+      <input type="checkbox" ${CARE.has(id)?'checked':''} onchange="toggleCare('${id}')">${label}
+    </label>`).join('');
+}
+function toggleCare(id){
+  if(CARE.has(id)) CARE.delete(id); else CARE.add(id);
+  paintCare();
+}
 
 function money(c){ return '$' + (c/100).toFixed(2); }
+function toggleQuoteDetails(){
+  const el = document.getElementById('qBreak');
+  const btn = document.getElementById('qDetailsBtn');
+  const open = el.classList.toggle('show');
+  el.style.display = open ? 'flex' : 'none';
+  btn.textContent = open ? 'Hide ‹' : 'Details ›';
+}
 function gwBack(){
   if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
      && history.length > 1){ history.back(); }
@@ -240,10 +320,11 @@ function paintPay(){
 }
 function paintQuote(){
   const label = TASK ? (TASKS.find(t=>t[0]===TASK)||[])[2] : 'Courier run';
+  const base = BASE_CENTS + (SIZE_ADD[SIZE] || 0);
   document.getElementById('qTask').textContent = label;
-  document.getElementById('qBase').textContent = 'from ' + money(BASE_CENTS);
+  document.getElementById('qBase').textContent = 'from ' + money(base);
   document.getElementById('qTip').textContent = money(TIP);
-  document.getElementById('qTot').textContent = money(BASE_CENTS + TIP);
+  document.getElementById('qTot').textContent = money(base + TIP);
 }
 
 async function sendCourier(){
@@ -260,12 +341,15 @@ async function sendCourier(){
   if(!phone){  gwToast('We need a phone number to reach you.', false); document.getElementById('phone').focus(); return; }
 
   const taskLabel = TASK ? (TASKS.find(t=>t[0]===TASK)||[])[2] : 'Courier';
+  const sizeLabel = (SIZES.find(s=>s[0]===SIZE)||[])[1] || '';
+  const careLabel = CARE.size ? ' · ' + [...CARE].map(id =>
+    (CARE_OPTS.find(c=>c[0]===id)||[])[1]).join(', ') : '';
   const params = new URLSearchParams({
     customer_name: name,
     customer_phone: phone,
     pickup_address: pickup,
     dropoff_address: drop,
-    items_description: `[COURIER · ${taskLabel}] ${what}`,
+    items_description: `[COURIER · ${taskLabel} · ${sizeLabel}${careLabel}] ${what}`,
     requested_for: when,
     tip_cents: String(TIP),
     payment_method: PAY,
@@ -303,7 +387,7 @@ try{
   if((p.addresses||[]).length) document.getElementById('drop').value = p.addresses[0];
 }catch(e){}
 
-paintTasks(); paintTips(); paintPay(); paintQuote();
+paintTasks(); paintSizes(); paintCare(); paintTips(); paintPay(); paintQuote();
 </script>
 </body>
 </html>
