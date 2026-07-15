@@ -184,6 +184,7 @@ async function loadPartners(){
         <button class="ghost" onclick="editThanks('${x.code}',${JSON.stringify(x.thank_you_note||'')})">Thank-you ✎</button>
         <button class="ghost" onclick="editAbout('${x.code}',${JSON.stringify(x.about_blurb||'')})">Story ✎</button>
         <button class="ghost" onclick="editHero('${x.code}',${JSON.stringify(x.hero_url||'')})">Hero photo ✎</button>
+        <button class="ghost" onclick="editCover('${x.code}',${JSON.stringify(x.cover_url||'')})">Cover photo ✎</button>
         <button class="ghost" onclick="showPhotos('${x.code}')">📷 Photos</button></div>
       <div id="photos-${x.code}" style="display:none;margin-top:8px"></div>
       <div id="digest-${x.code}" style="display:none;margin-top:8px"></div>
@@ -382,6 +383,16 @@ async function editHero(code, current){
   const r = await fetch(api(`/partners/${code}/hero`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
   if(r.ok){ gwToast('Hero photo saved ✓'); loadPartners(); }
+  else gwToast('Must be an https:// link.', false);
+}
+async function editCover(code, current){
+  const url = await gwPrompt({title:'Storefront cover photo', value: current, multiline:true,
+    placeholder:'https://…  (wide banner — think DoorDash storefront)',
+    confirm:'Save cover', body:'Wide banner shown on their featured card and storefront entrance. Paste a direct https:// image the restaurant owns. Leave blank to remove.'});
+  if(url === null) return;
+  const r = await fetch(api(`/partners/${code}/cover`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+  if(r.ok){ gwToast('Cover photo saved \u2713'); loadPartners(); }
   else gwToast('Must be an https:// link.', false);
 }
 async function editAbout(code, current){

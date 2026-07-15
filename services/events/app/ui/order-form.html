@@ -788,14 +788,13 @@ function renderMenu(m){
   z.style.display = '';
   const meta = window._PARTNER_META || {};
   const nm = (meta.display_name || '').replace(/</g,'&lt;');
-  /* Food photo beats the logo; the restaurant's own logo beats the generic
-     GateWay emblem; the emblem is the only always-safe fallback. Before v1.7
-     this jumped straight from hero_url to the emblem, so every partner without
-     a food photo wore GateWay's mark instead of their own. */
+  /* Storefront header precedence: wide cover photo -> food hero -> the
+     restaurant's own logo -> GateWay emblem (last resort only). */
   const emb = `<img class="emb" src="/static/gwd-emblem.png" alt="">`;
   const swapEmb = `this.outerHTML='${emb.replace(/'/g,"\\'")}'`;
-  const heroInner = meta.hero_url
-    ? `<img class="hero" src="${meta.hero_url}" alt="${nm}" onerror="${swapEmb}">`
+  const bigImg = meta.cover_url || meta.hero_url;
+  const heroInner = bigImg
+    ? `<img class="hero" src="${bigImg}" alt="${nm}" onerror="${swapEmb}">`
     : (meta.logo_url
         ? `<img class="hero" src="${meta.logo_url}" alt="${nm}" style="object-fit:contain;padding:6%;background:#fff" onerror="${swapEmb}">`
         : emb);

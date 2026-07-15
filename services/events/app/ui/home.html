@@ -361,6 +361,13 @@ function thumb(p, cls){
   const tint = p.brand_color || '#16337a';
   const bg = `background:linear-gradient(135deg, ${esc(tint)}, #0e1526)`;
   const fallback = `this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))`;
+  // wide contexts (featured tiles) get the DoorDash-style cover photo first;
+  // cover -> hero -> logo -> emblem. Narrow list thumbs skip the cover.
+  const wide = cls === 'fhero';
+  if(wide && p.cover_url){
+    return `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.cover_url)}" alt="" loading="lazy"
+      onerror="${fallback}"></div>`;
+  }
   if(p.hero_url){
     return `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.hero_url)}" alt="" loading="lazy"
       onerror="${fallback}"></div>`;

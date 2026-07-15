@@ -157,7 +157,8 @@ async def upsert_partner(key: str, request: Request):
             if body.get("delivery_fee_cents") is not None:
                 p.delivery_fee_cents = max(0, int(body["delivery_fee_cents"]))
             for f, cap in (("cuisine", 40), ("tagline", 120),
-                           ("brand_color", 9), ("logo_url", 500)):
+                           ("brand_color", 9), ("logo_url", 500),
+                           ("cover_url", 500)):
                 if body.get(f) is not None:
                     setattr(p, f, str(body[f]).strip()[:cap])
             if body.get("featured") is not None:
@@ -235,6 +236,27 @@ async def set_about(key: str, code: str, request: Request):
         if not p:
             raise HTTPException(404, "Unknown partner")
         p.about_blurb = blurb
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.post("/api/board/{key}/partners/{code}/cover")
+async def set_cover(key: str, code: str, request: Request):
+    """DoorDash-style wide cover photo for the storefront card + splash.
+    URL only (https:// or our own /static path) — we never rehost imagery."""
+    _check_key(key)
+    body = await request.json()
+    url = str(body.get("url", "")).strip()[:500]
+    if url and not url.startswith(("https://", "/static/")):
+        raise HTTPException(400, "Cover must be an https:// URL")
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.cover_url = url
         db.commit()
     finally:
         db.close()

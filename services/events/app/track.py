@@ -64,6 +64,12 @@ text-transform:uppercase;letter-spacing:.14em}
 .mark{font-weight:800;font-size:1.15rem}.mark span{color:#16337a}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
 .status{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.prog{display:flex;gap:5px;margin:10px 0 4px}
+.prog i{flex:1;height:6px;border-radius:8px;background:#e2e7f1}
+.prog i.go{background:linear-gradient(90deg,#2f6fe0,#16337a)}
+.prog i.pulse{animation:progPulse 1.6s ease-in-out infinite}
+@keyframes progPulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.prog i.pulse{animation:none}}
 .items{font-size:.9rem;color:#5a5e64;background:#fff;border:1.5px solid #d9deea;
 border-radius:10px;padding:10px 14px;margin:14px 0 26px}
 .step{display:flex;gap:14px;padding:0 0 26px 0;position:relative}
@@ -437,6 +443,18 @@ async def track(order_id: str):
                       '<button class="tipb" onclick="feedback(false)">Something was off</button>'
                       '</div></div>'
                       '<a class="again" id="againBtn" href="/order" style="display:none">Order again</a>')
+    # compact progress bar under the headline — how far along, at a glance.
+    # received=1/4, confirmed=2/4, assigned/in_transit=3/4, delivered=4/4.
+    _PROG = {"received": 1, "confirmed": 2, "assigned": 3, "in_transit": 3,
+             "delivered": 4, "closed": 4}
+    seg = _PROG.get(status, 0)
+    if seg:
+        segs = "".join(
+            f'<i class="{"go" if n < seg else ""}{" pulse" if n == seg - 1 and active else ""}"></i>'
+            for n in range(4))
+        prog_html = f'<div class="prog" aria-hidden="true">{segs}</div>'
+    else:
+        prog_html = ""
     micro_text = MICRO.get(status, "")
     if driver_first and status == "assigned":
         micro_text = f"Your neighbor {_esc(driver_first)} is heading to pick it up."
@@ -453,6 +471,7 @@ async def track(order_id: str):
             f'<div class="oid">{_esc(oid)}</div>'
             f'{celebrate_html}'
             f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
+            f'{prog_html}'
             f'{micro_html}{elapsed_html}{anticipation}'
             f'<div class="items">{items_line}</div>'
             f'{thanks}{proof_html}{again_html}'
