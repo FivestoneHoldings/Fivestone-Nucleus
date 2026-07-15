@@ -1244,20 +1244,40 @@ async def phone_order(key: str, request: Request):
 
 @router.get("/v0/community-fund")
 async def community_fund():
-    """Public: neighbors rounding up to cover a delivery for someone who needs one.
-    A platform funded by extraction would never build this."""
+    """The Neighbor Fund: neighbors round up a little so someone who's having a
+    hard week still gets a hot meal brought to their door. No account, no fee,
+    no cut — a platform built on extraction would never ship this.
+
+    'Deliveries covered' is measured against the real $5.99 network delivery
+    fee, so the number means exactly what it says."""
+    from .models import Partner as _P
+    FEE = 599  # one covered delivery = one standard delivery fee
     db: Session = SessionLocal()
     try:
-        rows = db.query(Event).filter(Event.event_type == "order.rounded_up").all()
+        rows = (db.query(Event)
+                .filter(Event.event_type == "order.rounded_up")
+                .order_by(Event.occurred_at.desc()).all())
         import json as _j
         total = 0
+        recent = []
         for e in rows:
             try:
-                total += int(_j.loads(e.payload).get("cents", 0))
+                c = int(_j.loads(e.payload).get("cents", 0))
             except Exception:
-                pass
-        return {"cents": total, "gifts": len(rows),
-                "meals_covered": total // 1200}
+                c = 0
+            total += c
+            if c > 0 and len(recent) < 8:
+                recent.append({"cents": c, "at": e.occurred_at.isoformat()
+                               if e.occurred_at else None})
+        covered = total // FEE
+        # how much more is needed to cover the next full delivery
+        toward_next = total % FEE
+        return {"cents": total, "gifts": len([r for r in rows]),
+                "deliveries_covered": covered,
+                "meals_covered": covered,  # back-compat for existing home widget
+                "fee_cents": FEE,
+                "toward_next_cents": toward_next,
+                "recent": recent}
     finally:
         db.close()
 

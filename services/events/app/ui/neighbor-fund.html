@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Neighbor Fund · GateWay</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta name="description" content="Neighbors rounding up so someone who's having a hard week still gets a hot meal at their door.">
+<meta property="og:title" content="The Neighbor Fund">
+<meta property="og:description" content="Round up a little. Cover a delivery for someone who needs one. GateWay takes nothing.">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="theme-color" content="#0e1526">
+<script>
+function gwBack(){
+  if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
+     && history.length > 1){ history.back(); }
+  else { location.href = '/'; }
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f7f8fb;--ink:#14181f;--blue:#16337a;--line:#dfe4ee;--dim:#5a5e64;--warm:#b5722a}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+max-width:520px;margin:0 auto;padding:64px 20px 60px;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;
+align-items:center;justify-content:space-between;padding:12px 16px;
+padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28);
+max-width:520px;margin:0 auto}
+.gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
+text-transform:uppercase;letter-spacing:.14em}
+.back{background:none;border:none;color:#c9d2e6;font-size:.8rem;font-weight:700;
+display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 4px}
+.back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* hero — the fund is about a hand reaching out, not a metric. Lead with that. */
+.hero{text-align:center;padding:26px 0 20px}
+.hero .icon{font-size:3rem;line-height:1;margin-bottom:14px}
+.hero h1{font-size:2rem;font-weight:900;letter-spacing:-.025em;line-height:1.05;margin-bottom:10px}
+.hero p{color:var(--dim);font-size:1rem;line-height:1.55;max-width:38ch;margin:0 auto}
+.count{background:linear-gradient(135deg,#16337a,#0e1526);color:#fff;border-radius:22px;
+padding:24px 22px;margin:18px 0 6px;text-align:center;box-shadow:0 14px 34px rgba(14,21,38,.28)}
+.count .big{font-size:2.6rem;font-weight:900;letter-spacing:-.03em;line-height:1}
+.count .lab{font-size:.82rem;opacity:.86;margin-top:5px}
+.count .bar{height:8px;background:rgba(255,255,255,.16);border-radius:20px;margin:16px 0 7px;overflow:hidden}
+.count .bar i{display:block;height:100%;background:linear-gradient(90deg,#4d84e6,#8fb2f2);border-radius:20px;transition:width .8s cubic-bezier(.2,1,.3,1)}
+.count .toward{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.06em;opacity:.8;text-transform:uppercase}
+.steps{margin:26px 0 10px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.14em;
+text-transform:uppercase;color:var(--warm);margin-bottom:12px}
+.step{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.step .n{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:#eef2fc;color:var(--blue);
+font-weight:900;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+.step h3{font-size:1rem;font-weight:800;margin-bottom:3px}
+.step p{font-size:.9rem;color:var(--dim);line-height:1.5}
+.promise{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:18px 20px;margin:20px 0}
+.promise h2{font-size:1.05rem;font-weight:900;margin-bottom:12px}
+.promise li{list-style:none;display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:.9rem;line-height:1.45}
+.promise li svg{flex:0 0 auto;width:19px;height:19px;stroke:#1a7f4b;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.recent{margin:22px 0}
+.recent .r{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #eef0f5;font-size:.88rem}
+.recent .r:last-child{border-bottom:none}
+.recent .amt{font-weight:800;color:var(--blue)}
+.recent .when{font-size:.72rem;color:#9199a8;font-family:'IBM Plex Mono',monospace}
+.cta{background:linear-gradient(135deg,#2f6fe0,#16337a);color:#fff;text-decoration:none;
+display:block;text-align:center;font-weight:800;padding:16px;border-radius:14px;font-size:1rem;margin-top:8px}
+.foot{text-align:center;color:#9199a8;font-size:.74rem;margin-top:22px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="gw-bar">
+  <button class="back" onclick="gwBack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+  <span class="surf">Neighbor Fund</span>
+</div>
+
+<div class="hero">
+  <div class="icon">🤝</div>
+  <h1>The Neighbor&nbsp;Fund</h1>
+  <p>Some weeks are hard. The Neighbor Fund lets you round up a little at checkout
+     so someone nearby who's having one of those weeks still gets a hot meal
+     brought right to their door.</p>
+</div>
+
+<div class="count" id="count" style="display:none">
+  <div class="big" id="covered">0</div>
+  <div class="lab" id="coveredLab">deliveries covered for neighbors so far</div>
+  <div class="bar"><i id="bar" style="width:0%"></i></div>
+  <div class="toward" id="toward">—</div>
+</div>
+
+<div class="steps">
+  <div class="eyebrow">How it works</div>
+  <div class="step"><div class="n">1</div><div>
+    <h3>Round up when you order</h3>
+    <p>At the end of any order, add a dollar or two — or whatever you like. It's
+       never required and never assumed.</p></div></div>
+  <div class="step"><div class="n">2</div><div>
+    <h3>It pools into the fund</h3>
+    <p>Every round-up goes into one shared pot. Each time it reaches the cost of
+       a standard delivery ($5.99), that's one more delivery we can cover.</p></div></div>
+  <div class="step"><div class="n">3</div><div>
+    <h3>A neighbor's delivery gets covered</h3>
+    <p>When someone tells us they're in a tight spot — a hard week, a fixed
+       income, a rough stretch — the fund quietly covers their delivery fee.
+       No forms to prove they deserve it.</p></div></div>
+</div>
+
+<div class="promise">
+  <h2>Our promise on this money</h2>
+  <ul>
+    <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>GateWay takes nothing.</b> Not a fee, not a cut, not a cent. 100% of every round-up covers a real delivery.</span></li>
+    <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>It only ever pays the <b>delivery fee</b> — the driver is still paid in full, always.</span></li>
+    <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>No account needed to give, and no one is charged automatically. You choose, every time.</span></li>
+  </ul>
+</div>
+
+<div class="recent" id="recentWrap" style="display:none">
+  <div class="eyebrow">Recent round-ups from neighbors</div>
+  <div id="recent"></div>
+</div>
+
+<a class="cta" href="/">Start an order</a>
+<div class="foot">The Neighbor Fund is part of GateWay Delivery.<br>Knoxville, Tennessee · Fivestone Holdings</div>
+
+<script>
+function money(c){ return '$' + (Math.max(0,c||0)/100).toFixed(2); }
+function ago(iso){
+  if(!iso) return '';
+  const s = Math.floor((Date.now() - new Date(iso).getTime())/1000);
+  if(s < 90) return 'just now';
+  if(s < 3600) return Math.floor(s/60)+'m ago';
+  if(s < 86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+fetch('/v0/community-fund').then(r=>r.json()).then(cf=>{
+  if(!cf) return;
+  const c = document.getElementById('count');
+  c.style.display = 'block';
+  const covered = cf.deliveries_covered || 0;
+  document.getElementById('covered').textContent = covered;
+  document.getElementById('coveredLab').textContent =
+    (covered === 1 ? 'delivery' : 'deliveries') + ' covered for neighbors so far';
+  const fee = cf.fee_cents || 599;
+  const toward = cf.toward_next_cents || 0;
+  document.getElementById('bar').style.width = Math.round(toward/fee*100) + '%';
+  document.getElementById('toward').textContent =
+    money(fee - toward) + ' more rounds up the next delivery';
+  const recent = cf.recent || [];
+  if(recent.length){
+    document.getElementById('recentWrap').style.display = 'block';
+    document.getElementById('recent').innerHTML = recent.map(r =>
+      `<div class="r"><span class="amt">+${money(r.cents)}</span><span class="when">${ago(r.at)}</span></div>`
+    ).join('');
+  }
+}).catch(()=>{});
+</script>
+</body>
+</html>

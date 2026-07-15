@@ -171,13 +171,20 @@ def merchant_lead_page():
     return _page("lead-merchant.html")
 
 
+@app.get("/neighbor-fund", response_class=HTMLResponse)
+def neighbor_fund_page():
+    """The Neighbor Fund explainer — what round-up actually is, where the money
+    goes, and our promise that GateWay takes nothing from it."""
+    return _page("neighbor-fund.html")
+
+
 @app.get("/order", response_class=HTMLResponse)
 def order_form():
     """Public partner order form — posts to the canonical intake webhook."""
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.7.2"
+NUCLEUS_VERSION = "1.7.3"
 
 
 @app.middleware("http")

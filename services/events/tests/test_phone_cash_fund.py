@@ -81,7 +81,12 @@ def test_community_fund_accumulates_and_counts_meals():
     d = client.get("/v0/community-fund").json()
     assert d["cents"] == before + 1500
     assert d["gifts"] >= 2
-    assert d["meals_covered"] == d["cents"] // 1200
+    # v1.7: one covered delivery = one standard $5.99 fee, not a flat $12
+    assert d["fee_cents"] == 599
+    assert d["deliveries_covered"] == d["cents"] // 599
+    assert d["meals_covered"] == d["deliveries_covered"]  # back-compat alias
+    assert 0 <= d["toward_next_cents"] < 599
+    assert isinstance(d.get("recent"), list)
     # guards
     assert client.post(f"/v0/track/{oid}/round-up", json={"cents": 0}).status_code == 400
     assert client.post("/v0/track/ORD-NOPE/round-up", json={"cents": 100}).status_code == 404
