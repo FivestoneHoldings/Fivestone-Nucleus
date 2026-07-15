@@ -76,6 +76,21 @@ def migrate_brand_columns():
             conn.commit()
         except Exception:
             conn.rollback()
+        # v1.7: standard delivery fee is $5.99 network-wide. Lift only the old
+        # default (399) so any partner the founder priced BY HAND is untouched.
+        try:
+            conn.execute(text("UPDATE partners SET delivery_fee_cents = 599 WHERE delivery_fee_cents = 399"))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+        # v1.7: drivers are people with faces, not emoji — photo + cover for partners
+        for tbl, col, ddl in (("driver_profiles", "photo_url", "VARCHAR(500) NOT NULL DEFAULT ''"),
+                              ("partners", "cover_url", "VARCHAR(500) NOT NULL DEFAULT ''")):
+            try:
+                conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                conn.rollback()
 
 
 # ---------- brand + demo-merchant seeds ----------

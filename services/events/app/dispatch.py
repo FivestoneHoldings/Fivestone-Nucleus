@@ -1091,7 +1091,7 @@ async def create_demo_order(key: str, code: str):
         subtotal = sum(i.price_cents for i in items)
     else:
         lines, subtotal = "1× Demo plate ($12.00)", 1200
-    fee = p.delivery_fee_cents or 399
+    fee = p.delivery_fee_cents or 599
     tip = 300
     total = subtotal + fee + tip
     now = _now()
@@ -1219,7 +1219,7 @@ async def phone_order(key: str, request: Request):
     try:
         p = db.get(P, code) if code else None
         pickup = p.address if p else ""
-        fee = p.delivery_fee_cents if p else 399
+        fee = p.delivery_fee_cents if p else 599
     finally:
         db.close()
     total = subtotal + fee + tip

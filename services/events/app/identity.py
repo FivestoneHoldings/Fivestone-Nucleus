@@ -166,7 +166,7 @@ async def upsert_partner(key: str, request: Request):
                            status=str(body.get("status", "pilot"))[:30],
                            contact=str(body.get("contact", ""))[:200],
                            address=str(body.get("address", ""))[:300],
-                           delivery_fee_cents=max(0, int(body.get("delivery_fee_cents", 399))),
+                           delivery_fee_cents=max(0, int(body.get("delivery_fee_cents", 599))),
                            cuisine=str(body.get("cuisine", ""))[:40],
                            tagline=str(body.get("tagline", ""))[:120],
                            brand_color=str(body.get("brand_color", ""))[:9],

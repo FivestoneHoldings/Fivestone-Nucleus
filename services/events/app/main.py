@@ -107,6 +107,14 @@ def me_page():
     return (_UI / "me.html").read_text()
 
 
+@app.get("/activity", response_class=HTMLResponse)
+def activity_page():
+    """A real order history — the Activity tab used to bounce to a single last
+    order or dump you on the account page. Now it's its own surface: every
+    order you've placed, one tap to track a live one or re-order a past one."""
+    return (_UI / "activity.html").read_text()
+
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     return (_UI / "home.html").read_text()
@@ -166,7 +174,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.6.1"
+NUCLEUS_VERSION = "1.7.0"
 
 
 @app.middleware("http")

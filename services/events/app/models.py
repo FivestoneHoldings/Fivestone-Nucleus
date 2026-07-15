@@ -55,7 +55,7 @@ class Partner(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pilot")
     contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     address: Mapped[str] = mapped_column(String(300), nullable=False, default="")
-    delivery_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=399)
+    delivery_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=599)
     accepting_orders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")
@@ -67,6 +67,7 @@ class Partner(Base):
     tagline: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     brand_color: Mapped[str] = mapped_column(String(9), nullable=False, default="")
     logo_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    cover_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -239,6 +240,7 @@ class DriverProfile(Base):
     vehicle_color: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     bio: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    photo_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 

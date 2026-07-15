@@ -38,7 +38,7 @@ async def fake_list_track(table, formula="", fields=None, max_records=100):
 def test_seeded_partner_has_address_and_fee():
     d = client.get("/v0/partners/stephens").json()
     assert "Gray, TN" in d["address"]
-    assert d["delivery_fee_cents"] == 399
+    assert d["delivery_fee_cents"] == 599  # v1.7 network standard
 
 
 def test_partner_meta_settable():
