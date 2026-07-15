@@ -346,3 +346,124 @@ def list_tickets(key: str):
                                  created_at=t.created_at.isoformat()) for t in rows]}
     finally:
         db.close()
+
+
+# ---------- DELIVERY PREFERENCES (v1.5) ----------
+# "Megan prefers no-contact delivery. Blue house, no garage. Always knock."
+# The big apps give a customer one cramped text box per order and forget it the
+# instant it's delivered. We remember — keyed by phone, since that's the one
+# stable thing across a customer's orders, devices, and even a lost phone.
+
+_DROPOFF_STYLES = {"hand_to_me", "leave_at_door", "meet_outside"}
+_AVATAR_ALLOWLIST = set(
+    "😀😃😄😁😊🙂😎🤠🥳😇🧑👩👨👵👴👱👩‍🦱👨‍🦱👩‍🦰👨‍🦰🧔👩‍🦳👨‍🦳🐶🐱🦊🐻🐼"
+    "🐨🦁🐯🐮🐷🐸🐵🦄🐔🐧🦉🌟⭐️🔥💙💚💛🧡💜🤍🖤🎃👻🤖👽🍕🌮🍔🌸"
+)
+
+
+class DeliveryPrefIn(BaseModel):
+    phone: str = Field(min_length=4, max_length=40)
+    name: str = Field(default="", max_length=120)
+    dropoff_style: str = Field(default="hand_to_me", max_length=30)
+    knock: bool = True
+    avoid_doorbell: bool = False
+    home_description: str = Field(default="", max_length=300)
+    access_notes: str = Field(default="", max_length=400)
+    driver_notes: str = Field(default="", max_length=400)
+    allergies: str = Field(default="", max_length=300)
+    utensils: bool = True
+    preferred_driver: str = Field(default="", max_length=80)
+    avatar: str = Field(default="", max_length=10)
+
+
+def _norm_phone(p: str) -> str:
+    return "".join(ch for ch in (p or "") if ch.isdigit())[-15:]
+
+
+@router.get("/v0/delivery-prefs/{phone}")
+def get_delivery_prefs(phone: str):
+    from .models import DeliveryPreference
+    db: Session = SessionLocal()
+    try:
+        pref = db.get(DeliveryPreference, _norm_phone(phone))
+        if not pref:
+            return {"exists": False}
+        return {"exists": True, "name": pref.name, "dropoff_style": pref.dropoff_style,
+                "knock": pref.knock, "avoid_doorbell": pref.avoid_doorbell,
+                "home_description": pref.home_description, "access_notes": pref.access_notes,
+                "driver_notes": pref.driver_notes, "allergies": pref.allergies,
+                "utensils": pref.utensils, "preferred_driver": pref.preferred_driver,
+                "avatar": pref.avatar}
+    finally:
+        db.close()
+
+
+@router.post("/v0/delivery-prefs")
+def save_delivery_prefs(body: DeliveryPrefIn):
+    from .models import DeliveryPreference
+    phone = _norm_phone(body.phone)
+    if len(phone) < 4:
+        raise HTTPException(422, "That doesn't look like a phone number.")
+    style = body.dropoff_style if body.dropoff_style in _DROPOFF_STYLES else "hand_to_me"
+    avatar = body.avatar if body.avatar in _AVATAR_ALLOWLIST else ""
+    db: Session = SessionLocal()
+    try:
+        pref = db.get(DeliveryPreference, phone)
+        if not pref:
+            pref = DeliveryPreference(phone=phone)
+            db.add(pref)
+        pref.name = body.name.strip()[:120]
+        pref.dropoff_style = style
+        pref.knock = body.knock
+        pref.avoid_doorbell = body.avoid_doorbell
+        pref.home_description = body.home_description.strip()[:300]
+        pref.access_notes = body.access_notes.strip()[:400]
+        pref.driver_notes = body.driver_notes.strip()[:400]
+        pref.allergies = body.allergies.strip()[:300]
+        pref.utensils = body.utensils
+        pref.preferred_driver = body.preferred_driver.strip()[:80]
+        pref.avatar = avatar
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+# ---------- DRIVER REQUESTS (v1.5) — the board's half of "request a driver" ----------
+
+@router.get("/api/board/{key}/driver-requests")
+def list_driver_requests(key: str, unresolved_only: bool = True):
+    from .models import DriverRequest
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        q = db.query(DriverRequest)
+        if unresolved_only:
+            q = q.filter(DriverRequest.resolved.is_(False))
+        rows = q.order_by(DriverRequest.created_at.desc()).limit(100).all()
+        return {"requests": [dict(id=r.id, order_id=r.order_id,
+                                  requested_driver=r.requested_driver,
+                                  customer_phone=r.customer_phone, honored=r.honored,
+                                  resolved=r.resolved,
+                                  created_at=r.created_at.isoformat()) for r in rows]}
+    finally:
+        db.close()
+
+
+@router.patch("/api/board/{key}/driver-requests/{req_id}")
+async def resolve_driver_request(key: str, req_id: str, request: Request):
+    from .models import DriverRequest
+    _check_key(key)
+    body = await request.json()
+    db: Session = SessionLocal()
+    try:
+        r = db.get(DriverRequest, req_id)
+        if not r:
+            raise HTTPException(404, "No such request")
+        if "honored" in body:
+            r.honored = bool(body["honored"])
+        r.resolved = True
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()

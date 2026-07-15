@@ -113,6 +113,8 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
   <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
+  <button onclick="showDriverRequests()" id="drReqBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚗 Driver requests</button>
+  <div id="drReqPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
@@ -531,6 +533,55 @@ async function showInbox(){
   }catch(e){
     el.innerHTML = `<div class="card" style="color:#f0a04b">Couldn't load the inbox. Refresh and try again.</div>`;
   }
+}
+
+/* --- DRIVER REQUESTS (v1.5) --- The customer's half of "request a driver" is
+   a wish saved to their profile. This is dispatch's half: see who was asked
+   for, and honestly mark whether we could give them what they wanted. --- */
+async function showDriverRequests(){
+  const el = document.getElementById('drReqPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="skel" style="height:70px"></div>';
+  try{
+    const d = await (await fetch(`/api/board/${key}/driver-requests`)).json();
+    const rows = d.requests || [];
+    if(!rows.length){
+      el.innerHTML = '<div class="card" style="color:#5f6a85">No open driver requests.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="card">' + rows.map(r => `
+      <div style="padding:10px 0;border-bottom:1px solid #1e2942">
+        <b style="color:#e8eaf0">${esc(r.order_id)}</b>
+        <span style="color:#8b93a7;font-size:.8rem"> asked for </span>
+        <b style="color:#57c68f">${esc(r.requested_driver)}</b>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button onclick="resolveDriverReq('${r.id}', true)" style="flex:1;padding:8px;font-size:.76rem;background:#16337a;box-shadow:none">✓ We gave them ${esc(r.requested_driver.split(' ')[0])}</button>
+          <button onclick="resolveDriverReq('${r.id}', false)" style="flex:1;padding:8px;font-size:.76rem;background:transparent;border:1.5px solid #263252;color:#8b93a7;box-shadow:none">Couldn't this time</button>
+        </div>
+      </div>`).join('') + '</div>';
+  }catch(e){
+    el.innerHTML = '<div class="card" style="color:#f0a04b">Could not load driver requests.</div>';
+  }
+}
+async function resolveDriverReq(id, honored){
+  await fetch(`/api/board/${key}/driver-requests/${id}`, {method:'PATCH',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({honored})});
+  gwToast(honored ? 'Marked as honored ✓' : 'Marked — noted for next time', true);
+  const d = await (await fetch(`/api/board/${key}/driver-requests`)).json();
+  const rows = d.requests || [];
+  const el = document.getElementById('drReqPanel');
+  el.innerHTML = rows.length ? '<div class="card">' + rows.map(r => `
+      <div style="padding:10px 0;border-bottom:1px solid #1e2942">
+        <b style="color:#e8eaf0">${esc(r.order_id)}</b>
+        <span style="color:#8b93a7;font-size:.8rem"> asked for </span>
+        <b style="color:#57c68f">${esc(r.requested_driver)}</b>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button onclick="resolveDriverReq('${r.id}', true)" style="flex:1;padding:8px;font-size:.76rem;background:#16337a;box-shadow:none">✓ We gave them ${esc(r.requested_driver.split(' ')[0])}</button>
+          <button onclick="resolveDriverReq('${r.id}', false)" style="flex:1;padding:8px;font-size:.76rem;background:transparent;border:1.5px solid #263252;color:#8b93a7;box-shadow:none">Couldn't this time</button>
+        </div>
+      </div>`).join('') + '</div>'
+    : '<div class="card" style="color:#5f6a85">No open driver requests.</div>';
 }
 
 async function showReadiness(){

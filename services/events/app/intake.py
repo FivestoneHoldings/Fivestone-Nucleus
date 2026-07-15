@@ -183,6 +183,57 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
         existing = await at.list_records(at.ORDERS, formula=f"{{fingerprint}}='{fp}'", max_records=1)
         duplicate = bool(existing)
         if not duplicate:
+            # --- STANDING DELIVERY PREFERENCES (v1.5) ---
+            # "Megan prefers no-contact delivery. Blue house, no garage. Always
+            # knock." If this phone number has saved preferences, fold them
+            # into what the DRIVER actually sees — special_instructions is the
+            # one field that already flows all the way to the driver's day
+            # sheet, so this needs no new Airtable schema to work today.
+            std_note = ""
+            if data["customer_phone"]:
+                from .models import DeliveryPreference as _DP
+                _pdb = SessionLocal()
+                try:
+                    pref = _pdb.get(_DP, "".join(ch for ch in data["customer_phone"] if ch.isdigit())[-15:])
+                    if pref:
+                        bits = []
+                        style_word = {"leave_at_door": "Leave at the door",
+                                     "meet_outside": "Meet outside",
+                                     "hand_to_me": "Hand it to me"}.get(pref.dropoff_style, "")
+                        if style_word:
+                            bits.append(style_word)
+                        if pref.avoid_doorbell:
+                            bits.append("no doorbell")
+                        if not pref.knock:
+                            bits.append("don't knock")
+                        if pref.home_description:
+                            bits.append(pref.home_description[:120])
+                        if pref.access_notes:
+                            bits.append(pref.access_notes[:150])
+                        if pref.driver_notes:
+                            bits.append(pref.driver_notes[:150])
+                        if pref.allergies:
+                            bits.append("ALLERGY: " + pref.allergies[:100])
+                        if bits:
+                            std_note = "📋 Standing notes: " + " · ".join(bits)
+                        # --- REQUEST A DRIVER (v1.5) ---
+                        # A name saved to a profile is a wish, not a fact. We
+                        # turn it into a real, trackable DriverRequest so
+                        # dispatch can actually TRY — but the disclaimer on
+                        # /me is honest: a driver has their own day, and we
+                        # never promise what we can't keep.
+                        if pref.preferred_driver:
+                            from .models import DriverRequest as _DR
+                            _pdb.add(_DR(order_id=order_id,
+                                        requested_driver=pref.preferred_driver[:80],
+                                        customer_phone=data["customer_phone"]))
+                            _pdb.commit()
+                finally:
+                    _pdb.close()
+            merged_instructions = data["special_instructions"]
+            if std_note:
+                merged_instructions = (std_note + (" — " + merged_instructions if merged_instructions else ""))[:600]
+
             fields = {
                 "order_id": order_id, "status": "received",
                 "source_channel": "webhook",
@@ -191,7 +242,7 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                 "dropoff_contact_name": data["dropoff_contact_name"],
                 "dropoff_contact_phone": data["dropoff_contact_phone"],
                 "items_description": data["items_description"],
-                "special_instructions": data["special_instructions"],
+                "special_instructions": merged_instructions,
                 "fingerprint": fp, "received_at": _now(),
                 "customer_name_raw": data["customer_name"],
                 "customer_phone_raw": data["customer_phone"],
