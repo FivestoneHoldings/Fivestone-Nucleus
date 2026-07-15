@@ -74,6 +74,7 @@ def public_partner_directory():
                     "tagline": p.tagline,
                     "brand_color": p.brand_color,
                     "logo_url": p.logo_url,
+                    "cover_url": p.cover_url,
                     "featured": p.featured,
                     "demo": p.demo,
                 })
@@ -101,6 +102,7 @@ def partner_lookup(code: str):
             "tagline": p.tagline,
             "brand_color": p.brand_color,
             "logo_url": p.logo_url,
+            "cover_url": p.cover_url,
             "demo": p.demo,
             "special": _todays_special(p)}
 
@@ -125,6 +127,7 @@ def list_partners(key: str):
                           "tagline": p.tagline,
                           "brand_color": p.brand_color,
                           "logo_url": p.logo_url,
+                          "cover_url": p.cover_url,
                           "featured": p.featured,
                           "demo": p.demo,
                           "special": _todays_special(p)}

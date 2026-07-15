@@ -144,7 +144,16 @@ font-weight:900;font-size:1.35rem;line-height:1.15;text-shadow:0 2px 12px rgba(0
 .rhead .fact{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.08em;
 text-transform:uppercase;background:#eef2fc;color:#16337a;border-radius:20px;padding:6px 11px;font-weight:500}
 .catnav{position:sticky;top:64px;z-index:20;display:flex;gap:7px;overflow-x:auto;padding:10px 0;
-margin-bottom:8px;background:#f7f8fb;-webkit-overflow-scrolling:touch}
+margin-bottom:8px;background:#f7f8fb;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+/* back-to-top: on a 105-item menu you should never have to thumb all the way
+   up. Appears once you've scrolled past the header, taps you home instantly. */
+#toTop{position:fixed;right:16px;bottom:120px;z-index:40;width:46px;height:46px;border-radius:50%;
+border:none;background:rgba(14,21,38,.92);color:#fff;box-shadow:0 8px 22px rgba(10,15,30,.34);
+display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;
+transform:translateY(8px);transition:opacity .22s ease,transform .22s ease}
+#toTop.show{opacity:1;pointer-events:auto;transform:translateY(0)}
+#toTop svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.catnav,#toTop{scroll-behavior:auto;transition:none}}
 .catnav::-webkit-scrollbar{display:none}
 .catnav a{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:.63rem;letter-spacing:.08em;
 text-transform:uppercase;text-decoration:none;background:#fff;border:1px solid #dfe4ee;color:#5a5e64;
@@ -190,7 +199,7 @@ border-radius:8px;padding:3px 7px;margin-top:5px;display:inline-block;cursor:poi
 .mnote.empty{color:#9aa3b5;background:#f2f4fa}
 
 /* ===== MENU — single authoritative block (v1.0.1) ===== */
-.mcat{font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
+.mcat{scroll-margin-top:118px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
 letter-spacing:.1em;color:#16337a;font-weight:600;margin:22px 0 10px;padding-bottom:6px;
 border-bottom:1px solid #e4e8f2;line-height:1.4}
 .mitem{display:flex;align-items:center;background:#fff;border:1px solid #e4e8f2;
@@ -779,9 +788,17 @@ function renderMenu(m){
   z.style.display = '';
   const meta = window._PARTNER_META || {};
   const nm = (meta.display_name || '').replace(/</g,'&lt;');
+  /* Food photo beats the logo; the restaurant's own logo beats the generic
+     GateWay emblem; the emblem is the only always-safe fallback. Before v1.7
+     this jumped straight from hero_url to the emblem, so every partner without
+     a food photo wore GateWay's mark instead of their own. */
+  const emb = `<img class="emb" src="/static/gwd-emblem.png" alt="">`;
+  const swapEmb = `this.outerHTML='${emb.replace(/'/g,"\\'")}'`;
   const heroInner = meta.hero_url
-    ? `<img class="hero" src="${meta.hero_url}" alt="${nm}" onerror="this.remove()">`
-    : `<img class="emb" src="/static/gwd-emblem.png" alt="">`;
+    ? `<img class="hero" src="${meta.hero_url}" alt="${nm}" onerror="${swapEmb}">`
+    : (meta.logo_url
+        ? `<img class="hero" src="${meta.logo_url}" alt="${nm}" style="object-fit:contain;padding:6%;background:#fff" onerror="${swapEmb}">`
+        : emb);
   const facts = [];
   if(meta.address) facts.push(meta.address.split(',')[0]);
   if(meta.delivery_fee_cents != null) facts.push(`$${(meta.delivery_fee_cents/100).toFixed(2)} delivery`);
@@ -868,7 +885,39 @@ async function itemNote(id, name){
 function navPick(el){
   document.querySelectorAll('.catnav a').forEach(a=>a.classList.remove('on'));
   el.classList.add('on');
+  centerChip(el);
 }
+/* keep the active chip visible in the horizontal rail so you always see where
+   you are, even on a long menu where the chip would otherwise scroll off. */
+function centerChip(el){
+  const rail = el.closest('.catnav'); if(!rail) return;
+  const target = el.offsetLeft - (rail.clientWidth/2) + (el.clientWidth/2);
+  rail.scrollTo({left: Math.max(0, target), behavior:'smooth'});
+}
+/* Scroll-spy: as you scroll the menu, light up the category you're actually in
+   and slide its chip into view. Runs on scroll, cheap (rAF-throttled). */
+let _spyTick = false;
+function menuSpy(){
+  if(_spyTick) return; _spyTick = true;
+  requestAnimationFrame(()=>{
+    _spyTick = false;
+    const cats = [...document.querySelectorAll('.mcat')];
+    if(!cats.length) return;
+    const line = 140; // a little below the sticky bar
+    let active = cats[0];
+    for(const c of cats){ if(c.getBoundingClientRect().top <= line) active = c; }
+    const idx = cats.indexOf(active);
+    const chip = document.querySelector(`.catnav a[href="#cat${idx}"]`);
+    if(chip && !chip.classList.contains('on')){
+      document.querySelectorAll('.catnav a').forEach(a=>a.classList.remove('on'));
+      chip.classList.add('on'); centerChip(chip);
+    }
+    const tt = document.getElementById('toTop');
+    if(tt) tt.classList.toggle('show', window.scrollY > 520);
+  });
+}
+window.addEventListener('scroll', menuSpy, {passive:true});
+function scrollTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function maybeReorder(){
   try{
     const params = new URLSearchParams(location.search);
@@ -1064,5 +1113,8 @@ function compose(){
   if(sendBtn && !sendBtn.disabled) sendBtn.textContent = `Place order · ${money(total)}`;
 }
 </script>
+<button id="toTop" onclick="scrollTop()" aria-label="Back to top" title="Back to top">
+  <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+</button>
 </body>
 </html>
