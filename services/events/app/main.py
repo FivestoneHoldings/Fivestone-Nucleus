@@ -37,6 +37,8 @@ app.include_router(menu_router)
 from .growth import (router as growth_router, migrate_brand_columns,
                      seed_brands_and_demos, seed_promos)
 app.include_router(growth_router)
+from .options import router as options_router
+app.include_router(options_router)
 migrate_brand_columns()
 seed_partners()
 seed_menus()
@@ -164,7 +166,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.3.1"
+NUCLEUS_VERSION = "1.4.0"
 
 
 @app.middleware("http")

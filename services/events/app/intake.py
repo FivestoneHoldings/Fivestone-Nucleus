@@ -6,13 +6,13 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import airtable_client as at
 from . import notify
 from .db import SessionLocal
-from .models import Event, Partner
+from .models import Event, MenuItem, Partner
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address"
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
           "special_instructions", "requested_for", "partner",
           "subtotal_cents", "fee_cents", "total_cents", "tip_cents",
-          "promo_code", "discount_cents"]
+          "promo_code", "discount_cents", "cart_json"]
 
 CAPS = {"items_description": 1000, "special_instructions": 600,
         "pickup_address": 300, "dropoff_address": 300,
@@ -28,7 +28,7 @@ CAPS = {"items_description": 1000, "special_instructions": 600,
         "customer_phone": 30, "dropoff_contact_phone": 30,
         "requested_for": 40, "partner": 60,
         "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12,
-        "promo_code": 30, "discount_cents": 12}
+        "promo_code": 30, "discount_cents": 12, "cart_json": 8000}
 
 # In-memory per-IP throttle: 30 submissions/minute (dispatch-scale abuse guard)
 _HITS: dict = {}
@@ -137,6 +137,40 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
     fp = _fingerprint(data["dropoff_address"], data["items_description"], data["requested_for"])
     order_id = "ORD-" + fp[:8].upper()
 
+    # --- CART RE-PRICING (v1.4), run BEFORE the try/except below ---
+    # A raised HTTPException here must reach the customer as its real status
+    # code and message ("Choose your protein first"), not get swallowed by the
+    # broad except-Exception handler further down and turned into a generic
+    # 503. The server re-derives EVERY line's price from the database and
+    # overwrites subtotal_cents — same posture as the v1.1 promo fix. Options
+    # can only ADD cost (enforced at creation/edit time), so this can only
+    # ever raise the subtotal versus a naive client total, never lower it.
+    cart_subtotal_override = None
+    cart_raw = data.get("cart_json") or "[]"
+    try:
+        cart = json.loads(cart_raw) if isinstance(cart_raw, str) else cart_raw
+    except (ValueError, TypeError):
+        cart = []
+    if isinstance(cart, list) and cart:
+        from .options import validate_selected_options
+        _db2 = SessionLocal()
+        try:
+            recomputed = 0
+            for line in cart[:60]:            # hard cap — no absurd carts
+                item_id = str(line.get("item_id", ""))[:36]
+                qty = max(1, min(20, int(line.get("qty", 1))))
+                choice_ids = [str(c)[:36] for c in (line.get("choice_ids") or [])][:20]
+                item = _db2.get(MenuItem, item_id)
+                if not item or not item.available:
+                    raise HTTPException(422, "An item in your cart is no longer available.")
+                if item.partner_code != data["partner"]:
+                    raise HTTPException(422, "Cart item does not belong to this kitchen.")
+                delta = validate_selected_options(_db2, item_id, choice_ids)
+                recomputed += (item.price_cents + delta) * qty
+            cart_subtotal_override = recomputed
+        finally:
+            _db2.close()
+
     if not at.configured():
         if wants_html:
             return HTMLResponse(CONFIRM_PAGE.format(
@@ -172,6 +206,8 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                         fields[money_field] = int(data[money_field])
                     except (ValueError, TypeError):
                         pass
+            if cart_subtotal_override is not None:
+                fields["subtotal_cents"] = cart_subtotal_override
 
             # --- SERVER IS THE ONLY AUTHORITY ON MONEY (v1.1) ---
             # A tampered client must never be able to shrink what the driver

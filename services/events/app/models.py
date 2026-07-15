@@ -165,3 +165,92 @@ class SupportTicket(Base):
     message: Mapped[str] = mapped_column(String(1000), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class OptionGroup(Base):
+    """A question the kitchen asks about an item: 'Choose your protein',
+    'Spice level', 'Add a side'. Attached to ONE menu item.
+
+    min_select/max_select drive the UI *and* the server guard: a required
+    protein choice (min=1) must be answered before the item can be ordered, and
+    a 'pick up to 3 sauces' group (max=3) cannot be gamed into 30.
+    """
+    __tablename__ = "option_groups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    item_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    min_select: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_select: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class OptionChoice(Base):
+    """One answer to an OptionGroup's question. price_delta_cents may be zero
+    (Chicken, no charge) or positive (Shrimp +$4.00). It is NEVER negative — a
+    modifier must not be able to discount an order."""
+    __tablename__ = "option_choices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    group_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    price_delta_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class DeliveryPreference(Base):
+    """How THIS neighbor wants to be delivered to. 'Blue house, no garage.
+    Always knock. Leave it with the screen door closed — the dog gets out.'
+
+    The big apps give you one cramped text box per order and forget it the moment
+    it's delivered. We remember, because the third time a driver comes to your
+    door you shouldn't have to explain your own house again.
+    """
+    __tablename__ = "delivery_preferences"
+
+    phone: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    dropoff_style: Mapped[str] = mapped_column(String(30), nullable=False, default="")  # hand_to_me|leave_at_door|meet_outside
+    knock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    avoid_doorbell: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    home_description: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    access_notes: Mapped[str] = mapped_column(String(400), nullable=False, default="")  # gate codes, parking, apt buzzer
+    driver_notes: Mapped[str] = mapped_column(String(400), nullable=False, default="")  # "dog is friendly", "baby asleep"
+    allergies: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    utensils: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    preferred_driver: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    avatar: Mapped[str] = mapped_column(String(10), nullable=False, default="")  # emoji avatar, no PII
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow,
+                                                 onupdate=_utcnow, nullable=False)
+
+
+class DriverProfile(Base):
+    """The driver is a person, not a routing token. Name, vehicle, a note from
+    dispatch, and the things a customer is allowed to know about who's coming."""
+    __tablename__ = "driver_profiles"
+
+    driver_id: Mapped[str] = mapped_column(String(60), primary_key=True)   # airtable record id
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    avatar: Mapped[str] = mapped_column(String(10), nullable=False, default="")
+    vehicle: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    vehicle_color: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    bio: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class DriverRequest(Base):
+    """A neighbor asked for a specific driver by name. We try. We never promise —
+    a driver has their own day, and a promise we can't keep is worse than a
+    'maybe' we were honest about."""
+    __tablename__ = "driver_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    requested_driver: Mapped[str] = mapped_column(String(80), nullable=False)
+    customer_phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    honored: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

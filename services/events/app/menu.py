@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from .db import SessionLocal
 from .models import MenuItem, Partner, Event
+from .options import options_for_items
 
 router = APIRouter()
 
@@ -20,13 +21,14 @@ def _check_key(key: str):
         raise HTTPException(403, "Bad board key")
 
 
-def _grouped(items):
+def _grouped(items, db=None):
+    opts = options_for_items(db, [i.id for i in items]) if db is not None else {}
     cats: dict = {}
     for i in items:
         cats.setdefault(i.category, []).append({
             "id": i.id, "name": i.name, "description": i.description,
             "price_cents": i.price_cents, "available": i.available,
-            "image_url": i.image_url})
+            "image_url": i.image_url, "options": opts.get(i.id, [])})
     return [{"name": c, "items": v} for c, v in cats.items()]
 
 
@@ -38,11 +40,11 @@ def public_menu(code: str):
                 .filter(MenuItem.partner_code == code.lower().strip(),
                         MenuItem.available.is_(True))
                 .order_by(MenuItem.sort, MenuItem.name).all())
+        if not rows:
+            raise HTTPException(404, "No menu for this partner")
+        return {"partner": code.lower().strip(), "categories": _grouped(rows, db)}
     finally:
         db.close()
-    if not rows:
-        raise HTTPException(404, "No menu for this partner")
-    return {"partner": code.lower().strip(), "categories": _grouped(rows)}
 
 
 @router.get("/api/board/{key}/partners/{code}/menu")
@@ -52,9 +54,9 @@ def admin_menu(key: str, code: str):
     try:
         rows = (db.query(MenuItem).filter(MenuItem.partner_code == code.lower().strip())
                 .order_by(MenuItem.sort, MenuItem.name).all())
+        return {"partner": code.lower().strip(), "categories": _grouped(rows, db)}
     finally:
         db.close()
-    return {"partner": code.lower().strip(), "categories": _grouped(rows)}
 
 
 @router.post("/api/board/{key}/partners/{code}/menu")
@@ -105,9 +107,9 @@ async def kitchen_menu(token: str):
         items = (db.query(MenuItem)
                  .filter(MenuItem.partner_code == p.code)
                  .order_by(MenuItem.category, MenuItem.sort).all())
+        return {"partner": p.code, "categories": _grouped(items, db)}
     finally:
         db.close()
-    return {"partner": p.code, "categories": _grouped(items)}
 
 
 @router.post("/api/kitchen/{token}/menu-items/{item_id}/86")
