@@ -779,18 +779,33 @@ async function loadDrivers(){
     <div class="card"><div class="line"><b>Add driver</b></div>
       <div class="row"><input id="newDrvName" placeholder="Driver name">
       <button onclick="addDriver()">Add +</button></div></div>` +
-    d.drivers.map(x=>`
+    d.drivers.map(x=>{
+      const face = x.photo_url
+        ? `<img src="${x.photo_url}" alt="" style="width:40px;height:40px;border-radius:11px;object-fit:cover;flex:0 0 auto">`
+        : `<div style="width:40px;height:40px;border-radius:11px;background:#eef1f7;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex:0 0 auto;border:1px solid #e4e8f2">${x.avatar||'🧑'}</div>`;
+      const setup = x.profile_complete
+        ? '<span style="color:#1a7f4b;font-weight:700;font-size:.72rem">★ Profile ready</span>'
+        : '<span style="color:#a86a1f;font-weight:700;font-size:.72rem">○ Needs profile setup</span>';
+      return `
     <div class="card">
       <span class="chip ${x.status}">${x.status||'—'}</span>
       <div class="oid">${x.driver_id}</div>
-      <div class="line" style="font-weight:600">${x.name}</div>
+      <div class="line" style="display:flex;gap:11px;align-items:center;margin:6px 0">
+        ${face}
+        <div style="min-width:0">
+          <div style="font-weight:700">${esc(x.name)}</div>
+          ${x.vehicle?`<div style="font-size:.78rem;color:#6b7280">🚗 ${esc(x.vehicle)}</div>`:''}
+          <div>${setup}</div>
+        </div>
+      </div>
+      ${x.bio?`<div style="font-size:.78rem;color:#6b7280;line-height:1.4;margin-bottom:6px">"${esc(x.bio)}"</div>`:''}
       <div class="line"><b>Day sheet</b> <span class="oid">/driver/${x.day_token}</span></div>
       <div class="row">
         <button class="ghost" onclick="openLink('/driver/${x.day_token}')">Open ↗</button>
         <button class="ghost" onclick="shareLink('Your GateWay Driver Hub link — ${esc(x.name)}','/driver/${x.day_token}')">Share / copy</button>
         <button class="warn" onclick="rotate('${x.id}')">Rotate ↻</button>
       </div>
-    </div>`).join('');
+    </div>`;}).join('');
 }
 async function addDriver(){
   const name = document.getElementById('newDrvName').value.trim();

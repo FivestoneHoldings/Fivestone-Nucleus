@@ -550,13 +550,36 @@ def _new_token() -> str:
 async def board_drivers(key: str):
     _check_key(key)
     drivers = await at.list_records(at.DRIVERS)
-    return {"drivers": [{
-        "id": d["id"],
-        "driver_id": d["fields"].get("driver_id", ""),
-        "name": d["fields"].get("display_name", ""),
-        "status": d["fields"].get("status", ""),
-        "day_token": d["fields"].get("day_token", ""),
-    } for d in drivers]}
+    # join the local profile (avatar/vehicle/bio) so the board shows the roster
+    # as people, and flags who still needs to set their card up.
+    from .models import DriverProfile
+    profs: dict = {}
+    _db: Session = SessionLocal()
+    try:
+        for p in _db.query(DriverProfile).all():
+            profs[p.driver_id] = p
+    finally:
+        _db.close()
+    out = []
+    for d in drivers:
+        did = d["fields"].get("driver_id", "")
+        p = profs.get(did)
+        card = {
+            "id": d["id"],
+            "driver_id": did,
+            "name": d["fields"].get("display_name", ""),
+            "status": d["fields"].get("status", ""),
+            "day_token": d["fields"].get("day_token", ""),
+            "avatar": p.avatar if p else "",
+            "vehicle": " ".join(x for x in [(p.vehicle_color if p else ""),
+                                            (p.vehicle if p else "")] if x),
+            "bio": p.bio if p else "",
+            "photo_url": p.photo_url if p else "",
+            # a driver is "set up" once they've added a face and a car
+            "profile_complete": bool(p and (p.avatar or p.photo_url) and p.vehicle),
+        }
+        out.append(card)
+    return {"drivers": out}
 
 
 @router.post("/api/board/{key}/drivers")
