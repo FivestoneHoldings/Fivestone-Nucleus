@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay — What's Next</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta name="description" content="Where GateWay Delivery is headed — built for kitchens, drivers, and neighbors, not against them.">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0e1526">
+<script>
+function gwBack(){
+  if(document.referrer && new URL(document.referrer, location.href).origin === location.origin
+     && history.length > 1){ history.back(); }
+  else { location.href = '/'; }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#f7f8fb;--blue:#16337a;--red:#d81f2a;--line:#d9deea;--dim:#5a5e64;--gold:#b5722a}
+*{box-sizing:border-box;margin:0;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{max-width:100%;overflow-x:hidden}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+max-width:480px;margin:0 auto;padding:88px 22px 90px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;
+justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));
+box-shadow:0 2px 14px rgba(10,15,30,.28);max-width:100vw}
+.back{background:none;border:none;color:#c9d2e6;font-size:.8rem;font-weight:700;
+display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 4px}
+.back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.14em}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#eef2fc;color:var(--blue);
+font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:700;letter-spacing:.08em;
+text-transform:uppercase;padding:5px 11px;border-radius:20px;margin-bottom:14px}
+.badge i{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+h1{font-size:1.7rem;font-weight:900;letter-spacing:-.025em;line-height:1.08;margin-bottom:10px}
+.lede{font-size:.94rem;color:var(--dim);line-height:1.55;margin-bottom:8px}
+.honest{font-size:.8rem;color:#8a6a2a;background:#fdf6e8;border:1px solid #f0dfb8;border-radius:12px;
+padding:11px 14px;margin:16px 0 28px;line-height:1.5}
+.pillar{background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px;
+box-shadow:0 4px 18px rgba(20,30,60,.06);position:relative;overflow:hidden}
+.pillar::before{content:"";position:absolute;top:0;left:0;width:5px;height:100%}
+.pillar.p1::before{background:linear-gradient(180deg,#2f6fe0,#16337a)}
+.pillar.p2::before{background:linear-gradient(180deg,#1a7f4b,#0e5c34)}
+.pillar.p3::before{background:linear-gradient(180deg,#b5722a,#8a5620)}
+.pnum{font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:700;letter-spacing:.1em;
+text-transform:uppercase;color:#9a9ea5;margin-bottom:6px}
+.pillar h2{font-size:1.15rem;font-weight:900;margin-bottom:8px;letter-spacing:-.01em}
+.pillar p{font-size:.87rem;color:var(--dim);line-height:1.55;margin-bottom:12px}
+.pillar .ex{font-size:.8rem;color:var(--ink);background:#f7f8fb;border-radius:11px;padding:10px 12px;line-height:1.5}
+.pillar .ex b{color:var(--blue)}
+.rsec{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
+color:#9a9ea5;margin:30px 0 12px}
+.opgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.op{background:#fff;border:1.5px solid var(--line);border-radius:15px;padding:13px;font-size:.78rem;line-height:1.4}
+.op b{display:block;font-size:.84rem;margin-bottom:3px}
+.foot{text-align:center;color:#9199a8;font-size:.74rem;margin-top:32px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="gw-bar">
+  <button class="back" onclick="gwBack()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+  <span class="surf">What's Next</span>
+</div>
+
+<div class="badge"><i></i>Vision — not yet built</div>
+<h1>Where GateWay is headed</h1>
+<p class="lede">Everything live today — the storefront, tracking, the Neighbor
+  Fund, driver profiles — is real and running. This page is different: it's
+  where we're taking the platform next.</p>
+<div class="honest">We're not going to show you a button that doesn't work.
+  Nothing on this page is live in the app yet. This is the roadmap, presented
+  honestly as a roadmap.</div>
+
+<div class="pillar p1">
+  <div class="pnum">Pillar 1</div>
+  <h2>🐝 Swarm Ordering</h2>
+  <p>Group-buying for real-world gatherings. Drop a pin at a tailgate, an
+    office park, a block party — anyone nearby joins the same order from the
+    same kitchen, and the more people join, the lower everyone's delivery fee
+    drops. One driver, one trip, one big order — instead of ten separate ones
+    competing for the same kitchen's attention.</p>
+  <div class="ex"><b>Why it wins:</b> the kitchen gets a single efficient
+    ticket instead of a flood of small ones, the driver makes one high-yield
+    trip, and neighbors get a price break for ordering together.</div>
+</div>
+
+<div class="pillar p2">
+  <div class="pnum">Pillar 2</div>
+  <h2>🗺️ Routing You Can See</h2>
+  <p>At checkout, you'd choose how your order travels — plainly, no hidden
+    batching. A discounted route where your order rides along with a couple of
+    nearby neighbors' orders, shown to you on the map exactly as it'll run. Or
+    a direct route, your order and only your order, for a bit more.</p>
+  <div class="ex"><b>Why it wins:</b> you always know what you're paying for
+    and why — never a mystery fee for a routing decision made behind the
+    scenes.</div>
+</div>
+
+<div class="pillar p3">
+  <div class="pnum">Pillar 3</div>
+  <h2>🚗 The Driver Revolution</h2>
+  <p><b>Zone Mayors</b> — a driver who owns a neighborhood becomes the familiar
+    face for its kitchens, with a share of that zone's growth as it's built.
+    <b>Fair-shift bonuses</b> — on top of 100%-to-driver tips, drivers who run
+    a clean, on-time shift earn platform-funded bonuses stacked on top, never
+    pulled from a customer's tip.</p>
+  <div class="ex"><b>Why it wins:</b> drivers build something that's actually
+    theirs in a neighborhood, instead of being an anonymous dot on someone
+    else's map.</div>
+</div>
+
+<div class="rsec">Also on the roadmap</div>
+<div class="opgrid">
+  <div class="op"><b>🍳 Kitchen-ready dispatch</b>A driver is only called the
+    moment the kitchen actually boxes the order — zero dead wait time.</div>
+  <div class="op"><b>🛍️ Multi-kitchen carts</b>Order from two spots at once,
+    timed to land on your porch together.</div>
+  <div class="op"><b>📉 Fair-load pricing</b>Busy kitchens get gentle demand
+    shaping instead of getting buried.</div>
+  <div class="op"><b>🌙 End-of-day deals</b>Kitchens turn today's extra food
+    into a flash discount instead of the trash.</div>
+  <div class="op"><b>📇 A kitchen's own regulars</b>Merchants keep and own
+    their customer relationships — no walled garden, no ad tax.</div>
+</div>
+
+<div class="foot">GateWay Delivery · Fivestone Holdings<br>Knoxville, Tennessee
+  &amp; surrounding areas</div>
+</body>
+</html>

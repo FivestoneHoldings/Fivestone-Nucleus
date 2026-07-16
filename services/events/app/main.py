@@ -178,13 +178,20 @@ def neighbor_fund_page():
     return _page("neighbor-fund.html")
 
 
+@app.get("/roadmap", response_class=HTMLResponse)
+def roadmap_page():
+    """Honest vision page — clearly labeled as NOT YET BUILT. For presentations:
+    lets the founder show ambition without claiming any of it works today."""
+    return _page("roadmap.html")
+
+
 @app.get("/order", response_class=HTMLResponse)
 def order_form():
     """Public partner order form — posts to the canonical intake webhook."""
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.2"
+NUCLEUS_VERSION = "1.9.3"
 
 
 @app.middleware("http")
