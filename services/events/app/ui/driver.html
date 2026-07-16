@@ -176,7 +176,7 @@ async function toggleProfile(){
 function paintProfile(){
   const p = PROFILE || {};
   const av = DRIVER_AVATARS.map(a =>
-    `<button type="button" onclick="pickAvatar('${a}')" style="font-size:1.5rem;width:42px;height:42px;border-radius:11px;border:1.5px solid ${p.avatar===a?'#16337a':'#dfe4ee'};background:${p.avatar===a?'#eef2fc':'#fff'};cursor:pointer">${a}</button>`
+    `<button type="button" aria-label="Choose face ${a}" onclick="pickAvatar('${a}')" style="font-size:1.5rem;width:42px;height:42px;border-radius:11px;border:1.5px solid ${p.avatar===a?'#16337a':'#dfe4ee'};background:${p.avatar===a?'#eef2fc':'#fff'};cursor:pointer">${a}</button>`
   ).join('');
   const face = p.photo_url
     ? `<img src="${p.photo_url}" alt="" style="width:64px;height:64px;border-radius:16px;object-fit:cover">`

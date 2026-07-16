@@ -57,7 +57,7 @@ margin-top:12px;box-shadow:0 8px 22px rgba(22,51,122,.3)}
 text-transform:uppercase;color:#c3d0f0}
 .addr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;
 border-bottom:1px solid #eef1f7;font-size:.88rem}
-.addr span.x{color:#d81f2a;font-weight:800;padding:4px 8px;cursor:pointer}
+.addr button.x{color:#d81f2a;font-weight:800;padding:4px 8px;cursor:pointer;border:none;background:transparent;font-family:inherit;font-size:1rem}
 .h{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #eef1f7}
 .h .oid{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--dim)}
 .h a{color:var(--blue);font-weight:800;text-decoration:none;font-size:.82rem}
@@ -119,9 +119,9 @@ display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex:0 0
 border:1.5px solid var(--line)}
 .avatarPicker{display:flex;flex-wrap:wrap;gap:6px;max-height:84px;overflow-y:auto;
 padding:2px;border:1px solid var(--line);border-radius:12px;background:#fbfbfd}
-.avatarPicker span{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-font-size:1.15rem;border-radius:9px;cursor:pointer}
-.avatarPicker span.on{background:#16337a22;outline:2px solid #16337a}
+.avatarPicker button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+font-size:1.15rem;border-radius:9px;cursor:pointer;border:none;background:transparent;padding:0;font-family:inherit}
+.avatarPicker button.on{background:#16337a22;outline:2px solid #16337a}
 .dropstyle{display:flex;gap:7px;margin:6px 0 14px}
 .dropstyle button{flex:1;padding:11px 6px;border-radius:12px;border:1.5px solid var(--line);
 background:#fff;color:#5a5e64;font-weight:800;font-family:'Archivo';font-size:.76rem;cursor:pointer;
@@ -254,7 +254,7 @@ function paintAddrs(){
   const p = gwProfile.get();
   document.getElementById('addrs').innerHTML = (p.addresses||[]).length
     ? p.addresses.map(a=>`<div class="addr"><span>${esc(a)}</span>
-        <span class="x" onclick="gwProfile.removeAddress(${JSON.stringify(a)});paintAddrs()">✕</span></div>`).join('')
+        <button type="button" class="x" aria-label="Remove address" onclick="gwProfile.removeAddress(${JSON.stringify(a)});paintAddrs()">✕</button></div>`).join('')
     : '<div class="empty">No saved addresses yet.</div>';
 }
 /* --- LOYALTY (v1.1) --- The count is the customer's REAL order history from this
@@ -357,7 +357,7 @@ const AVATARS = "😀😃😄😁😊🙂😎🤠🥳😇🧑👩👨👵👴�
 let AVATAR = '';
 function paintAvatarPicker(){
   document.getElementById('avatarPicker').innerHTML = AVATARS.map(a =>
-    `<span class="${AVATAR===a?'on':''}" onclick="pickAvatar('${a}')">${a}</span>`).join('');
+    `<button type="button" class="${AVATAR===a?'on':''}" aria-label="Choose avatar ${a}" onclick="pickAvatar('${a}')">${a}</button>`).join('');
   document.getElementById('avatarBig').textContent = AVATAR || '🙂';
 }
 function pickAvatar(a){ AVATAR = a; paintAvatarPicker(); }

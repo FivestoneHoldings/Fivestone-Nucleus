@@ -195,9 +195,6 @@ display:flex;flex-direction:column;align-items:center;line-height:1.15;transitio
 .msearch{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;
 border:1.5px solid transparent;background:#f2f4fa;font-family:inherit;font-size:.9rem;margin-bottom:10px}
 .msearch:focus{background:#fff;border-color:#2f6fe0;outline:none}
-.mnote{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:#16337a;background:#eef2fc;
-border-radius:8px;padding:3px 7px;margin-top:5px;display:inline-block;cursor:pointer}
-.mnote.empty{color:#9aa3b5;background:#f2f4fa}
 
 /* ===== MENU — single authoritative block (v1.0.1) ===== */
 .mcat{scroll-margin-top:118px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
@@ -219,7 +216,8 @@ display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hi
 .mprice{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.82rem;color:#16337a}
 .mnote{font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:#16337a;background:#eef2fc;
 border-radius:6px;padding:2px 6px;margin-top:5px;display:inline-block;cursor:pointer;
-max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+border:none;font-family:'IBM Plex Mono',monospace}
 .mnote.empty{color:#9aa3b5;background:#f4f6fb}
 .mact{flex:0 0 auto;display:flex;align-items:center;padding:0 10px}
 .step{display:flex;align-items:center;gap:5px}
@@ -851,7 +849,7 @@ function renderMenu(m){
           <div class="mname">${nm2}</div>
           ${i2.description?`<div class="mdesc">${(i2.description||'').replace(/</g,'&lt;')}</div>`:''}
           <div class="mprice">$${(i2.price_cents/100).toFixed(2)}</div>
-          <span class="mnote empty" id="note-${i2.id}" onclick="itemNote('${i2.id}','${nm2.replace(/'/g,"\\'")}')">+ special request</span>
+          <button type="button" class="mnote empty" id="note-${i2.id}" onclick="itemNote('${i2.id}','${nm2.replace(/'/g,"\\'")}')">+ special request</button>
         </div>
         <div class="mact">
           ${i2.available===false
@@ -860,9 +858,9 @@ function renderMenu(m){
                 ? `<button type="button" class="custbtn" onclick='openOptions(${JSON.stringify(i2.id)})'>
                      Options <span id="oc-${i2.id}" class="occount" style="display:none">0</span></button>`
                 : `<div class="step">
-                     <button type="button" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},-1)">−</button>
+                     <button type="button" aria-label="Remove one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},-1)">−</button>
                      <span id="q-${i2.id}">0</span>
-                     <button type="button" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},1)">+</button>
+                     <button type="button" aria-label="Add one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},1)">+</button>
                    </div>`)}
         </div>
       </div>`;}).join('')).join('');

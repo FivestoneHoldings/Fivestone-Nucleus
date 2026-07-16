@@ -173,7 +173,7 @@ color:#c3cee6;border-radius:14px;padding:6px 11px;font-size:.72rem;font-weight:6
 background:#fff;font-family:'Archivo';font-size:.92rem;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)}
 .gsico{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:.95rem;opacity:.5}
 .gsx{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:#9a9ea5;
-font-weight:800;font-size:.9rem;padding:4px}
+font-weight:800;font-size:.9rem;padding:4px;border:none;background:transparent;font-family:inherit}
 .sr-sec{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
 color:#9a9ea5;margin:16px 0 8px}
 .sr-item{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);
@@ -238,7 +238,7 @@ gwSplash({name:'GateWay Delivery',
 <div class="gsearch">
   <span class="gsico">🔍</span>
   <input id="gsInput" placeholder="Search dishes or kitchens — try &quot;burger&quot;" autocomplete="off" oninput="onSearchInput()">
-  <span class="gsx" id="gsClear" onclick="clearSearch()" style="display:none">✕</span>
+  <button type="button" class="gsx" id="gsClear" aria-label="Clear search" onclick="clearSearch()" style="display:none">✕</button>
 </div>
 <div id="searchResults" style="display:none"></div>
 
