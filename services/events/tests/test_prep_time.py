@@ -52,3 +52,12 @@ def test_board_ui_shows_prep_time_to_founder():
     b = open(os.path.join(os.path.dirname(__file__), "..",
                           "app", "ui", "board.html")).read()
     assert "Median prep time" in b
+
+
+def test_board_has_order_search():
+    b = open(os.path.join(os.path.dirname(__file__), "..",
+                          "app", "ui", "board.html")).read()
+    assert 'id="orderSearch"' in b
+    assert "renderOrders()" in b
+    # searches order id, customer, AND kitchen — not just one field
+    assert "o.order_id" in b and "o.partner" in b and "o.customer" in b

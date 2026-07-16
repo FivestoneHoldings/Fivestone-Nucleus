@@ -116,6 +116,9 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <button onclick="showDriverRequests()" id="drReqBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚗 Driver requests</button>
   <div id="drReqPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
+  <input id="orderSearch" type="text" placeholder="Search order #, customer, or kitchen…"
+    oninput="renderOrders()" style="width:100%;padding:11px 14px;margin-bottom:10px;border-radius:11px;
+    border:1.5px solid #263252;background:#151d33;color:#e8eaf0;font-family:inherit;font-size:.85rem">
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orderDetail"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -728,9 +731,16 @@ function ageChip(o){
 }
 const URGENCY = {failed:'#e03131', received:'#f0a04b'};
 function renderOrders(){
-  const list = SNAP.filter(FILTERS.find(f=>f[0]===FILTER)[2]);
+  let list = SNAP.filter(FILTERS.find(f=>f[0]===FILTER)[2]);
+  const q = (document.getElementById('orderSearch')?.value || '').trim().toLowerCase();
+  if(q){
+    list = list.filter(o =>
+      (o.order_id||'').toLowerCase().includes(q) ||
+      (o.partner||'').toLowerCase().includes(q) ||
+      (o.customer||'').toLowerCase().includes(q));
+  }
   if(!list.length){ document.getElementById('orders').innerHTML =
-    `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;color:#c9cdd3;font-size:1rem">All clear</div><div style="font-size:.82rem;margin-top:4px">No open orders right now. New orders land here the moment they come in.</div></div>`; }
+    `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;color:#c9cdd3;font-size:1rem">${q?'No matches':'All clear'}</div><div style="font-size:.82rem;margin-top:4px">${q?`Nothing matches "${esc(q)}" in this filter.`:'No open orders right now. New orders land here the moment they come in.'}</div></div>`; }
   else document.getElementById('orders').innerHTML = list.map(o => `
     <div class="card" style="${URGENCY[o.status]?`border-left:4px solid ${URGENCY[o.status]}`:''}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
