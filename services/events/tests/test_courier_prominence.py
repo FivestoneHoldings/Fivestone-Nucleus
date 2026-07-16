@@ -39,3 +39,14 @@ def test_courier_tip_base_is_five_dollars_with_custom():
     c = _f("courier.html")
     assert "const TIPS = [500, 700, 1000, 1500]" in c
     assert "tipCustom" in c
+
+
+def test_courier_captures_recipient_phone_when_different():
+    """A real gap: the driver only had the SENDER's phone, not the person
+    actually at the destination (sending groceries to a parent, a gift to a
+    friend, etc). Optional field, folded into special_instructions so the
+    driver can see and call it."""
+    c = _f("courier.html")
+    assert 'id="recipPhone"' in c
+    assert "special_instructions" in c
+    assert "Recipient (call on arrival)" in c
