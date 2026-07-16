@@ -158,6 +158,7 @@ async function loadPartners(){
       <div class="line" style="font-weight:600">${x.display_name}</div>
       <div class="line"><b>Address</b>${x.address||'—'}</div>
       <div class="line"><b>Delivery fee</b>$${((x.delivery_fee_cents||0)/100).toFixed(2)}</div>
+      ${x.prep_minutes ? `<div class="line"><b>Median prep time</b>~${x.prep_minutes} min (last 20 tickets)</div>` : ''}
       <div class="row"><input id="pa-${x.code}" placeholder="Pickup address" value="${(x.address||'').replace(/"/g,'&quot;')}">
         <input id="pf-${x.code}" placeholder="Fee $" style="max-width:76px" value="${((x.delivery_fee_cents||0)/100).toFixed(2)}">
         <button class="ghost" onclick="savePartnerMeta('${x.code}')">Save</button></div>

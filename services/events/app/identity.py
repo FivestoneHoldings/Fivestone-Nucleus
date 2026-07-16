@@ -141,6 +141,7 @@ def partner_lookup(code: str):
 @router.get("/api/board/{key}/partners")
 def list_partners(key: str):
     _check_key(key)
+    prep = _prep_minutes_by_partner()
     db: Session = SessionLocal()
     try:
         rows = db.query(Partner).order_by(Partner.created_at).all()
@@ -161,6 +162,7 @@ def list_partners(key: str):
                           "cover_url": p.cover_url,
                           "featured": p.featured,
                           "demo": p.demo,
+                          "prep_minutes": prep.get(p.code),
                           "special": _todays_special(p)}
                          for p in rows]}
 

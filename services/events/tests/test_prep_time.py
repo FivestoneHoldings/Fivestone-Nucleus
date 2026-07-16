@@ -39,3 +39,16 @@ def test_home_and_featured_tiles_show_prep_badge():
                              "app", "ui", "home.html")).read()
     assert "p.prep_minutes" in home
     assert "min\u2058" in home or "min`" in home or "~${p.prep_minutes} min" in home
+
+
+def test_board_partners_endpoint_exposes_prep_minutes():
+    src = open(os.path.join(os.path.dirname(__file__), "..",
+                            "app", "identity.py")).read()
+    assert '"prep_minutes": prep.get(p.code)' in src
+    assert src.count('"prep_minutes": prep.get(p.code)') == 2  # public + board
+
+
+def test_board_ui_shows_prep_time_to_founder():
+    b = open(os.path.join(os.path.dirname(__file__), "..",
+                          "app", "ui", "board.html")).read()
+    assert "Median prep time" in b
