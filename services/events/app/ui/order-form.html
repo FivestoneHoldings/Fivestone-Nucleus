@@ -801,6 +801,13 @@ try{
 function renderMenu(m){
   if(!m || !m.categories || !m.categories.length) return;
   window._MENU = m;
+  // id -> {name, cents} lookup so click handlers never need the name/price
+  // interpolated into markup — that was the source of the quote-injection bug
+  // (e.g. Stephen's 'Personal Pizza 10"' broke its own onclick attribute).
+  window._ITEMS = {};
+  (m.categories||[]).forEach(c => (c.items||[]).forEach(it => {
+    window._ITEMS[it.id] = {name: it.name || '', cents: it.price_cents || 0};
+  }));
   const z = document.getElementById('menuZone');
   z.style.display = '';
   const meta = window._PARTNER_META || {};
@@ -849,7 +856,7 @@ function renderMenu(m){
           <div class="mname">${nm2}</div>
           ${i2.description?`<div class="mdesc">${(i2.description||'').replace(/</g,'&lt;')}</div>`:''}
           <div class="mprice">$${(i2.price_cents/100).toFixed(2)}</div>
-          <button type="button" class="mnote empty" id="note-${i2.id}" onclick="itemNote('${i2.id}','${nm2.replace(/'/g,"\\'")}')">+ special request</button>
+          <button type="button" class="mnote empty" id="note-${i2.id}" onclick="itemNote('${i2.id}')">+ special request</button>
         </div>
         <div class="mact">
           ${i2.available===false
@@ -858,9 +865,9 @@ function renderMenu(m){
                 ? `<button type="button" class="custbtn" onclick='openOptions(${JSON.stringify(i2.id)})'>
                      Options <span id="oc-${i2.id}" class="occount" style="display:none">0</span></button>`
                 : `<div class="step">
-                     <button type="button" aria-label="Remove one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},-1)">−</button>
+                     <button type="button" aria-label="Remove one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}',-1)">−</button>
                      <span id="q-${i2.id}">0</span>
-                     <button type="button" aria-label="Add one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}','${nm2.replace(/'/g,"\\'")}',${i2.price_cents},1)">+</button>
+                     <button type="button" aria-label="Add one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}',1)">+</button>
                    </div>`)}
         </div>
       </div>`;}).join('')).join('');
@@ -884,7 +891,8 @@ function filterMenu(){
     cat.style.display = any ? '' : 'none';
   });
 }
-async function itemNote(id, name){
+async function itemNote(id){
+  const name = ((window._ITEMS && window._ITEMS[id]) || {}).name || 'this item';
   const v = await gwPrompt({title:`Special request — ${name}`, multiline:true,
     value: NOTES[id] || '', confirm:'Save request',
     placeholder:'No onions · extra crispy · sauce on the side',
@@ -1076,8 +1084,9 @@ function removeCartLine(key){
   paintReview();
 }
 
-function bump(id, name, cents, d){
-  const e = CART[id] || {name, cents, qty:0, itemId:id, choiceIds:[]};
+function bump(id, d){
+  const meta = (window._ITEMS && window._ITEMS[id]) || {name:'', cents:0};
+  const e = CART[id] || {name: meta.name, cents: meta.cents, qty:0, itemId:id, choiceIds:[]};
   e.qty = Math.max(0, e.qty + d);
   if(e.qty === 0) delete CART[id]; else CART[id] = e;
   document.getElementById('q-'+id).textContent = e.qty;
