@@ -301,12 +301,30 @@ def test_option_priced_lines_can_be_individually_removed_from_review():
 def test_asia_cafe_entrees_carry_real_protein_options():
     """Asia Cafe's own menu prices these as 'Chicken $13.05+, Steak $14.05+,
     Shrimp $15.05+' — a required choice, not a flat price. Confirms the seed
-    data actually attached option groups, not just base prices."""
+    data actually attached option groups, not just base prices.
+
+    v2: items now carry BOTH a protein group and a spice-level group, so scan
+    every group's choices rather than assuming the first group is protein."""
     m = client.get("/v0/partners/asiacafe/menu").json()
     with_opts = [it for cat in m["categories"] for it in cat["items"] if it["options"]]
-    assert len(with_opts) >= 15, "protein options did not seed onto the real menu"
-    names = {c["name"] for c in with_opts[0]["options"][0]["choices"]}
-    assert {"Chicken", "Steak", "Shrimp"}.issubset(names)
+    assert len(with_opts) >= 15, "options did not seed onto the real menu"
+    # find an item that offers a protein choice among its groups
+    def choice_names(it):
+        return {c["name"] for g in it["options"] for c in g["choices"]}
+    protein_items = [it for it in with_opts
+                     if {"Chicken", "Steak", "Shrimp"}.issubset(choice_names(it))]
+    assert protein_items, "no item exposed the Chicken/Steak/Shrimp protein choice"
+
+
+def test_asia_cafe_entrees_carry_spice_levels():
+    """v2: reviews call out 'customizable spiciness levels'. Confirm the spice
+    group seeded with the expected ladder on a broad swath of the menu."""
+    m = client.get("/v0/partners/asiacafe/menu").json()
+    spice_groups = [g for cat in m["categories"] for it in cat["items"]
+                    for g in it["options"] if g["name"] == "Spice level"]
+    assert len(spice_groups) >= 40
+    got = {c["name"] for c in spice_groups[0]["choices"]}
+    assert "Medium" in got and "Mild" in got and "Hot" in got
 
 
 def test_asia_cafe_protein_upcharges_are_never_negative():

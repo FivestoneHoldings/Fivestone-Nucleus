@@ -173,108 +173,322 @@ SEED_MENUS = {
     # own menu prices these AS a required choice (Chicken $13.05+, Steak
     # $14.05+, Shrimp $15.05+), not a flat price.
     "asiacafe": [
-        ("Beverages", [
-            ("Sweet Tea", "", 335), ("Unsweet Tea", "", 335), ("Thai Tea", "", 335),
-            ("Bubble Tea - Mango", "", 405), ("Bubble Tea - Strawberry", "", 405),
-            ("Coconut Water", "", 405), ("Bottle Water", "", 155),
-            ("AC Coffee 4 in 1 Single", "", 150), ("AC Coffee 4 in 1 Bag", "", 500),
-            ("Fountain Drink", "Pepsi, Mtn Dew, Dr Pepper & more", 255),
+        ('Beverages', [
+            ('Sweet Tea', '', 335),
+            ('Unsweet Tea', '', 335),
+            ('Thai Tea', '', 335),
+            ('Bubble Tea - Mango', '', 405),
+            ('Bubble Tea - Strawberry', '', 405),
+            ('Coconut Water', '', 405),
+            ('Code Blue Gatorade', '', 328),
+            ('Bottle Water', '', 155),
+            ('AC Coffee 4 in 1 Single', '', 150),
+            ('AC Coffee 4 in 1 Bag', '', 500),
+            ('AC Coffee 6 in 1 Bag', '', 1305),
+            ('AC Coffee 8 in 1 Bag', '', 800),
+            ('Pepsi - Fountain', 'The bold, refreshing, robust cola', 255),
+            ('Pepsi Zero Sugar - Fountain', 'Real cola taste, no sugar', 255),
+            ('Mtn Dew - Fountain', 'One of a kind citrus taste', 255),
+            ('Dr. Pepper - Fountain', 'A signature blend of 23 flavors', 255),
+            ('Diet Dr. Pepper - Fountain', '23 flavors, without the calories', 255),
+            ('Starry - Fountain', 'Crisp, clear lemon lime', 255),
+            ('Crush Orange - Fountain', 'The original orange soda', 255),
+            ('Tropicana Lemonade - Fountain', 'Freshly squeezed lemon taste', 255),
         ]),
-        ("Apps, Soups & Salads", [
-            ("Crab Rangoons", "", 905), ("Gyoza", "", 805), ("Edamame", "", 705),
-            ("Roti Canai", "", 805), ("Fried Tofu", "", 705),
-            ("Salt and Pepper Calamari", "", 905), ("Satay Chicken", "", 905),
-            ("Shish Kebob", "", 905), ("Tempura Vegetables", "", 805),
-            ("Shrimp Tempura", "", 905), ("Asia Cafe Platter", "Mixed appetizer sampler", 1305),
-            ("Single Vegetable Spring Roll", "", 205),
-            ("Md Mushroom Soup", "", 405), ("Md Egg Drop Soup", "", 405),
-            ("Md Hot and Sour Soup", "", 405), ("Md Tom Yum Soup D", "", 405),
-            ("Md Wonton Soup", "", 505), ("House Salad", "", 505),
-            ("Malaysian Salad", "", 905), ("Ginger Salad", "", 505),
-            ("Chicken Wings", "", 805),
+        ('Appetizers', [
+            ('Crab Rangoons', 'Deep fried pastry, crab meat & cream cheese', 905),
+            ('Gyoza', 'Pan-fried dumplings', 805),
+            ('Edamame', 'Steamed soybeans', 705),
+            ('Roti Canai', 'Flaky flatbread with curry dipping sauce', 805),
+            ('Fried Tofu', '', 705),
+            ('Salt and Pepper Calamari', '', 905),
+            ('Satay Chicken', 'Grilled skewers with peanut sauce', 905),
+            ('Shish Kebob', '', 905),
+            ('Tempura Vegetables', '', 805),
+            ('Shrimp Tempura', '', 905),
+            ('Asia Cafe Platter', 'Mixed appetizer sampler', 1305),
+            ('Single Vegetable Spring Roll (1)', '', 205),
+            ('Lumpia Shanghai (4)', 'Filipino-style fried spring rolls', 505),
+            ('Chicken Wings', '', 805),
         ]),
-        ("Asian Entrees D43-D56 · fried rice & choice of soup included", [
-            ("General Tso Chicken D43", "Broccoli, special hot and spicy sauce", 1305),
-            ("Sesame D44", "Broccoli, special sauce", 1305, "PROTEIN"),
-            ("Sweet Sour Chicken D45", "Pineapple, carrots, onions, bell peppers", 1305),
-            ("Black Pepper D46", "Onions, black pepper, special sauce", 1305, "PROTEIN"),
-            ("Moo Goo Pan D47", "Carrots, onions, mushrooms, zucchini, snow peas", 1305, "PROTEIN"),
-            ("Mongolian D49", "Green onions, jumbo onions", 1305, "PROTEIN"),
-            ("Pepper D50", "Carrots, red & green bell peppers, jumbo onions", 1305, "PROTEIN"),
-            ("Hunan D51", "Zucchini, bell peppers, broccoli, carrots, snow peas", 1305, "PROTEIN"),
-            ("Broccoli D53", "Broccoli, carrots, snow peas", 1305, "PROTEIN"),
-            ("Kung Pao D54", "Peppers, zucchini, mushrooms, jumbo onion", 1305, "PROTEIN"),
-            ("Cashew D55", "Peppers, zucchini, mushrooms, onions, cashews", 1305, "PROTEIN"),
-            ("Shrimp with Lobster Sauce D56", "Mushrooms, peas, carrots", 1405),
-            ("Orange Chicken", "", 1305),
+        ('Soups', [
+            ('Mushroom Soup (Sm)', '', 305),
+            ('Mushroom Soup (Md)', '', 405),
+            ('Mushroom Soup (Lg)', '', 505),
+            ('Egg Drop Soup (Sm)', '', 305),
+            ('Egg Drop Soup (Md)', '', 405),
+            ('Egg Drop Soup (Lg)', '', 505),
+            ('Hot and Sour Soup (Sm)', '', 305),
+            ('Hot and Sour Soup (Md)', '', 405),
+            ('Hot and Sour Soup (Lg)', '', 505),
+            ('Tom Yum Soup (Sm)', 'Spicy & sour Thai soup', 305, 'SPICE'),
+            ('Tom Yum Soup (Md)', 'Spicy & sour Thai soup', 405, 'SPICE'),
+            ('Tom Yum Soup (Lg)', 'Spicy & sour Thai soup', 505, 'SPICE'),
+            ('Tom Kha Soup (Sm)', 'Coconut milk Thai soup', 405),
+            ('Tom Kha Soup (Md)', 'Coconut milk Thai soup', 505),
+            ('Tom Kha Soup (Lg)', 'Coconut milk Thai soup', 605),
+            ('Wonton Soup (Sm)', '', 405),
+            ('Wonton Soup (Md)', '', 505),
+            ('Wonton Soup (Lg)', '', 605),
+            ('Miso Soup (Sm)', '', 405),
+            ('Miso Soup (Md)', '', 505),
+            ('Miso Soup (Lg)', '', 605),
         ]),
-        ("Noodle Dishes D70-D82", [
-            ("Chinese Lo Mein D71", "Onions, green onions, soy sauce", 1305, "PROTEIN"),
-            ("Pad Thai D73", "Peanuts, cilantro, egg, tomatoes, spicy sauce", 1305, "PROTEIN"),
-            ("Drunken Noodle D74", "Bell peppers, onions, tomatoes, eggs", 1305, "PROTEIN"),
-            ("Satay Noodles D70", "Stir fried in satay sauce", 1305, "PROTEIN"),
-            ("Penang Mee Goreng D72", "Malaysian chili sauce, tomatoes, egg", 1305, "PROTEIN"),
-            ("Wonton Mee Noodle Soup D76", "Homemade pork & dumplings", 1405),
+        ('Salads', [
+            ('House Salad', 'With ginger dressing', 505),
+            ('Ginger Salad', '', 505),
+            ('Malaysian Salad', '', 905),
+            ('Seaweed Salad', 'Seasoned seaweed salad', 605),
+            ('Cucumber Salad', 'Thin sliced, ponzu & sesame', 605),
+            ('Squid Salad', 'Seasoned thin sliced squid', 805),
+            ('Snowcrab Salad', 'Snow crab, avocado, asparagus & masago', 805),
+            ('Seafood Salad', 'Assorted fish, shrimp & octopus', 905),
+            ('Tuna Salad', 'Tuna, cucumber, masago, avocado, ponzu', 905),
+            ('Kani Salad', 'Crab stick salad', 805),
         ]),
-        ("Curries, Fried Rice & Vegetarian", [
-            ("Chinese Fried Rice D39", "Eggs, onions, carrots, green onions", 1305, "PROTEIN"),
-            ("Thai Fried Rice D40", "Pineapple, egg, curry powder, cilantro", 1305, "PROTEIN"),
-            ("Basil Fried Rice D42", "Curry powder, cilantro, egg, pineapple", 1305, "PROTEIN"),
-            ("Green Curry D58", "Potatoes, carrots, eggplant, coconut milk", 1305, "PROTEIN"),
-            ("Red Curry D59", "Red chilis, carrots, bell peppers, coconut milk", 1305, "PROTEIN"),
-            ("Rama Curry D60", "Yellow curry, peanut sauce, broccoli, carrots", 1305, "PROTEIN"),
-            ("Masama Curry D61", "Coconut milk, potatoes, onions, peanuts", 1305, "PROTEIN"),
-            ("Penang Curry D62", "Richer red curry, potatoes, broccoli, lime leaves", 1305, "PROTEIN"),
-            ("Chop Suey D64", "Snow peas, broccoli, carrots, mushrooms, celery", 1205),
-            ("Asia Cafe Veg Entree D65", "Carrots, bell peppers, broccoli, zucchini", 1205),
+        ('Asian Entrees', [
+            ('General Tso Chicken D43', 'Broccoli with special hot and spicy sauce', 1305),
+            ('Sesame D44', 'With broccoli and special sauce', 1305, 'PROTEIN'),
+            ('Sweet Sour Chicken D45', 'Pineapple, carrots, onions & bell peppers', 1305),
+            ('Black Pepper D46', 'Onions, black pepper & special sauce', 1305, 'PROTEIN'),
+            ('Moo Goo Pan D47', 'Carrots, onions, mushrooms, zucchini, snow peas', 1305, 'PROTEIN'),
+            ('Sha Cha Sauce D48', 'Mixed vegetables & sha cha sauce', 1305, 'PROTEIN'),
+            ('Mongolian D49', 'Green onions & jumbo onions', 1305, 'PROTEIN'),
+            ('Pepper D50', 'Carrots, red & green bell peppers, jumbo onions', 1305, 'PROTEIN'),
+            ('Hunan D51', 'Zucchini, bell peppers, broccoli, carrots, snow peas', 1305, 'PROTEIN'),
+            ('Pad Prik D52', 'Bell pepper, onion & green onion, light brown sauce', 1305, 'PROTEIN'),
+            ('Broccoli D53', 'Broccoli, carrots & snow peas', 1305, 'PROTEIN'),
+            ('Kung Pao D54', 'Green & red peppers, zucchini, mushrooms, onion', 1305, 'PROTEIN'),
+            ('Cashew D55', 'Peppers, zucchini, mushrooms, onions & cashews', 1305, 'PROTEIN'),
+            ('Shrimp with Lobster Sauce D56', 'Lobster sauce, mushrooms, peas & carrots', 1405),
+            ('Garlic', 'Broccoli & carrots in white sauce', 1305, 'PROTEIN'),
+            ('Orange Chicken', '', 1305),
+            ('Cilantro Stir Fry', '', 1305, 'PROTEIN'),
+            ('Beef and Scallops', '', 1405),
+            ('Sweet Sour Shrimp', '', 1398),
+            ('Mojarra Fried Tilapia D43', '', 1505),
+            ('Grilled Fish and Shrimp D44', '', 1505),
+            ('Lechon Kawali', 'Crispy Filipino pork belly', 1498),
         ]),
-        ("Hibachi Singles & Combos D18-D33 · fried rice, soup & veg included", [
-            ("Vegetable D18", "", 1205), ("Tofu D19", "", 1205),
-            ("Chicken D20", "", 1305), ("Steak D21", "", 1305),
-            ("Shrimp D22", "", 1305), ("Ribeye D26", "", 1705),
-            ("Chicken and Steak D27", "", 1405), ("Steak and Shrimp D28", "", 1405),
-            ("Chicken and Shrimp D29", "", 1405), ("Steak and Crab D31", "", 1405),
+        ('Noodle Dishes', [
+            ('Satay Noodles D70', 'Stir fried noodles in satay sauce', 1305, 'PROTEIN'),
+            ('Chinese Lo Mein D71', 'Onions, green onions & soy sauce', 1305, 'PROTEIN'),
+            ('Penang Mee Goreng D72', 'Malaysian chili sauce, tomatoes & egg', 1305, 'PROTEIN'),
+            ('Pad Thai D73', 'Peanuts, cilantro, egg, tomatoes & spicy sauce', 1305, 'PROTEIN'),
+            ('Drunken Noodle D74', 'Bell peppers, onions, tomatoes & eggs', 1305, 'PROTEIN'),
+            ('Thai Mee Siam D75', 'Thin rice noodles, carrots, cabbage, scallions', 1305, 'PROTEIN'),
+            ('Wonton Mee Noodle Soup D76', 'Egg noodles, homemade pork & dumplings', 1405),
+            ('Chow Kueh Teow D77', 'Malaysian flat rice noodles, egg, chili sauce', 1405, 'PROTEIN'),
+            ('Singapore Rice Noodles D78', 'Light soy, chili, onions & curry powder', 1405, 'PROTEIN'),
+            ('Curry Mee Noodle Soup D79', 'Chili base, curry powder, coconut milk, eggplant', 1305),
+            ('Black Pepper Sauce Noodles D80', 'Bell peppers, onions, green onions', 1305, 'PROTEIN'),
+            ('Shrimp Laksa Mee Hoon D81', 'Carrots, napa, bean sprouts, coconut milk', 1405),
+            ("Chef's Special Broad Noodle Soup D82", 'Shrimp, chicken & vegetables', 1405),
         ]),
-        ("Vietnamese — House-Made Pho", [
-            ("VA6 Pho Ga", "White meat chicken, rice noodles, herbs, broth", 1305),
-            ("VA4 Tai", "Rare steak, rice noodles, thinly sliced onions", 1305),
-            ("VA5 Bo Vien", "Beef meatballs, rice noodles, broth", 1305),
-            ("VA7 Pho Tom", "Shrimp, rice noodles, broth", 1305),
-            ("VA8 Pho Combo", "Rare steak, flank steak, meatballs, tendon", 1905),
-            ("VA10 Bun Dac Biet", "Grilled pork, shrimp, egg roll, vermicelli", 1505),
-            ("VA11 Bun Thit Nuong", "Grilled pork, vermicelli, herbs", 1405),
-            ("Goi Cuon", "Spring rolls — shrimp, herbs, rice paper, peanut sauce", 605),
+        ('Curries', [
+            ('Green Curry D58', 'Potatoes, carrots, eggplant, snow peas, coconut milk', 1305, 'PROTEIN'),
+            ('Red Curry D59', 'Red chilis, carrots, bell peppers, eggplant, coconut milk', 1305, 'PROTEIN'),
+            ('Rama Curry D60', 'Yellow curry, peanut sauce, broccoli, carrots, peppers', 1305, 'PROTEIN'),
+            ('Masama Curry D61', 'Coconut milk, potatoes, onions, pineapple & peanuts', 1305, 'PROTEIN'),
+            ('Penang Curry D62', 'Richer red curry, potatoes, broccoli, lime leaves', 1305, 'PROTEIN'),
+            ('Sotong Curry D63', 'Squid, green curry, carrots, snow peas, coconut milk', 1305),
         ]),
-        ("Kids · 12 and under", [
-            ("Kids Sweet Sour Chicken K1", "With fried rice", 805),
-            ("Kids General Tso Chicken K2", "", 805),
-            ("Kids Hib/Teri", "Zucchini, onions, broccoli, fried rice", 805),
-            ("Kids Chicken Fingers w Fries", "", 805),
+        ('Fried Rice & Vegetarian', [
+            ('Chinese Fried Rice D39', 'Eggs, onions, carrots & green onions', 1305, 'PROTEIN'),
+            ('Thai Fried Rice D40', 'Pineapple, egg, curry powder, cilantro', 1305, 'PROTEIN'),
+            ('Malaysian Nasi Goreng D41', 'Peas, pineapple, chili sauce, carrots, tomatoes', 1305, 'PROTEIN'),
+            ('Basil Fried Rice D42', 'Curry powder, cilantro, egg, green onions, pineapple', 1305, 'PROTEIN'),
+            ('Chop Suey D64', 'Snow peas, broccoli, carrots, mushrooms, celery, napa', 1205),
+            ('Asia Cafe Veg Entree D65', 'Carrots, bell peppers, broccoli, zucchini, sauce on side', 1205),
+            ('Basil Eggplant D66', 'Bell peppers, onions, carrots, zucchini, basil', 1205),
+            ('Szechuan Eggplant D67', 'Carrots, snow peas, celery, eggplant', 1205),
+            ('Hunan Tofu D68', 'Zucchini, bell peppers, broccoli, carrots, snow peas, tofu', 1205),
+            ('Garden Delight D69', 'Napa, carrots, green & red bell peppers, zucchini', 1205),
+            ('Egg Foo Young D70', '', 1205),
         ]),
-        ("Desserts", [
-            ("Meltdown", "Chocolate cake, ganache center, vanilla ice cream", 705),
-            ("Turtle Lava", "Chocolate cake, caramel center, pecans, ice cream", 698),
-            ("Cheesecake", "", 605),
-            ("Chinese Doughnuts", "", 605),
-            ("Tempura Banana", "", 505),
+        ('Bentos & Exotics', [
+            ('Bento Box Chicken D14', '', 1505, 'SPICE'),
+            ('Bento Box Steak D15', '', 1505, 'SPICE'),
+            ('Bento Box Vegetarian D17', '', 1505, 'SPICE'),
+            ('Bento Box Shrimp D18', '', 1605, 'SPICE'),
+            ('Chicken with Fries D2', 'Marinated in Chinese spices, deep-fried', 1605),
+            ('Malaysian Bak Kut Teh D3', 'Chinese mushrooms, garlic, barbecue ribs, herbs', 1505),
+            ('Malaysian Beef Rendang D4', 'Cucumber, banana leaf, grated coconut', 1505),
+            ('Malaysian Style Shrimp and Squid D5', 'Chili base, lemon grass, coconut milk', 1505),
+            ('Thai Style Chicken and Shrimp D6', 'Chili base, lemon grass, coconut milk', 1505),
+            ('Shrimp and Scallop Garlic Sauce D7', 'Carrots, broccoli, snow peas', 1505),
+            ('Asia Cafe Seafood Delight', '', 1505),
+            ('Asia Cafe Spring Chicken', '', 1598),
+            ('Chicken Feet D1', 'Chinese mushrooms, green onions & carrots', 1298),
+            ('Roast Duck', '', 2998),
         ]),
-        ("Side Orders", [
-            ("Side Fried Rice", "", 255), ("Side Steamed Rice", "", 255),
-            ("Side Vegetables", "", 505), ("Side Chicken", "", 605),
-            ("Side Steak", "", 705), ("Side Shrimp", "", 705),
-            ("Side French Fries", "", 405), ("Side Broccoli", "", 505),
-            ("Fortune Cookie", "", 25),
+        ('Hibachi Singles', [
+            ('Hibachi Vegetable D18', 'Fried rice, soup & veg included', 1205, 'SPICE'),
+            ('Hibachi Tofu D19', 'Fried rice, soup & veg included', 1205, 'SPICE'),
+            ('Hibachi Chicken D20', 'Fried rice, soup & veg included', 1305, 'SPICE'),
+            ('Hibachi Steak D21', 'Fried rice, soup & veg included', 1305, 'SPICE'),
+            ('Hibachi Shrimp D22', 'Fried rice, soup & veg included', 1305, 'SPICE'),
+            ('Hibachi Crab Meat D23', 'Fried rice, soup & veg included', 1305, 'SPICE'),
+            ('Hibachi Ribeye D26', 'Fried rice, soup & veg included', 1705, 'SPICE'),
+            ('Hibachi Filet Mignon', 'Fried rice, soup & veg included', 2005, 'SPICE'),
         ]),
-        ("2. Sushi Rolls — Full sushi bar available, ask your driver for the complete list", [
-            ("California Roll", "Crab, avocado, cucumber, masago", 705),
-            ("Spicy Tuna Roll", "Avocado, cucumber, spicy mayo", 905),
-            ("Spicy Salmon Roll", "Avocado, cucumber, spicy mayo, crunchy", 905),
-            ("Philadelphia Roll", "Smoked salmon, cream cheese, avocado", 905),
-            ("Shrimp Tempura Roll", "Cucumber, avocado, eel sauce", 905),
-            ("Rainbow Roll", "Snow crab, avocado, tuna, salmon, white tuna", 1505),
-            ("Dragon Roll", "Crabstick, cucumber, avocado, BBQ eel", 1605),
-            ("Volcano Roll", "Crab stick, crawfish, baked, wasabi mayo", 1605),
-            ("Knoxville Roll", "Shrimp tempura, cream cheese, crawfish, snow crab", 1505),
+        ('Hibachi Combos', [
+            ('Chicken and Steak D27', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+            ('Steak and Shrimp D28', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+            ('Chicken and Shrimp D29', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+            ('Steak and Crab D31', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+            ('Shrimp and Crab D32', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+            ('Chicken and Crab D33', 'Fried rice, soup & veg included', 1405, 'SPICE'),
+        ]),
+        ('Imperial Dinners', [
+            ('Chicken Shrimp Steak D37', '', 1505, 'SPICE'),
+            ('Chicken Shrimp Crab D38', '', 1505, 'SPICE'),
+            ('Imperial Dinner D41', 'Chicken, steak, shrimp & crab meat', 2005, 'SPICE'),
+        ]),
+        ('Vietnamese Pho & Vermicelli', [
+            ('VA1 Tai & Nam', 'Rare steak & flank steak in house pho', 1405),
+            ('VA2 Tai & Gan', 'Rare steak & tendon in house pho', 1405),
+            ('VA3 Tai & Sach', 'Rare steak & tripe in house pho', 1405),
+            ('VA4 Tai', 'Rare steak in house pho, herbs & broth', 1305),
+            ('VA5 Bo Vien', 'Beef meatballs in house pho', 1305),
+            ('VA6 Pho Ga', 'White meat chicken in house pho', 1305),
+            ('VA7 Pho Tom', 'Shrimp in house pho', 1305),
+            ('VA8 Pho Combo', 'Rare steak, flank steak, meatballs & tendon', 1905),
+            ('VA10 Bun Dac Biet', 'Grilled pork, shrimp & egg roll over vermicelli', 1505),
+            ('VA11 Bun Thit Nuong', 'Grilled pork over vermicelli', 1405),
+            ('VA12 Bun Tom Nuong', 'Grilled shrimp over vermicelli', 1505),
+            ('VA13 Bun Cha Gio', 'Egg roll over vermicelli', 1305),
+            ('VA14 Bun Cha Gio Thit Nuong', 'Grilled pork & egg roll over vermicelli', 1405),
+            ('Goi Cuon', 'Fresh spring rolls, shrimp, herbs, peanut sauce', 605),
+        ]),
+        ('Lunch Menu · 11am-4pm · fried rice + choice of soup', [
+            ('L Cilantro Vegetable Stir Fry L1', 'Chili base, red onions, eggplant, cabbage', 998, 'PROTEIN'),
+            ('L Szechuan Eggplant L2', 'Carrots, snow peas, celery, eggplant', 998, 'PROTEIN'),
+            ('L Sweet Sour Chicken L3', 'Pineapple, onions, carrots, bell peppers', 998, 'PROTEIN'),
+            ('L General Tso Chicken L4', 'Broccoli, hot & spicy sauce, dried chili', 998, 'PROTEIN'),
+            ('L Sesame Chicken L5', 'Broccoli, special sauce & sesame seeds', 998, 'PROTEIN'),
+            ('L Moo Goo Pan L6', 'White meat chicken, mushrooms, carrots, cabbage', 998, 'PROTEIN'),
+            ('L Garlic L7', 'Broccoli & carrots in white sauce', 998, 'PROTEIN'),
+            ('L Broccoli L8', 'Broccoli & carrots in brown sauce', 998, 'PROTEIN'),
+            ('L Black Pepper L9', 'Jumbo onions, bell peppers, light brown sauce', 998, 'PROTEIN'),
+            ('L Lo Mein L10', 'Cabbage, carrots, onions, green onions, noodles', 998, 'PROTEIN'),
+            ('L Mongolian L11', 'Green onions & jumbo onions', 998, 'PROTEIN'),
+            ('L Pepper L12', 'Carrots, red & green bell peppers, jumbo onions', 998, 'PROTEIN'),
+            ('L Hunan L13', 'Zucchini, bell peppers, broccoli, carrots, snow peas', 998, 'PROTEIN'),
+            ('L Cashew L14', 'Onions, peppers, carrots, zucchini, mushrooms, cashews', 998, 'PROTEIN'),
+            ('L Hibachi-Teriyaki L15', 'Broccoli, onions, zucchini, mushrooms', 998, 'PROTEIN'),
+            ('L Hibachi-Teriyaki Combo L16', 'Chicken, steak, shrimp & veg', 1298),
+            ('L Penang Curry L18', 'Richer red curry, potatoes, broccoli, lime leaves', 998, 'PROTEIN'),
+            ('L Red Curry L19', 'Red chilis, basil, carrots, bell peppers, coconut milk', 998, 'PROTEIN'),
+            ('L Rama Curry L20', 'Yellow curry, peanut sauce, broccoli, carrots', 998, 'PROTEIN'),
+            ('L Masaman Curry L21', 'Coconut milk, potatoes, onions, pineapple, peanuts', 998, 'PROTEIN'),
+            ('L Green Curry L22', 'Potatoes, carrots, eggplant, snow peas, coconut milk', 998, 'PROTEIN'),
+            ('L Thai Mee Siam L23', 'Thin rice noodles, carrots, cabbage, scallions', 998, 'PROTEIN'),
+            ('L Malaysian Mee Goreng L24', 'Chicken or beef, chili sauce, egg & soy', 998, 'PROTEIN'),
+            ('L Kung Pao', 'Green & red peppers, zucchini, mushrooms, onion', 998, 'PROTEIN'),
+        ]),
+        ('Kids · 12 and under', [
+            ('Kids Sweet Sour Chicken K1', 'With fried rice', 805),
+            ('Kids General Tso Chicken K2', '', 805),
+            ('Kids Hibachi/Teriyaki', 'Zucchini, onions, broccoli, fried rice', 805),
+            ('Kids Sesame Chicken K6', '', 805),
+            ('Kids Chicken Fingers w Fries', '', 805),
+        ]),
+        ('Sushi Appetizers', [
+            ('Tuna Tataki', 'Black pepper tuna, ponzu, masago & scallions', 1005),
+            ('Baked Salmon', 'Salmon rolled in snow crab, sweet tangy sauce', 1005),
+            ('Tempura Salmon Cheese', 'Salmon, cream cheese, jalapeno, deep fried, ponzu', 1005),
+            ('Salmon Skin Salad', 'Salmon skin, seaweed, tamago, cucumber, avocado', 705),
+            ('Chef Salad', 'Tuna, cucumber, seaweed, avocado, crunchy', 805),
+            ('Unagi Salad', '', 805),
+        ]),
+        ('Sushi Rolls', [
+            ('California Roll', 'Crab, avocado, cucumber, masago', 705),
+            ('Spicy Tuna Roll', 'Spicy tuna, avocado, cucumber, spicy mayo', 905, 'SPICE'),
+            ('Spicy Salmon Roll', 'Salmon, avocado, cucumber, spicy mayo, crunchy', 905, 'SPICE'),
+            ('Spicy Scallop Roll', 'Chopped scallop, sriracha, spicy mayo, crunchy', 905, 'SPICE'),
+            ('Philadelphia Roll', 'Smoked salmon, cream cheese & avocado', 905),
+            ('Shrimp Tempura Roll', 'Tempura shrimp, cucumber, avocado, eel sauce', 905),
+            ('Crunchy Roll', 'Snow crab, crunchy & asparagus', 705),
+            ('Boston Roll', 'Boiled shrimp, avocado & cucumber', 705),
+            ('Dynamite Roll', 'Chopped fish, masago, spicy mayo & sriracha', 905, 'SPICE'),
+            ('Eel Roll', 'Eel, cucumber, avocado, eel sauce', 905),
+            ('Crunchy Shrimp Roll', 'Boiled shrimp, avocado, crunchy, spicy mayo', 805),
+            ('Salmon Roll', 'Salmon with seaweed wrapper', 805),
+            ('Tuna Roll', 'Tuna with seaweed wrapper', 905),
+            ('Yellowtail Roll', 'Yellowtail & scallion, seaweed wrapper', 1005),
+            ('Avocado Roll', 'Avocado with seaweed wrapper', 505),
+            ('Cucumber Roll', '', 505),
+            ('Vegetable Roll', 'Assorted vegetables & Japanese pickles', 605),
+            ('Rainbow Roll', 'Snow crab, avocado, tuna, salmon & white tuna', 1505),
+            ('Dragon Roll', 'Crabstick, cucumber, avocado, BBQ eel', 1605),
+            ('Volcano Roll', 'Crab, avocado, cucumber, crawfish & scallop, baked', 1605),
+            ('Spider Roll', 'Fried soft shell crab, snow crab & avocado', 1505),
+            ('Asia Cafe Roll', 'Soft shell crab, shrimp tempura, crawfish, spicy mayo', 1605),
+            ("Chef's Special Roll", 'Yellowtail, tuna, salmon, mango, snow crab, eel', 1605),
+            ('Knoxville Roll', 'Shrimp tempura, cream cheese, crawfish, snow crab', 1505),
+            ('Tennessee Roll', 'Spicy tuna & shrimp tempura, sweet tangy sauce', 1105, 'SPICE'),
+            ('Sunshine Roll', 'Shrimp tempura, avocado, cream cheese, boiled shrimp', 1405),
+            ('Surf and Turf Roll', 'Shrimp tempura, cream cheese, smoked salmon, snow crab', 1505),
+            ('Crazy Crab Roll', 'Crabstick, avocado, snow crab, spicy mayo, sriracha', 1305, 'SPICE'),
+            ('New York Roll', 'Salmon, avocado, cream cheese, topped with salmon', 1505),
+            ('Chicago Roll', 'Tuna, avocado, cream cheese, topped with tuna', 1505),
+            ('Pink Lady Roll', 'Spicy salmon, snow crab, avocado, crunchy, pink wrap', 1205, 'SPICE'),
+            ('Deep Fried Bagel Roll', 'Smoked salmon, cream cheese, crab, deep fried', 1505),
+        ]),
+        ('Nigiri (3 per order)', [
+            ('Salmon (Sake) Nigiri', '', 805),
+            ('Tuna (Maguro) Nigiri', '', 905),
+            ('Fresh Water Eel (Unagi) Nigiri', '', 905),
+            ('Escolar Nigiri', '', 805),
+            ('Flying Fish Roe (Tobiko) Nigiri', '', 805),
+            ('Crab Stick (Kani) Nigiri', '', 705),
+            ('Octopus (Tako) Nigiri', '', 805),
+            ('Shrimp (Ebi) Nigiri', '', 705),
+            ('Egg Custard (Tamago) Nigiri', '', 605),
+        ]),
+        ('Sashimi (3 per order)', [
+            ('Salmon (Sake) Sashimi', '', 1005),
+            ('Tuna (Maguro) Sashimi', '', 1005),
+            ('Yellow Tail Sashimi', '', 1205),
+            ('Fresh Water Eel (Unagi) Sashimi', '', 1005),
+            ('Escolar Sashimi', '', 1005),
+            ('Octopus (Tako) Sashimi', '', 1005),
+            ('Egg Custard (Tamago) Sashimi', '', 705),
+        ]),
+        ('Dinners from the Sushi Bar', [
+            ('Sushi Deluxe', '9 pieces nigiri & 1 California roll', 2505),
+            ('Sashimi Deluxe', '12 piece chef choice & 1 salmon roll', 3105),
+            ('Nigiri and Sashimi Dinner', '6 nigiri, 6 sashimi & 1 tuna roll', 3205),
+            ('Ninja Platter', '12 pieces chef choice, California & spicy tuna roll', 3405),
+            ('Chirashi', 'Assorted sashimi over sushi rice', 1705),
+            ('Unagi-Don', 'BBQ eel over sushi rice', 1505),
+            ('Asia Cafe Love Boat', '15 sashimi, 6 nigiri, veg roll & special roll', 6805),
+        ]),
+        ('Desserts', [
+            ('Meltdown', 'Chocolate cake, ganache center, vanilla ice cream', 705),
+            ('Turtle Lava', 'Chocolate cake, caramel center, pecans, ice cream', 698),
+            ('Cheesecake', 'Rich cream cheese & pure vanilla', 605),
+            ('Pineapple Upside Down Cake', 'Warm, pineapple & chocolate topping', 705),
+            ('Chinese Doughnuts', '', 605),
+            ('Tempura Banana', '', 505),
+            ('Sesame Balls', '', 505),
+            ('Ice Cream', '', 398),
+        ]),
+        ('Side Orders', [
+            ('Side Fried Rice', '', 255),
+            ('Side Steamed Rice', '', 255),
+            ('Side Vegetables', '', 505),
+            ('Side Soba Noodles', '', 505),
+            ('Side Chicken', '', 605),
+            ('Side Steak', '', 705),
+            ('Side Shrimp', '', 705),
+            ('Side French Fries', '', 405),
+            ('Side Sweet Carrots', '', 405),
+            ('Side Broccoli', '', 505),
+            ('Side Zucchini', '', 505),
+            ('Side Roti Bread', '', 155),
+            ('Fortune Cookie', '', 25),
         ]),
     ],
     # ===== Asia Cafe Xpress — Alcoa location, same D-code system as the
@@ -439,15 +653,26 @@ SEED_MENUS = {
 }
 
 
-MENU_DATA_VERSION = "real-v1"
+MENU_DATA_VERSION = "real-v2-asiacafe-complete"
 
 
 def migrate_real_menus():
-    """One-time: replace DRAFT seeded menus with the VERIFIED published menus
-    (Burger Boys' Toast page, Friends BBQ's Marble City listing, Stephen's menu).
-    Idempotent via a marker event. Founder edits made AFTER this run are preserved
-    because the migration only fires once."""
-    from .models import Event
+    """Replace DRAFT seeded menus with VERIFIED published menus. Idempotent via a
+    per-version marker event; founder edits are preserved because a given version
+    only ever fires once.
+
+    v1 (real-v1) seeded all pilot menus. v2 (real-v2-asiacafe-complete) is a
+    SURGICAL rebuild of ONLY Asia Cafe — the full 270+ item menu transcribed from
+    asiacafe.org — so it must NOT touch Burger Boys / Friends BBQ / Stephen's,
+    whose menus the founder may have hand-tuned since v1. The rebuild scope is
+    therefore keyed to the version, not a blanket wipe of every seed partner."""
+    from .models import Event, OptionGroup, OptionChoice
+    # which partners this version is allowed to rebuild
+    REBUILD_SCOPE = {
+        "real-v1": list(SEED_MENUS.keys()),
+        "real-v2-asiacafe-complete": ["asiacafe"],
+    }
+    scope = REBUILD_SCOPE.get(MENU_DATA_VERSION, list(SEED_MENUS.keys()))
     db: Session = SessionLocal()
     try:
         done = (db.query(Event)
@@ -455,11 +680,23 @@ def migrate_real_menus():
                         Event.entity_ref == MENU_DATA_VERSION).count() > 0)
         if done:
             return
-        for code in SEED_MENUS:
+        for code in scope:
+            # clear options belonging to this partner's items, then the items
+            item_ids = [i.id for i in db.query(MenuItem)
+                        .filter(MenuItem.partner_code == code).all()]
+            if item_ids:
+                grp_ids = [g.id for g in db.query(OptionGroup)
+                           .filter(OptionGroup.item_id.in_(item_ids)).all()]
+                if grp_ids:
+                    db.query(OptionChoice).filter(
+                        OptionChoice.group_id.in_(grp_ids)).delete(synchronize_session=False)
+                    db.query(OptionGroup).filter(
+                        OptionGroup.id.in_(grp_ids)).delete(synchronize_session=False)
             db.query(MenuItem).filter(MenuItem.partner_code == code).delete(
                 synchronize_session=False)
         db.commit()
-        for code, cats in SEED_MENUS.items():
+        for code in scope:
+            cats = SEED_MENUS.get(code, [])
             sort = 0
             for cat_name, items in cats:
                 for row in items:
@@ -469,8 +706,12 @@ def migrate_real_menus():
                                     description=desc, price_cents=cents, sort=sort)
                     db.add(item)
                     db.flush()
-                    if len(row) > 3 and row[3] == "PROTEIN":
+                    marker = row[3] if len(row) > 3 else ""
+                    if marker == "PROTEIN":
                         _attach_protein_options(db, item)
+                        _attach_spice_options(db, item)   # protein dishes are spice-customizable too
+                    elif marker == "SPICE":
+                        _attach_spice_options(db, item)
         db.add(Event(event_type="menu.migrated", entity_ref=MENU_DATA_VERSION,
                      tenant="gateway", actor="system",
                      payload='{"source":"published menus verified 2026-07"}'))
@@ -544,6 +785,22 @@ def migrate_split_burgerboys():
 
 
 
+def _attach_spice_options(db, item):
+    """Asia Cafe's menu marks many dishes customizable — Mongolian, curries,
+    hibachi and spicy rolls all take a heat level. Reviews specifically call out
+    'customizable spiciness levels'. Free choice, no upcharge; Medium default."""
+    from .models import OptionGroup, OptionChoice
+    g = OptionGroup(item_id=item.id, name="Spice level", min_select=1, max_select=1, sort=1)
+    db.add(g)
+    db.flush()
+    for i, (nm, default) in enumerate([
+        ("Mild", False), ("Medium", True), ("Hot", False),
+        ("Thai Hot 🔥", False), ("No spice", False),
+    ]):
+        db.add(OptionChoice(group_id=g.id, name=nm, price_delta_cents=0,
+                            is_default=default, sort=i))
+
+
 def _attach_protein_options(db, item):
     """Asia Cafe's own menu prices these entrees 'Chicken $13.05+, Steak $14.05+,
     Shrimp $15.05+' — the protein is a REQUIRED choice that changes the price,
@@ -585,8 +842,12 @@ def seed_menus():
                                         description=desc, price_cents=cents, sort=sort)
                         db.add(item)
                         db.flush()
-                        if len(row) > 3 and row[3] == "PROTEIN":
+                        marker = row[3] if len(row) > 3 else ""
+                        if marker == "PROTEIN":
                             _attach_protein_options(db, item)
+                            _attach_spice_options(db, item)
+                        elif marker == "SPICE":
+                            _attach_spice_options(db, item)
                         sort += 1
                 db.commit()
     finally:
