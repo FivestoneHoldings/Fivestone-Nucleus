@@ -120,6 +120,22 @@ async def kitchen_ready(token: str, record_id: str, request: Request):
     if recs[0]["fields"].get("partner_code", "") != p.code:
         raise HTTPException(403, "That order belongs to a different kitchen")
     order_id = recs[0]["fields"].get("order_id", record_id)
+    received_at = recs[0]["fields"].get("received_at", "")
+    # honest prep-time telemetry: how many minutes from order-received to
+    # kitchen-ready, captured at the moment it happens. This is what powers the
+    # 'usually ready in ~X min' badge on the storefront — never a guess.
+    prep_minutes = None
+    if received_at:
+        try:
+            from datetime import datetime, timezone
+            rt = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+            if rt.tzinfo is None:
+                rt = rt.replace(tzinfo=timezone.utc)
+            delta = (datetime.now(timezone.utc) - rt).total_seconds() / 60
+            if 0 < delta < 180:  # sanity bound — ignore stale/bad data
+                prep_minutes = round(delta)
+        except Exception:
+            prep_minutes = None
     db: Session = SessionLocal()
     try:
         last = (db.query(Event)
@@ -130,7 +146,8 @@ async def kitchen_ready(token: str, record_id: str, request: Request):
         if last is not None and last.event_type == "order.kitchen_ready":
             return {"ok": True, "idempotent": True, "order_id": order_id}
         db.add(Event(event_type="order.kitchen_ready", entity_ref=order_id,
-                     tenant="gateway", actor=f"kitchen:{p.code}", payload=json.dumps({})))
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"partner": p.code, "prep_minutes": prep_minutes})))
         db.commit()
     finally:
         db.close()

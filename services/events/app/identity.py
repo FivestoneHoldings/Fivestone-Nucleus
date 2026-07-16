@@ -46,10 +46,40 @@ def _check_key(key: str):
         raise HTTPException(403, "Bad board key")
 
 
+def _prep_minutes_by_partner() -> dict:
+    """Median of each partner's last 20 real kitchen-ready times. Median, not
+    mean, so one chaotic Friday-night ticket doesn't drag the badge around —
+    and only ever real telemetry, never a guess."""
+    import json as _j, statistics
+    from .models import Event
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Event)
+                .filter(Event.event_type == "order.kitchen_ready")
+                .order_by(Event.recorded_at.desc()).limit(600).all())
+    finally:
+        db.close()
+    by_partner: dict = {}
+    for e in rows:
+        try:
+            d = _j.loads(e.payload)
+        except Exception:
+            continue
+        code, mins = d.get("partner"), d.get("prep_minutes")
+        if not code or mins is None:
+            continue
+        by_partner.setdefault(code, [])
+        if len(by_partner[code]) < 20:
+            by_partner[code].append(mins)
+    return {code: round(statistics.median(vals)) for code, vals in by_partner.items()
+            if len(vals) >= 3}  # need a real sample before we'll claim a number
+
+
 @router.get("/v0/partners")
 def public_partner_directory():
     """Public: active/pilot partners that have a menu — the 'restaurant list'."""
     from .models import MenuItem
+    prep = _prep_minutes_by_partner()
     db: Session = SessionLocal()
     try:
         rows = (db.query(Partner)
@@ -77,6 +107,7 @@ def public_partner_directory():
                     "cover_url": p.cover_url,
                     "featured": p.featured,
                     "demo": p.demo,
+                    "prep_minutes": prep.get(p.code),
                 })
     finally:
         db.close()

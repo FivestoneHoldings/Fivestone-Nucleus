@@ -401,7 +401,7 @@ function paintFeatured(){
       <div class="fbody">
         <div class="fname">${esc(p.display_name)}</div>
         <div class="ftag">${esc(p.tagline || p.about_blurb || 'Browse the menu')}</div>
-        <div class="fmeta">${esc(p.cuisine||'Local')} · ${fee(p)}</div>
+        <div class="fmeta">${esc(p.cuisine||'Local')}${p.prep_minutes?` · ~${p.prep_minutes} min`:''} · ${fee(p)}</div>
       </div></a>`).join('') + '</div>';
 }
 
@@ -418,7 +418,8 @@ function paintList(){
   el.innerHTML = '<div class="rsec">' + head + '</div>' + list.map(p=>{
     const name = esc(p.display_name);
     const area = esc((p.address||'').split(',')[0]);
-    const meta = [area, fee(p)].filter(Boolean).join(' · ');
+    const prepBit = p.prep_minutes ? `~${p.prep_minutes} min` : '';
+    const meta = [area, prepBit, fee(p)].filter(Boolean).join(' · ');
     const usual = (COUNTS[p.code]||0) >= 2 ? '<span class="rbadge">YOUR USUAL</span>' : '';
     const demo = p.demo ? '<span class="demo">PREVIEW</span>' : '';
     if(p.accepting_orders === false){
