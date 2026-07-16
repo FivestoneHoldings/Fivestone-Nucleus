@@ -37,7 +37,7 @@ CHECKS = {
  ],
  "app/ui/kitchen.html": [
    "gateBtn", "DRIVER COMING", "AudioContext", "slidein", "editSpecial",
-   "markReady", "/guide/kitchen", "netDown", "skel", "esc(o.items)",
+   "markReady", "/guide/kitchen", "netDown", "skel", "fmtItems(o.items)",
    "pride", "in_kitchen_now", "pauseFifteen", "loadBanner", "showFeedback",
  ],
  "app/ui/board.html": [

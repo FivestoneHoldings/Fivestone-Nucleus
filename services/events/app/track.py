@@ -358,6 +358,12 @@ def _eta_window(fields: dict, status: str):
     REMAIN = {"received": 40, "confirmed": 32, "assigned": 22, "in_transit": 12}
     if status not in REMAIN:
         return None
+    # if the kitchen accepted with an explicit prep estimate, honor it: prep +
+    # a typical dispatch/drive tail once they're cooking to a promised time.
+    try:
+        kitchen_est = int(fields.get("prep_estimate_minutes") or 0)
+    except (TypeError, ValueError):
+        kitchen_est = 0
     # anchor = the freshest stamp we have, so the clock re-bases as it advances
     anchor_ts = ""
     for field in ("in_transit_at", "assigned_at", "confirmed_at", "received_at"):
@@ -372,7 +378,12 @@ def _eta_window(fields: dict, status: str):
                 base = base.replace(tzinfo=timezone.utc)
         except Exception:
             base = datetime.now(timezone.utc)
-    remain = REMAIN[status]
+    if kitchen_est and status in ("confirmed", "received"):
+        # kitchen promised N min of prep from confirmation; add a ~14 min
+        # dispatch+drive tail for the delivery leg
+        remain = kitchen_est + 14
+    else:
+        remain = REMAIN[status]
     lo = base + timedelta(minutes=remain - 5)
     hi = base + timedelta(minutes=remain + 5)
     now = datetime.now(timezone.utc)

@@ -109,6 +109,54 @@ async def kitchen_orders(token: str):
     }
 
 
+@router.post("/api/kitchen/{token}/orders/{record_id}/accept")
+async def kitchen_accept(token: str, record_id: str, request: Request):
+    """A real kitchen ACCEPTS an incoming ticket before working it — optionally
+    with a prep-time estimate ('this'll take 25 min') that flows straight to the
+    customer's ETA. Moves received -> confirmed."""
+    import re as _re
+    p = _partner_by_token(token)
+    safe_rec = _re.sub(r"[^A-Za-z0-9]", "", record_id)[:40]
+    recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{safe_rec}'", max_records=1)
+    if not recs:
+        raise HTTPException(404, "No such order")
+    if recs[0]["fields"].get("partner_code", "") != p.code:
+        raise HTTPException(403, "That order belongs to a different kitchen")
+    order_id = recs[0]["fields"].get("order_id", record_id)
+    status = recs[0]["fields"].get("status", "")
+    body = await request.json()
+    try:
+        est = int(body.get("prep_estimate_minutes") or 0)
+    except (TypeError, ValueError):
+        est = 0
+    est = max(0, min(120, est))  # sane bound
+    # only advance from 'received' — never walk a driver-assigned order backwards
+    if status == "received":
+        from datetime import datetime, timezone
+        fields = {"status": "confirmed", "confirmed_at": datetime.now(timezone.utc).isoformat()}
+        if est:
+            fields["prep_estimate_minutes"] = est
+        try:
+            await at.patch_record(at.ORDERS, recs[0]["id"], fields)
+        except Exception:
+            # if the prep_estimate column doesn't exist yet, still confirm
+            try:
+                await at.patch_record(at.ORDERS, recs[0]["id"],
+                                      {"status": "confirmed",
+                                       "confirmed_at": datetime.now(timezone.utc).isoformat()})
+            except Exception:
+                raise HTTPException(502, "Could not update the order")
+    db: Session = SessionLocal()
+    try:
+        db.add(Event(event_type="order.kitchen_accepted", entity_ref=order_id,
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"partner": p.code, "prep_estimate_minutes": est})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "order_id": order_id, "prep_estimate_minutes": est}
+
+
 @router.post("/api/kitchen/{token}/orders/{record_id}/ready")
 async def kitchen_ready(token: str, record_id: str, request: Request):
     import re as _re

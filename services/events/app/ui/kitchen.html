@@ -28,10 +28,15 @@ letter-spacing:.04em;padding:3px 9px;border-radius:20px;margin-bottom:8px}
 @media (prefers-reduced-motion:reduce){.agebadge.age-hot{animation:none}}
 .chip.in_transit{background:#fdf1e3;color:#a86a1f}.chip.assigned{background:#efe9fa;color:#6d4fa8}
 .items{font-size:1.08rem;font-weight:700;line-height:1.5;margin:10px 0}
+.iline{padding:3px 0;font-size:1.08rem;font-weight:700;line-height:1.35}
+.iqty{display:inline-block;min-width:1.9em;color:#16337a;font-family:'IBM Plex Mono',monospace;font-weight:800}
 .notes{font-size:.88rem;color:#8a6d3b;background:#fdf6e3;border-radius:8px;padding:8px 12px;margin-bottom:10px}
 .when{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--dim);margin-bottom:12px}
 button{width:100%;padding:16px;border-radius:12px;border:none;background:var(--green);color:#fff;
 font-weight:900;font-size:1rem;font-family:'Archivo';cursor:pointer}
+button.accept{background:linear-gradient(135deg,#2f6fe0,#16337a)}
+button.ghost-btn{background:transparent;color:#16337a;border:1.5px solid #cdd6ea;font-weight:700;
+font-size:.84rem;padding:11px;margin-top:8px}
 .done-label{color:var(--green);font-weight:900;text-align:center;font-size:1rem;padding:8px}
 .empty{text-align:center;color:var(--dim);padding:50px 12px}
 .paused{background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;
@@ -183,6 +188,24 @@ async function toggleGate(){
 }
 
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
+// Turn "2× Pad Thai ($9.00), 1× Spring Rolls ($4.00) — subtotal $13.00" into a
+// clean line-per-item list with the quantity bold — a line cook reads this at a
+// glance, not a run-on string. Special-request notes stay separate below.
+function fmtItems(raw){
+  if(!raw) return '—';
+  // drop the trailing subtotal the cook doesn't need on the line
+  let s = String(raw).split(' — subtotal')[0];
+  const parts = s.split(/,\s*(?=\d+\s*[×xX])/); // split on ", " before "N×"
+  const lines = parts.map(p => {
+    const m = p.match(/^\s*(\d+)\s*[×xX]\s*(.+?)(?:\s*\(\$[\d.]+\))?\s*$/);
+    if(m){
+      const qty = m[1], name = m[2].trim();
+      return `<div class="iline"><span class="iqty">${esc(qty)}×</span> ${esc(name)}</div>`;
+    }
+    return `<div class="iline">${esc(p.trim())}</div>`;
+  });
+  return lines.join('');
+}
 function beep(){
   try{
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -309,14 +332,17 @@ async function load(){
       <span class="chip ${o.status}">${KLABEL[o.status]||o.status.replace('_',' ')}</span>
       ${o.ready ? '' : ageBadge(o.received_at)}
       <div class="oid">${o.order_id}</div>
-      <div class="items">${esc(o.items)||'—'}</div>
+      <div class="items">${fmtItems(o.items)}</div>
       ${o.notes?`<div class="notes">📝 ${esc(o.notes)}</div>`:''}
       <div class="when">${fmtWhen(o)}</div>
       ${o.ready
         ? `<div class="done-label">✓ READY — driver notified</div>
            <button class="undo" id="undo-${o.id}" onclick="undoReady('${o.id}')"
              style="display:none">↩ Undo — not ready yet</button>`
-        : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`}
+        : (o.status === 'received'
+            ? `<button class="accept" onclick="acceptOrder('${o.id}')">✓ Accept order</button>
+               <button class="ghost-btn" onclick="acceptWithTime('${o.id}')">Accept + set prep time…</button>`
+            : `<button onclick="markReady('${o.id}')">READY FOR PICKUP ✓</button>`)}
     </div>`).join('') :
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;font-size:1rem">Kitchen's quiet</div><div style="font-size:.82rem;margin-top:4px">No open orders. New tickets ring in here automatically. 🔔</div></div>`;
 }
@@ -337,6 +363,25 @@ function ageBadge(receivedAt){
 const UNDO_WINDOW_MS = 120000;
 const READY_AT = {};   // id -> ms, this session only
 
+async function acceptOrder(id, estimate){
+  const body = estimate ? {prep_estimate_minutes: estimate} : {};
+  const r = await fetch(api(`/orders/${id}/accept`), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if(r.ok){
+    await load();
+    gwToast(estimate ? `Accepted — ~${estimate} min told to the customer ✓` : 'Order accepted ✓', true);
+  } else {
+    gwToast("That didn't go through. Try again.", false);
+  }
+}
+async function acceptWithTime(id){
+  const v = await gwPrompt({title:'How long will this take?',
+    placeholder:'e.g. 20', inputmode:'numeric', confirm:'Accept order',
+    body:"We'll show the customer this estimate on their tracking screen. Minutes only."});
+  if(v === null) return;
+  const mins = Math.max(0, Math.min(120, parseInt(String(v).replace(/[^0-9]/g,'')) || 0));
+  acceptOrder(id, mins || undefined);
+}
 async function markReady(id){
   const r = await fetch(api(`/orders/${id}/ready`), {method:'POST',
     headers:{'Content-Type':'application/json'}, body:'{}'});
