@@ -58,3 +58,9 @@ def test_driver_hub_shows_profile_completeness_badge():
     assert 'id="profBadge"' in d
     assert "function profComplete" in d
     assert "paintProfBadge" in d
+
+
+def test_kitchen_86_panel_has_search_for_long_menus():
+    k = _f("kitchen.html")
+    assert 'id="m86Search"' in k
+    assert "paint86()" in k

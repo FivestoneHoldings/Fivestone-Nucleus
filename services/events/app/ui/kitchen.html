@@ -222,7 +222,15 @@ function paint86(){
   const el = document.getElementById('menu86Panel');
   const cats = (MENU86_CACHE && MENU86_CACHE.categories) || [];
   if(!cats.length){ el.innerHTML = '<div class="card">No menu items yet.</div>'; return; }
-  el.innerHTML = '<div class="card">' + cats.map(c => `
+  const q = (document.getElementById('m86Search')?.value || '').trim().toLowerCase();
+  const filtCats = q
+    ? cats.map(c => ({...c, items: c.items.filter(i => i.name.toLowerCase().includes(q))}))
+          .filter(c => c.items.length)
+    : cats;
+  const search = `<input id="m86Search" type="text" placeholder="Find an item to 86…"
+    oninput="paint86()" value="${(document.getElementById('m86Search')?.value||'').replace(/"/g,'&quot;')}"
+    style="width:100%;padding:10px 13px;margin-bottom:10px;border-radius:10px;border:1.5px solid #dfe4ee;font-family:inherit;font-size:.85rem">`;
+  const body = filtCats.length ? filtCats.map(c => `
     <div style="font-weight:800;font-size:.82rem;margin:10px 0 6px;color:#8b93a7;
       font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em">${esc(c.name)}</div>
     ${c.items.map(i => `
@@ -233,7 +241,9 @@ function paint86(){
           background:${i.available?'transparent':'#d81f2a'};color:${i.available?'#f0a04b':'#fff'};
           border:1.5px solid ${i.available?'#f0a04b':'#d81f2a'};box-shadow:none">
           ${i.available ? '86 this' : "We're back"}</button>
-      </div>`).join('')}`).join('') + '</div>';
+      </div>`).join('')}`).join('')
+    : `<div style="padding:16px 0;color:#8b93a7;font-size:.85rem">Nothing matches "${esc(q)}".</div>`;
+  el.innerHTML = '<div class="card">' + search + body + '</div>';
 }
 async function toggle86(id, wasAvailable){
   const r = await fetch(api(`/menu-items/${id}/86`), {method:'POST',

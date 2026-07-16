@@ -37,3 +37,11 @@ def test_track_page_renders_eta_and_localizes():
                           "app", "track.py")).read()
     assert 'class="eta"' in t
     assert "paintEta" in t  # browser localizes the ISO to the viewer tz
+
+
+def test_track_page_has_share_button():
+    t = open(os.path.join(os.path.dirname(__file__), "..",
+                          "app", "track.py")).read()
+    assert "shareTrack" in t
+    assert "navigator.share" in t
+    assert "navigator.clipboard.writeText" in t  # fallback for browsers w/o Web Share

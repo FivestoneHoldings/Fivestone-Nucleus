@@ -63,6 +63,8 @@ text-transform:uppercase;letter-spacing:.14em}
 .items{box-shadow:0 3px 16px rgba(20,30,60,.06);border-radius:14px !important;border:1px solid #e4e8f2 !important}
 .mark{font-weight:800;font-size:1.15rem}.mark span{color:#16337a}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
+.sharebtn{margin-left:9px;background:#eef2fc;color:#16337a;border:none;border-radius:20px;
+padding:4px 11px;font-size:.68rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.01em}
 .status{font-size:1.5rem;font-weight:800;margin-bottom:4px}
 .prog{display:flex;gap:5px;margin:10px 0 4px}
 .eta{background:linear-gradient(135deg,#0e1526,#16337a);color:#fff;border-radius:15px;
@@ -213,6 +215,20 @@ async function pollHeadsUp(){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 pollHeadsUp(); setInterval(pollHeadsUp, 15000);
+// let someone share the live tracking link with whoever's expecting the order
+async function shareTrack(){
+  const url = location.href;
+  const title = 'Track my GateWay order';
+  try{
+    if(navigator.share){ await navigator.share({title, url}); return; }
+  }catch(e){ return; } // user cancelled the native sheet — not an error
+  try{
+    await navigator.clipboard.writeText(url);
+    if(window.gwToast) gwToast('Tracking link copied \u2713');
+  }catch(e){
+    if(window.gwToast) gwToast('Could not copy — long-press the address bar instead', false);
+  }
+}
 // localize the ETA window to the viewer's timezone from the server ISO, and
 // keep a soft "in ~N min" hint fresh.
 function paintEta(){
@@ -544,7 +560,9 @@ async def track(order_id: str):
             f'<div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay"><span class="surf">Tracking</span></div>'
             f'<button class="gw-back" onclick="gwBack()">&lsaquo; Back to GateWay</button>'
             f'<div class="mark" style="display:none">GateWay <span>Delivery</span></div>'
-            f'<div class="oid">{_esc(oid)}</div>'
+            f'<div class="oid">{_esc(oid)} '
+            f'<button class="sharebtn" onclick="shareTrack()" aria-label="Share tracking link" '
+            f'title="Share tracking link">&#8599; Share</button></div>'
             f'{celebrate_html}'
             f'<div class="status" style="text-align:{"center" if celebrate_html else "left"}">{HEADLINES.get(status, _esc(status))}</div>'
             f'{prog_html}'
