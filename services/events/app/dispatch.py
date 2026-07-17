@@ -213,6 +213,7 @@ async def driver_orders(day_token: str):
     done_recs = [r for r in combined
                  if r["fields"].get("status") in ("delivered", "closed")]
     my_done = [r for r in done_recs if drv["id"] in (r["fields"].get("driver") or [])]
+    my_done.sort(key=lambda r: r["fields"].get("delivered_at") or "", reverse=True)
     done_today = len(my_done)
     tips_today = sum(int(r["fields"].get("tip_cents") or 0) for r in my_done)
     return {
@@ -220,6 +221,15 @@ async def driver_orders(day_token: str):
         "shift": drv["fields"].get("status", "") == "on_shift",
         "done_today": done_today,
         "tips_today_cents": tips_today,
+        # v1.9: the hub's My-day history — each completed run, newest first,
+        # so a driver can review their day instead of staring at a bare count.
+        "done_list": [{
+            "order_id": r["fields"].get("order_id", ""),
+            "dropoff": r["fields"].get("dropoff_address", ""),
+            "delivered_at": r["fields"].get("delivered_at", ""),
+            "tip_cents": int(r["fields"].get("tip_cents") or 0),
+            "total_cents": int(r["fields"].get("total_cents") or 0),
+        } for r in my_done[:30]],
         "orders": [{
             "id": r["id"],
             "order_id": r["fields"].get("order_id", ""),

@@ -102,6 +102,8 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="who" id="who">…</div>
 </div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
+<button onclick="toggleMyDay()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">📜 My day — completed runs</button>
+<div id="myDayPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleProfile()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">⭐ My profile — what customers see <span id="profBadge"></span></button>
 <div id="profilePanel" style="display:none;margin-bottom:14px"></div>
 <div id="earnPanel" style="display:none;margin-bottom:14px"></div>
@@ -124,6 +126,8 @@ async function load(){
     return;
   }
   const d = await r.json();
+  window._DAY = d;   // cached for the My-day panel
+  if(document.getElementById('myDayPanel').style.display !== 'none') paintMyDay();
   document.getElementById('who').textContent = d.driver;
   const n = (d.orders||[]).length;
   if(typeof LASTN === 'number' && n > LASTN){
@@ -169,6 +173,42 @@ async function load(){
 }
 const DRIVER_AVATARS = ['😎','🚗','🧢','🕶️','🤠','🥳','😊','🙂','👩','👨','🧔','🦊','🐻','🦁','🌟','🔥','💙','🧡','🛵'];
 let PROFILE = null;
+function toggleMyDay(){
+  const el = document.getElementById('myDayPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; paintMyDay();
+}
+function paintMyDay(){
+  const el = document.getElementById('myDayPanel');
+  const d = window._DAY || {};
+  const list = d.done_list || [];
+  const money = c => '$' + (Math.max(0,c||0)/100).toFixed(2);
+  const t = iso => { try{ return new Date(iso).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };
+  if(!list.length){
+    el.innerHTML = `<div class="card" style="text-align:center;padding:26px 16px">
+      <div style="font-size:1.6rem;margin-bottom:8px">🌅</div>
+      <div style="font-weight:800">Nothing completed yet today</div>
+      <div style="font-size:.8rem;color:#8a8e95;margin-top:4px">Every run you finish shows up here — your day, at a glance.</div></div>`;
+    return;
+  }
+  const tips = list.reduce((a,x)=>a+(x.tip_cents||0),0);
+  el.innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-around;text-align:center;padding-bottom:12px;border-bottom:1px solid #eef0f5;margin-bottom:10px">
+      <div><b style="font-size:1.3rem;color:#16337a">${list.length}</b><div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#8a8e95;font-weight:700">Runs</div></div>
+      <div><b style="font-size:1.3rem;color:#1a7f4b">${money(tips)}</b><div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#8a8e95;font-weight:700">Tips today</div></div>
+    </div>
+    ${list.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f2f4f8">
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((x.dropoff||'').split(',')[0] || x.order_id)}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#9199a8">${esc(x.order_id)}${x.delivered_at?` · ${t(x.delivered_at)}`:''}</div>
+      </div>
+      <div style="flex:0 0 auto;text-align:right">
+        <div style="font-weight:800;font-size:.85rem;color:#1a7f4b">+${money(x.tip_cents)}</div>
+        <div style="font-size:.62rem;color:#9199a8">tip</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
 async function toggleProfile(){
   const el = document.getElementById('profilePanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }

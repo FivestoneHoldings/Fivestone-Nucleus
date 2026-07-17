@@ -109,6 +109,45 @@ async def kitchen_orders(token: str):
     }
 
 
+@router.get("/api/kitchen/{token}/history")
+async def kitchen_history(token: str):
+    """The kitchen's day in review: every ticket that's left the building today
+    (out for delivery / delivered), newest first, plus today's top sellers
+    parsed from real tickets — the depth a serious operation reviews at close."""
+    p = _partner_by_token(token)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=(f"AND({{partner_code}}='{p.code}',"
+                 f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
+                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}'),"
+                 f"OR({{status}}='in_transit',{{status}}='delivered',{{status}}='closed'))"),
+        max_records=100)
+    records.sort(key=lambda r: (r["fields"].get("delivered_at")
+                                or r["fields"].get("in_transit_at") or ""), reverse=True)
+    # top sellers: parse "2× Pad Thai ($9.00), 1× Rolls (...)" quantity lines
+    import re as _re
+    counts: dict = {}
+    for r in records:
+        raw = (r["fields"].get("items_description") or "").split(" — subtotal")[0]
+        for part in _re.split(r",\s*(?=\d+\s*[×xX])", raw):
+            m = _re.match(r"^\s*(\d+)\s*[×xX]\s*(.+?)(?:\s*\(\$[\d.]+\))?\s*$", part)
+            if m:
+                name = m.group(2).strip()[:60]
+                counts[name] = counts.get(name, 0) + int(m.group(1))
+    top = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:5]
+    return {
+        "tickets": [{
+            "order_id": r["fields"].get("order_id", ""),
+            "status": r["fields"].get("status", ""),
+            "items": r["fields"].get("items_description", ""),
+            "subtotal_cents": int(r["fields"].get("subtotal_cents") or 0),
+            "delivered_at": r["fields"].get("delivered_at", ""),
+        } for r in records[:40]],
+        "top_sellers": [{"name": n, "qty": q} for n, q in top],
+    }
+
+
 @router.post("/api/kitchen/{token}/orders/{record_id}/accept")
 async def kitchen_accept(token: str, record_id: str, request: Request):
     """A real kitchen ACCEPTS an incoming ticket before working it — optionally

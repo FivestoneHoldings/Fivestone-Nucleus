@@ -128,6 +128,20 @@ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hi
 .pfrom{font-size:.68rem;color:var(--dim);margin-top:4px}
 .pprice{font-weight:900;font-size:.86rem;margin-top:5px;color:#16337a}
 .frail{display:flex;gap:12px;overflow-x:auto;margin:0 -22px 4px;padding:2px 22px 8px;scrollbar-width:none}
+.hlrail{display:flex;gap:11px;overflow-x:auto;margin:0 -22px 14px;padding:2px 22px 8px;
+scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hlrail::-webkit-scrollbar{display:none}
+.hlcard{flex:0 0 auto;width:238px;display:flex;gap:11px;align-items:flex-start;
+background:#fff;border:1.5px solid #e2e7f1;border-left:4px solid var(--tint,#16337a);
+border-radius:15px;padding:12px 13px;box-shadow:0 3px 14px rgba(20,30,60,.06)}
+.hlcard img{width:36px;height:36px;border-radius:10px;object-fit:contain;background:#fff;
+border:1px solid #eef0f5;flex:0 0 auto}
+.hlemoji{width:36px;height:36px;border-radius:10px;background:#eef2fc;display:flex;
+align-items:center;justify-content:center;font-size:1.2rem;flex:0 0 auto}
+.hlbody{min-width:0}
+.hlbody b{display:block;font-size:.82rem;font-weight:800;line-height:1.2;margin-bottom:2px}
+.hlbody p{font-size:.76rem;color:#5a5e64;line-height:1.4;display:-webkit-box;
+-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .frail::-webkit-scrollbar{display:none}
 .ftile{flex:0 0 78%;max-width:290px;background:#fff;border:1px solid var(--line);border-radius:18px;
 overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 4px 16px rgba(20,30,60,.08)}
@@ -249,6 +263,7 @@ gwSplash({name:'GateWay Delivery',
 <div id="browseWrap">
 <div id="chips" class="chips"></div>
 <div id="featured"></div>
+<div id="highlights"></div>
 
 <a class="courier" href="/courier">
   <div class="crhead">
@@ -514,6 +529,31 @@ function paintFeaturedProducts(items){
   }).join('') + '</div>';
 }
 fetch('/v0/featured-items').then(r=>r.json()).then(d=>paintFeaturedProducts(d.items)).catch(()=>{});
+
+// "Happening now" — real news only (specials kitchens posted, new partners,
+// fund milestones). The section simply doesn't render when there's no news.
+fetch('/v0/highlights').then(r=>r.json()).then(d=>{
+  const hl = (d && d.highlights) || [];
+  if(!hl.length) return;
+  const KIND_ICON = {special:'🍽️', new_partner:'🎉', fund:'🤝'};
+  const el = document.getElementById('highlights');
+  el.innerHTML = '<div class="rsec">📣 Happening now</div><div class="hlrail">' +
+    hl.map(h=>{
+      const tint = /^#[0-9a-fA-F]{6}$/.test(h.brand_color||'') ? h.brand_color : '#16337a';
+      const face = h.logo_url
+        ? `<img src="${esc(h.logo_url)}" alt="" loading="lazy">`
+        : `<span class="hlemoji">${KIND_ICON[h.kind]||'📣'}</span>`;
+      const inner = `<div class="hlcard" style="--tint:${tint}">
+          ${face}
+          <div class="hlbody">
+            <b>${esc(h.partner_name)}</b>
+            <p>${esc(h.text)}</p>
+          </div></div>`;
+      return h.partner
+        ? `<a href="/order?partner=${encodeURIComponent(h.partner)}" style="text-decoration:none;color:inherit">${inner}</a>`
+        : `<a href="/neighbor-fund" style="text-decoration:none;color:inherit">${inner}</a>`;
+    }).join('') + '</div>';
+}).catch(()=>{});
 
 fetch('/v0/partners').then(r=>r.json()).then(d=>{
   ALL = d.partners || [];

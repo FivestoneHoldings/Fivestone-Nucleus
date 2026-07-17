@@ -24,6 +24,61 @@ def _new_portal_token() -> str:
     return "kt-" + secrets.token_hex(5)
 
 
+@router.get("/v0/highlights")
+def highlights():
+    """The storefront's news rail — real happenings, never filler:
+      * today's specials each kitchen actually posted from their own screen
+      * kitchens new to GateWay in the last 21 days ('Just joined')
+      * a Neighbor Fund milestone when there's a fresh one
+    Empty sections simply don't appear; we never invent news."""
+    from datetime import datetime, timezone, timedelta
+    from .models import Event
+    import json as _j
+    out = []
+    db: Session = SessionLocal()
+    try:
+        partners = (db.query(Partner)
+                    .filter(Partner.status.in_(["active", "pilot"])).all())
+        for p in partners:
+            sp = _todays_special(p)
+            if sp:
+                out.append({"kind": "special", "partner": p.code,
+                            "partner_name": p.display_name,
+                            "logo_url": p.logo_url, "brand_color": p.brand_color,
+                            "text": sp})
+        cutoff = datetime.now(timezone.utc) - timedelta(days=21)
+        for p in partners:
+            if p.demo:
+                continue
+            created = getattr(p, "created_at", None)
+            if created is not None:
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                if created >= cutoff:
+                    out.append({"kind": "new_partner", "partner": p.code,
+                                "partner_name": p.display_name,
+                                "logo_url": p.logo_url,
+                                "brand_color": p.brand_color,
+                                "text": f"{p.display_name} just joined GateWay"})
+        # Neighbor Fund milestone: every 5th covered delivery is worth a cheer
+        rows = (db.query(Event)
+                .filter(Event.event_type == "order.rounded_up").all())
+        total = 0
+        for e in rows:
+            try:
+                total += int(_j.loads(e.payload).get("cents", 0))
+            except Exception:
+                pass
+        covered = total // 599
+        if covered and covered % 5 == 0:
+            out.append({"kind": "fund", "partner": "", "partner_name": "The Neighbor Fund",
+                        "logo_url": "", "brand_color": "#16337a",
+                        "text": f"Neighbors have now covered {covered} deliveries for each other 🤝"})
+    finally:
+        db.close()
+    return {"highlights": out[:8]}
+
+
 def seed_partners():
     db: Session = SessionLocal()
     try:
