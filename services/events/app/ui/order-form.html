@@ -810,6 +810,7 @@ try{
     try{
       const lines = Object.entries(CART).map(([id,e])=>({id, name:e.name, cents:e.cents, qty:e.qty}));
       if(lines.length) localStorage.setItem('gw_cart_' + p, JSON.stringify(lines));
+      localStorage.removeItem('gw_draft_' + p);   // order placed — draft is done
     }catch(e){}
   });
 }catch(e){}
@@ -986,23 +987,35 @@ function scrollTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function maybeReorder(){
   try{
     const params = new URLSearchParams(location.search);
-    if(!params.get('reorder') || !p) return;
-    const stashed = JSON.parse(localStorage.getItem('gw_cart_' + p) || '[]');
-    if(!stashed.length) return;
-    // only re-add items that still exist & are available on the live menu
-    const live = {};
-    (window._MENU.categories||[]).forEach(c=>c.items.forEach(i=>{ live[i.id] = i; }));
-    let added = 0;
-    stashed.forEach(line=>{
-      if(live[line.id]){
-        CART[line.id] = {name: live[line.id].name, cents: live[line.id].price_cents, qty: line.qty};
-        const q = document.getElementById('q-'+line.id); if(q) q.textContent = line.qty;
-        added += line.qty;
+    if(params.get('reorder') && p){
+      const stashed = JSON.parse(localStorage.getItem('gw_cart_' + p) || '[]');
+      if(stashed.length){ restoreLines(stashed, 'Your usual is in the cart'); return; }
+    }
+    // No explicit reorder — restore an in-progress DRAFT if one's fresh (<6h),
+    // so an accidental back-tap didn't cost the customer their cart.
+    if(p){
+      const draft = JSON.parse(localStorage.getItem('gw_draft_' + p) || 'null');
+      if(draft && draft.lines && draft.lines.length && (Date.now() - (draft.at||0) < 6*3600*1000)){
+        restoreLines(draft.lines, 'Picked up where you left off');
       }
-    });
-    if(added){ compose(); if(window.gwToast) gwToast(`Your usual is in the cart — ${added} item${added>1?'s':''} ✓`);
-      window.scrollTo({top: document.getElementById('menuZone').offsetTop - 80, behavior:'smooth'}); }
+    }
   }catch(e){}
+}
+function restoreLines(lines, msg){
+  const live = {};
+  (window._MENU.categories||[]).forEach(c=>c.items.forEach(i=>{ live[i.id] = i; }));
+  let added = 0;
+  lines.forEach(line=>{
+    if(live[line.id]){
+      CART[line.id] = {name: live[line.id].name, cents: live[line.id].price_cents,
+                       qty: line.qty, itemId: line.itemId||line.id, choiceIds: line.choiceIds||[]};
+      const q = document.getElementById('q-'+line.id); if(q) q.textContent = line.qty;
+      added += line.qty;
+    }
+  });
+  if(added){ compose(); if(window.gwToast) gwToast(`${msg} — ${added} item${added>1?'s':''} ✓`);
+    const mz = document.getElementById('menuZone');
+    if(mz) window.scrollTo({top: mz.offsetTop - 80, behavior:'smooth'}); }
 }
 /* ===== OPTIONS SHEET (v1.4) ===== */
 let OPT_STATE = null;   // { item, chosen: {groupId: Set(choiceId)}, qty }
@@ -1135,6 +1148,22 @@ function bump(id, d){
 }
 function compose(){
   const entries = Object.values(CART);
+  // Live draft persistence: an in-progress cart survives an accidental back-tap
+  // or refresh. Keyed per partner; cleared on submit. Losing a half-built cart
+  // is a silent conversion killer for a real business.
+  try{
+    const pcode = new URLSearchParams(location.search).get('partner');
+    if(pcode){
+      if(entries.length){
+        localStorage.setItem('gw_draft_' + pcode, JSON.stringify({
+          at: Date.now(),
+          lines: Object.entries(CART).map(([id,e])=>({id, name:e.name, cents:e.cents, qty:e.qty, itemId:e.itemId, choiceIds:e.choiceIds||[]}))
+        }));
+      } else {
+        localStorage.removeItem('gw_draft_' + pcode);
+      }
+    }
+  }catch(e){}
   const itemsField = document.querySelector('[name="items_description"]');
   const bar = document.getElementById('cartbar');
   const sub = entries.reduce((s,e)=>s+e.cents*e.qty,0);
