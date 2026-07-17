@@ -18,8 +18,16 @@
   window.gwSplash = function (opts) {
     opts = opts || {};
     const once = opts.once !== false;
-    try { if (once && sessionStorage.getItem(KEY)) return; } catch (e) {}
-    try { if (once) sessionStorage.setItem(KEY, '1'); } catch (e) {}
+    /* v1.9: time-gated, not forever-per-session. A founder demoing the app or a
+       customer returning at dinner should get the entrance again; someone
+       bouncing between pages shouldn't. 30-minute window. */
+    try {
+      if (once) {
+        const last = parseInt(sessionStorage.getItem(KEY) || '0');
+        if (Date.now() - last < 30 * 60 * 1000) return;
+        sessionStorage.setItem(KEY, String(Date.now()));
+      }
+    } catch (e) {}
 
     const name = opts.name || 'GateWay';
     const sub = opts.sub || 'Local kitchens, delivered by your neighbors';

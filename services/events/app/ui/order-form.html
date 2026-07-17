@@ -171,7 +171,11 @@ border-radius:20px;padding:8px 13px;font-weight:500}
 
 
 /* v0.49 viewport guard — nothing may exceed the phone's width */
-html,body{max-width:100%;overflow-x:hidden}
+/* overflow-x:hidden on html+body is a documented Safari scroll-breaker
+   (body becomes the scroll container; wheel/trackpad can dead-lock).
+   clip clips horizontal overflow WITHOUT creating a scroll container. */
+html,body{max-width:100%;overflow-x:clip}
+@supports not (overflow: clip){html,body{overflow-x:hidden}}
 img,svg,video{max-width:100%;height:auto}
 *{min-width:0}
 .gw-bar{box-sizing:border-box;max-width:100vw}
@@ -590,8 +594,16 @@ function paintReview(){
    re-enter the building. --- */
 function paintSplash(d){
   if(!d || !HAS_MENU) return;
+  /* Gate: show the branded entrance unless you walked through this door in the
+     last 10 minutes. Session-forever gating meant a founder demoing the app —
+     or a customer coming back at dinner after browsing at lunch — never saw the
+     storefront entrance again. Bouncing back from checkout is still quiet. */
   const seen = 'gw_door_' + (d.code || 'x');
-  try{ if(sessionStorage.getItem(seen)) return; sessionStorage.setItem(seen, '1'); }catch(e){}
+  try{
+    const last = parseInt(sessionStorage.getItem(seen) || '0');
+    if(Date.now() - last < 10*60*1000) return;
+    sessionStorage.setItem(seen, String(Date.now()));
+  }catch(e){}
   const theme = document.querySelector('meta[name="theme-color"]');
   if(theme && d.brand_color) theme.setAttribute('content', d.brand_color);
   applyBrand(d.brand_color);

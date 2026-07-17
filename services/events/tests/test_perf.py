@@ -48,10 +48,14 @@ def test_driver_sheet_budget_cold_2_warm_1():
     d = client.get("/api/driver/tokPF/orders").json()
     assert d["done_today"] == 1 and d["tips_today_cents"] == 200
     assert len(d["orders"]) == 1  # active only
-    assert CALLS["n"] == 2  # token lookup + ONE combined orders query
+    assert CALLS["n"] == 3  # token + active + delivered-today (split v1.9.4:
+    # the combined query capped at 100 records total, so delivered rows could
+    # crowd a driver's LIVE order out of the window — it silently vanished
+    # from their hub. The split runs concurrently (same wall-clock), and
+    # active orders can never be truncated out by history. Correctness > 1 call.
     CALLS["n"] = 0
     client.get("/api/driver/tokPF/orders")
-    assert CALLS["n"] == 1  # driver cached — combined query only
+    assert CALLS["n"] == 2  # driver cached — active + delivered (split, concurrent)
 
 
 def test_board_snapshot_budget_cold_3_warm_2():
@@ -63,7 +67,7 @@ def test_board_snapshot_budget_cold_3_warm_2():
     assert CALLS["n"] == 3  # open + today + drivers
     CALLS["n"] = 0
     client.get(f"{K}/snapshot")
-    assert CALLS["n"] == 2  # drivers cached
+    assert CALLS["n"] == 2  # drivers cached — open + today only
 
 
 def test_track_location_budget_warm_1():
@@ -79,4 +83,4 @@ def test_cache_busts_on_shift_mutation():
     client.post("/api/driver/tokPF/shift", json={"on": True})  # mutation busts
     CALLS["n"] = 0
     client.get("/api/driver/tokPF/orders")
-    assert CALLS["n"] == 2  # cold again — fresh truth after mutation
+    assert CALLS["n"] == 3  # cold again — fresh truth after mutation (split budget)

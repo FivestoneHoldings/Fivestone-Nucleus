@@ -169,14 +169,25 @@ async def driver_orders(day_token: str):
     drv = await _driver_by_token(day_token)
     pay_by_order: dict = {}
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    combined = await at.list_records(
-        at.ORDERS,
-        formula=(f"OR({{status}}='assigned',{{status}}='in_transit',"
-                 f"AND(OR({{status}}='delivered',{{status}}='closed'),"
-                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}'))"),
-        max_records=100,
+    # Split queries: active (assigned/in_transit) and delivered-today run
+    # separately AND concurrently. The old combined query capped at 100 records
+    # total — on a busy day, delivered rows could crowd active assignments out
+    # of the window and a driver's live order would silently vanish from their
+    # hub. Now active orders have their own full window and can never be
+    # truncated out by history.
+    import asyncio as _aio
+    records, done_today = await _aio.gather(
+        at.list_records(
+            at.ORDERS,
+            formula="OR({status}='assigned',{status}='in_transit')",
+            max_records=100),
+        at.list_records(
+            at.ORDERS,
+            formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
+                     f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}')"),
+            max_records=100),
     )
-    records = [r for r in combined if r["fields"].get("status") in ("assigned", "in_transit")]
+    combined = list(records) + list(done_today)
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     mine.sort(key=lambda r: (r["fields"].get("requested_for")
                              or r["fields"].get("received_at") or "9999"))

@@ -14,7 +14,11 @@
 <style>
 :root{--ink:#16181b;--paper:#f7f8fb;--blue:#16337a;--red:#d81f2a;--line:#d9deea;--dim:#5a5e64}
 *{box-sizing:border-box;margin:0;min-width:0;-webkit-tap-highlight-color:transparent}
-html,body{max-width:100%;overflow-x:hidden}
+/* overflow-x:hidden on html+body is a documented Safari scroll-breaker
+   (body becomes the scroll container; wheel/trackpad can dead-lock).
+   clip clips horizontal overflow WITHOUT creating a scroll container. */
+html,body{max-width:100%;overflow-x:clip}
+@supports not (overflow: clip){html,body{overflow-x:hidden}}
 html{-webkit-text-size-adjust:100%}
 body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
 max-width:560px;margin:0 auto;padding:88px 22px 170px;min-height:100vh;

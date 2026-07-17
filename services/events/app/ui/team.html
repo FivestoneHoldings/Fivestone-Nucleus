@@ -8,7 +8,11 @@
 <style>
 :root{--ink:#16181b;--paper:#f7f8fb;--green:#16337a;--line:#d9deea;--dim:#5a5e64}
 *{box-sizing:border-box;margin:0;min-width:0}
-html,body{max-width:100%;overflow-x:hidden}
+/* overflow-x:hidden on html+body is a documented Safari scroll-breaker
+   (body becomes the scroll container; wheel/trackpad can dead-lock).
+   clip clips horizontal overflow WITHOUT creating a scroll container. */
+html,body{max-width:100%;overflow-x:clip}
+@supports not (overflow: clip){html,body{overflow-x:hidden}}
 body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
 max-width:460px;margin:0 auto;padding:96px 22px 60px;min-height:100vh;-webkit-font-smoothing:antialiased}
 .gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28)}

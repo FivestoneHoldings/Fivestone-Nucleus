@@ -79,7 +79,11 @@ select,input{border-radius:11px}
 .chip{letter-spacing:.05em}
 
 /* v0.49 viewport guard — nothing may exceed the phone's width */
-html,body{max-width:100%;overflow-x:hidden}
+/* overflow-x:hidden on html+body is a documented Safari scroll-breaker
+   (body becomes the scroll container; wheel/trackpad can dead-lock).
+   clip clips horizontal overflow WITHOUT creating a scroll container. */
+html,body{max-width:100%;overflow-x:clip}
+@supports not (overflow: clip){html,body{overflow-x:hidden}}
 img,svg,video{max-width:100%;height:auto}
 *{min-width:0}
 .gw-bar{box-sizing:border-box;max-width:100vw}
@@ -742,10 +746,13 @@ function renderOrders(){
   if(!list.length){ document.getElementById('orders').innerHTML =
     `<div class="empty" style="padding:56px 20px"><div class="gw-dash" style="justify-content:center;margin-bottom:16px"><i></i><i></i><i></i></div><div style="font-weight:800;color:#c9cdd3;font-size:1rem">${q?'No matches':'All clear'}</div><div style="font-size:.82rem;margin-top:4px">${q?`Nothing matches "${esc(q)}" in this filter.`:'No open orders right now. New orders land here the moment they come in.'}</div></div>`; }
   else document.getElementById('orders').innerHTML = list.map(o => `
-    <div class="card" style="${URGENCY[o.status]?`border-left:4px solid ${URGENCY[o.status]}`:''}">
+    <div class="card ticket" role="button" tabindex="0" title="Open ticket"
+      onclick="jumpTo('${esc(o.order_id)}')"
+      onkeydown="if(event.key==='Enter')jumpTo('${esc(o.order_id)}')"
+      style="cursor:pointer;${URGENCY[o.status]?`border-left:4px solid ${URGENCY[o.status]}`:''}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
       ${ageChip(o)}
-      <div class="oid">${o.order_id}${o.partner?` <span style="color:#6fa0ff">· ${esc(o.partner)}</span>`:''}</div>
+      <div class="oid">${o.order_id}${o.partner?` <span style="color:#6fa0ff">· ${esc(o.partner)}</span>`:''} <span style="color:#4d5a78;font-size:.68rem;font-weight:700">· tap to open ›</span></div>
       ${o.customer?`<div class="line"><b>From</b>${esc(o.customer)}</div>`:''}
       <div class="line"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
       <div class="line"><b>Drop</b>${esc(o.dropoff)||'—'}</div>
@@ -753,7 +760,7 @@ function renderOrders(){
       ${o.requested_for?`<div class="line"><b>Scheduled</b><span style="color:#f0a04b;font-weight:700">${esc(o.requested_for).replace('T',' ').slice(0,16)}</span></div>`:''}
       ${o.kitchen_ready?`<div class="line" style="color:#6fa0ff;font-weight:800">🍳 Kitchen: READY</div>`:''}
       ${o.status==='delivered'?`<div class="line"><b>Proof</b><a href="/proof/${o.order_id}" target="_blank" style="color:#6fa0ff">📷 view photo</a></div>`:''}
-      <div class="row">
+      <div class="row" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
         ${o.status==='received'?`<button class="ghost" onclick="confirmO('${o.id}')">Confirm</button>`:''}
         ${['received','confirmed'].includes(o.status)?`
           <select id="d-${o.id}">${DRIVERS.map(x=>`<option value="${x.id}">${esc(x.name)}${x.active?` (${x.active} active)`:''}</option>`).join('')}</select>
@@ -775,7 +782,14 @@ async function post(path, body){
   }
   return r.ok;
 }
-async function assign(id){ if(await post(`/orders/${id}/assign`,{driver_id:document.getElementById('d-'+id).value})) load(); }
+async function assign(id){
+  const sel = document.getElementById('d-'+id);
+  const name = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent.split(' (')[0] : 'the driver';
+  if(await post(`/orders/${id}/assign`,{driver_id: sel.value})){
+    gwToast(`Sent to ${name} — it's live on their hub now ✓`, true);
+    load();
+  }
+}
 async function confirmO(id){ if(await post(`/orders/${id}/confirm`)) load(); }
 async function closeO(id){ if(await post(`/orders/${id}/close`)) load(); }
 async function requeueO(id){ if(await post(`/orders/${id}/requeue`)) load(); }
