@@ -16,18 +16,18 @@ def _fq(v: str) -> str:
     return _re.sub(r"[^A-Za-z0-9 _.@+\-]", "", str(v or ""))[:120]
 
 STEPS = [("received_at", "Order received"),
-         ("confirmed_at", "Confirmed by dispatch"),
+         ("confirmed_at", "Kitchen accepted — cooking"),
          ("assigned_at", "Driver assigned"),
          ("in_transit_at", "Picked up — on the way"),
          ("delivered_at", "Delivered")]
 
-HEADLINES = {"received": "We've got your order 👍", "confirmed": "Confirmed — lining it up",
+HEADLINES = {"received": "We've got your order 👍", "confirmed": "The kitchen is on it 🍳",
              "assigned": "A driver has your order", "in_transit": "On the way to you 🚚",
              "delivered": "Delivered ✓", "closed": "Delivered ✓",
              "cancelled": "This order was cancelled", "failed": "Delivery issue — we're on it"}
 
-MICRO = {"received": "Hang tight — dispatch is on it.",
-         "confirmed": "The kitchen has your ticket.",
+MICRO = {"received": "Hang tight — sending it to the kitchen.",
+         "confirmed": "The kitchen accepted your order and is cooking.",
          "assigned": "Your driver is heading to pick it up.",
          "in_transit": "Watch the map — your driver is moving.",
          "delivered": "Enjoy! Thanks for choosing GateWay.",
