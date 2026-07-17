@@ -101,6 +101,7 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="mark" style="display:none">GateWay <span>Driver Hub</span></div>
   <div class="who" id="who">…</div>
 </div>
+<div id="alertBanner" style="display:none"></div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
 <button onclick="toggleMyDay()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">📜 My day — completed runs</button>
 <div id="myDayPanel" style="display:none;margin-bottom:14px"></div>
@@ -115,6 +116,35 @@ letter-spacing:.06em;text-transform:uppercase}
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/driver/${token}` + p;
 
+function driverChime(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const notes = [880, 1174.7];
+    notes.forEach((f,i)=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      o.connect(g); g.connect(ctx.destination);
+      const t = ctx.currentTime + i*0.14;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.28, t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+      o.start(t); o.stop(t+0.24);
+    });
+  }catch(e){}
+}
+function requestOrderAlerts(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().then(paintAlertBanner);
+  }
+}
+function paintAlertBanner(){
+  const el = document.getElementById('alertBanner');
+  if(!el || !('Notification' in window)) return;
+  if(Notification.permission !== 'default'){ el.style.display = 'none'; return; }
+  el.innerHTML = `<button onclick="requestOrderAlerts()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px dashed #c3d0f0;color:#16337a;box-shadow:none;font-size:.8rem">🔔 Turn on alerts — never miss a new delivery</button>`;
+  el.style.display = '';
+}
 async function load(){
   const r = await fetch(api('/orders'));
   if(!r.ok){
@@ -134,6 +164,14 @@ async function load(){
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     document.title = '🔔 New delivery — GateWay';
     setTimeout(()=>{ document.title = 'GateWay — Driver Hub'; }, 8000);
+    driverChime();
+    if('Notification' in window && Notification.permission === 'granted'){
+      const nf = new Notification('New delivery assigned to you', {
+        body: 'Open your hub — a new run just landed.',
+        tag: 'gw-driver-assignment', requireInteraction: true,
+      });
+      nf.onclick = () => { window.focus(); nf.close(); };
+    }
   }
   LASTN = n;
   HAS_ACTIVE = (d.orders||[]).some(o=>o.status==='in_transit');
@@ -446,7 +484,8 @@ function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
 load();
-setInterval(load, 60000);
+paintAlertBanner();
+setInterval(load, 20000);
 
 // Continuous location ping while actively delivering (in_transit orders present)
 let HAS_ACTIVE = false;

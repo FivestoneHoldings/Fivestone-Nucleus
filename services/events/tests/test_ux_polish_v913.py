@@ -41,3 +41,15 @@ def test_cover_photo_is_doordash_proportioned_not_16_9():
     o = _f("order-form.html")
     assert "aspect-ratio:2.75/1" in o
     assert "aspect-ratio:16/9" not in o
+
+
+def test_driver_hub_has_desktop_notification_alert():
+    d = _f("driver.html")
+    assert "requestOrderAlerts" in d
+    assert "new Notification(" in d
+    assert "driverChime" in d
+
+
+def test_driver_poll_tightened_to_20s():
+    d = _f("driver.html")
+    assert "setInterval(load, 20000);" in d
