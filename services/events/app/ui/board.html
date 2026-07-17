@@ -153,6 +153,7 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <input id="orderSearch" type="text" placeholder="Search order #, customer, or kitchen…"
     oninput="renderOrders()" style="width:100%;padding:11px 14px;margin-bottom:10px;border-radius:11px;
     border:1.5px solid #263252;background:#151d33;color:#e8eaf0;font-family:inherit;font-size:.85rem">
+  <div id="alertBanner" style="display:none"></div>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
 </div>
@@ -594,23 +595,49 @@ async function load(){
   maybeDayOpen();
 }
 /* New-order alert — a dispatcher can't stare at the board every second. When a
-   fresh 'received' order appears, chime once and badge the tab title so it
-   catches the eye even from another tab. Silent on first load (no false alarm
-   for the backlog already sitting there). */
+   fresh 'received' order appears: chime, badge the tab title, toast, AND fire a
+   real OS-level desktop notification if permission is granted — so an order
+   can't be missed even if the board tab isn't focused or is behind another
+   window. This is the direct fix for 'test orders came in and I was unaware'. */
 let _seenOrderIds = null, _titleBase = document.title, _pendingNew = 0;
+function requestOrderAlerts(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().then(paintAlertBanner);
+  }
+}
+function paintAlertBanner(){
+  const el = document.getElementById('alertBanner');
+  if(!el || !('Notification' in window)) return;
+  if(Notification.permission === 'granted'){ el.style.display = 'none'; return; }
+  if(Notification.permission === 'denied'){
+    el.innerHTML = `<div style="background:#3a1a1a;border:1.5px solid #5a2a2a;color:#e0a0a0;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:.78rem">🔕 Desktop alerts are blocked in this browser. You'll still get the sound + toast for new orders.</div>`;
+    el.style.display = '';
+    return;
+  }
+  el.innerHTML = `<button onclick="requestOrderAlerts()" style="width:100%;margin-bottom:12px;padding:11px;background:#1a2a4a;border:1.5px solid #2c4a9e;color:#c9d2e6;font-size:.8rem;box-shadow:none">🔔 Turn on desktop alerts so a new order never slips by</button>`;
+  el.style.display = '';
+}
 function detectNewOrders(orders){
   const ids = new Set((orders||[]).map(o=>o.order_id));
   if(_seenOrderIds === null){ _seenOrderIds = ids; return; }  // first load: seed, don't alert
-  let fresh = 0;
-  (orders||[]).forEach(o=>{
-    if(!_seenOrderIds.has(o.order_id) && o.status === 'received') fresh++;
-  });
+  const freshOrders = (orders||[]).filter(o=>!_seenOrderIds.has(o.order_id) && o.status === 'received');
   _seenOrderIds = ids;
-  if(fresh){
+  if(freshOrders.length){
     boardChime();
-    _pendingNew += fresh;
+    _pendingNew += freshOrders.length;
     document.title = `(${_pendingNew}) NEW · ${_titleBase}`;
-    if(window.gwToast) gwToast(`${fresh} new order${fresh>1?'s':''} just came in`, true);
+    if(window.gwToast) gwToast(`${freshOrders.length} new order${freshOrders.length>1?'s':''} just came in`, true);
+    if('Notification' in window && Notification.permission === 'granted'){
+      const first = freshOrders[0];
+      const n = new Notification('New GateWay order', {
+        body: freshOrders.length > 1
+          ? `${freshOrders.length} new orders — starting with ${first.order_id}${first.partner?' · '+first.partner:''}`
+          : `${first.order_id}${first.partner?' · '+first.partner:''}`,
+        tag: 'gw-new-order', requireInteraction: true,
+      });
+      n.onclick = () => { window.focus(); openTicketModal(first.order_id); n.close(); };
+    }
   }
 }
 function boardChime(){
@@ -1057,7 +1084,7 @@ function netDown(){
 function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
-load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
+load(); paintAlertBanner(); setInterval(()=>{ if(VIEW==='orders') load(); }, 20000);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTicketModal(); });
 </script>
 <div id="ticketModalWrap" class="tmwrap" onclick="if(event.target===this)closeTicketModal()">

@@ -113,6 +113,7 @@ cursor:pointer;box-shadow:none}
 <div id="menu86Panel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleHistory()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📊 Today in review</button>
 <div id="historyPanel" style="display:none;margin-bottom:14px"></div>
+<div id="alertBanner" style="display:none"></div>
 <div id="loadBanner"></div>
 <div id="pride" class="pride"></div>
 <div id="pickchip" style="display:none"></div>
@@ -211,6 +212,23 @@ function fmtItems(raw){
     return `<div class="iline">${esc(p.trim())}</div>`;
   });
   return lines.join('');
+}
+function requestOrderAlerts(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().then(paintAlertBanner);
+  }
+}
+function paintAlertBanner(){
+  const el = document.getElementById('alertBanner');
+  if(!el || !('Notification' in window)) return;
+  if(Notification.permission === 'granted'){ el.style.display = 'none'; return; }
+  if(Notification.permission === 'denied'){
+    el.innerHTML = `<div style="background:#fdecec;border:1.5px solid #f0c0c0;color:#a83c3c;border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:.8rem">🔕 Desktop alerts are blocked. You'll still get the beep + on-screen ticket for new orders.</div>`;
+    el.style.display = ''; return;
+  }
+  el.innerHTML = `<button onclick="requestOrderAlerts()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px dashed #c3d0f0;color:#16337a;box-shadow:none;font-size:.82rem">🔔 Turn on desktop alerts — never miss a ticket, even in another tab</button>`;
+  el.style.display = '';
 }
 function beep(){
   try{
@@ -355,7 +373,16 @@ async function load(){
   document.getElementById('pauseBanner').innerHTML = d.accepting ? '' :
     '<div class="paused">ORDERING PAUSED — customers can\'t order right now. GateWay can resume it.</div>';
   const fresh = d.orders.filter(o=>!KNOWN.has(o.order_id));
-  if(!FIRST && fresh.length) beep();
+  if(!FIRST && fresh.length){
+    beep();
+    if('Notification' in window && Notification.permission === 'granted'){
+      const n = new Notification('New order at ' + (d.kitchen||'your kitchen'), {
+        body: fresh.length > 1 ? `${fresh.length} new tickets just came in` : `Ticket ${fresh[0].order_id}`,
+        tag: 'gw-kitchen-order', requireInteraction: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+  }
   const freshIds = new Set(fresh.map(o=>o.order_id));
   d.orders.forEach(o=>KNOWN.add(o.order_id));
   const KLABEL = {received:'NEW', confirmed:'CONFIRMED', assigned:'DRIVER COMING'};
@@ -478,7 +505,7 @@ load = async function(){
 };
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
-load(); setInterval(load, 20000);
+load(); paintAlertBanner(); setInterval(load, 20000);
 </script>
 </body>
 </html>
