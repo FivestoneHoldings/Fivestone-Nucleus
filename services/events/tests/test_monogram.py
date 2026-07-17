@@ -25,3 +25,16 @@ def test_monogram_initial_is_html_safe():
     o = _f("order-form.html")
     # the initial is escaped before it goes into markup
     assert "initial.replace(/</g,'&lt;')" in o
+
+
+def test_home_thumbs_fall_back_to_monogram_not_emblem():
+    h = open(os.path.join(UI, "home.html")).read()
+    assert "monotile" in h and "monoletter" in h
+    # the repeated-emblem final fallback is gone from thumb()
+    assert '<img class="emb" src="/static/gwd-emblem.png" alt=""></div>' not in h
+
+
+def test_home_image_error_fallback_is_monogram():
+    h = open(os.path.join(UI, "home.html")).read()
+    # even when a logo fails to load, we show the letter, not the emblem
+    assert "className:'monoletter'" in h

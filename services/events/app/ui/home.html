@@ -94,6 +94,11 @@ box-shadow:0 2px 10px rgba(20,30,60,.05);transition:transform .14s, box-shadow .
 background:linear-gradient(135deg,#16337a,#0e1526);display:flex;align-items:center;justify-content:center}
 .rthumb img.photo{width:100%;height:100%;object-fit:cover;display:block}
 .rthumb img.emb{width:62%;height:auto;opacity:.92}
+.monotile{display:flex;align-items:center;justify-content:center}
+.monoletter{color:#fff;font-family:'Archivo',sans-serif;font-weight:900;letter-spacing:-.02em;
+opacity:.92;text-shadow:0 1px 3px rgba(0,0,0,.2);line-height:1}
+.rthumb .monoletter{font-size:1.7rem}
+.fhero .monoletter{font-size:2.6rem}
 .rinfo{flex:1;min-width:0}
 .rname{font-weight:800;font-size:1rem;line-height:1.25;display:flex;align-items:center;gap:6px;
 flex-wrap:wrap}
@@ -379,7 +384,8 @@ function fee(p){ return p.delivery_fee_cents ? '$'+(p.delivery_fee_cents/100).to
 function thumb(p, cls){
   const tint = p.brand_color || '#16337a';
   const bg = `background:linear-gradient(135deg, ${esc(tint)}, #0e1526)`;
-  const fallback = `this.replaceWith(Object.assign(document.createElement('img'),{className:'emb',src:'/static/gwd-emblem.png'}))`;
+  const mono0 = ((p.display_name||'').replace(/^[^A-Za-z0-9]+/,'')[0]||'•').toUpperCase().replace(/</g,'&lt;').replace(/'/g,"\\'");
+  const fallback = `this.replaceWith(Object.assign(document.createElement('span'),{className:'monoletter',textContent:'${mono0}'}))`;
   // wide contexts (featured tiles) get the DoorDash-style cover photo first;
   // cover -> hero -> logo -> emblem. Narrow list thumbs skip the cover.
   const wide = cls === 'fhero';
@@ -395,7 +401,8 @@ function thumb(p, cls){
     return `<div class="${cls}" style="${bg}"><img class="photo" src="${esc(p.logo_url)}" alt=""
       loading="lazy" style="object-fit:contain;padding:14%;background:#fff" onerror="${fallback}"></div>`;
   }
-  return `<div class="${cls}" style="${bg}"><img class="emb" src="/static/gwd-emblem.png" alt=""></div>`;
+  const mono = ((p.display_name||'').replace(/^[^A-Za-z0-9]+/,'')[0]||'•').toUpperCase().replace(/</g,'&lt;');
+  return `<div class="${cls} monotile" style="${bg}"><span class="monoletter">${mono}</span></div>`;
 }
 
 function paintChips(){
