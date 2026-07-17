@@ -340,7 +340,7 @@ async function paintHistory(){
     </div>
     <div style="text-align:right">
       <span class="chip" id="st-${esc(x.oid)}">…</span><br>
-      <a href="/track/${encodeURIComponent(x.oid)}">Track ▸</a>
+      ${x.partner?`<a href="/order?partner=${encodeURIComponent(x.partner)}&reorder=1">Reorder ↻</a> · `:''}<a href="/track/${encodeURIComponent(x.oid)}">Track ▸</a>
     </div></div>`).join('');
   for(const x of h.slice(0,12)){
     try{
