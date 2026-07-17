@@ -112,6 +112,8 @@ cursor:pointer;box-shadow:none}
 <button onclick="show86()" id="menu86Btn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🍽 86 an item</button>
 <div id="menu86Panel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleHistory()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📊 Today in review</button>
+<button onclick="togglePosts()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📰 Post an update — your news feed</button>
+<div id="postsPanel" style="display:none;margin-bottom:14px"></div>
 <div id="historyPanel" style="display:none;margin-bottom:14px"></div>
 <div id="alertBanner" style="display:none"></div>
 <div id="loadBanner"></div>
@@ -252,6 +254,56 @@ function fmtWhen(o){
    scoped to THIS kitchen's own token and can only flip availability, never
    price or name. ===== */
 let MENU86_CACHE = null;
+function relTimeK(iso){
+  try{
+    const mins = Math.floor((Date.now() - new Date(iso).getTime())/60000);
+    if(mins < 1) return 'just now';
+    if(mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins/60);
+    if(hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs/24) + 'd ago';
+  }catch(e){ return ''; }
+}
+async function togglePosts(){
+  const el = document.getElementById('postsPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = ''; await paintPosts();
+}
+async function paintPosts(){
+  const el = document.getElementById('postsPanel');
+  el.innerHTML = '<div class="card">Loading…</div>';
+  try{
+    const d = await (await fetch(api('/posts'))).json();
+    const posts = d.posts || [];
+    el.innerHTML = `<div class="card">
+      <textarea id="postText" maxlength="280" placeholder="Back from vacation! New winter menu is in! We're famous for our..." style="width:100%;min-height:70px;border:1.5px solid #dfe4ee;border-radius:12px;padding:11px;font-family:inherit;font-size:.85rem;box-sizing:border-box;resize:vertical"></textarea>
+      <button onclick="submitPost()" style="margin-top:8px">Post to your GateWay page</button>
+      ${posts.length ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#8b93a7;margin:16px 0 8px">Your recent posts</div>
+        ${posts.map(p=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #f2f4f8">
+          <div style="min-width:0"><div style="font-size:.84rem;line-height:1.4">${esc(p.text)}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#9199a8;margin-top:3px">${relTimeK(p.created_at)}</div></div>
+          <button onclick="deletePost('${p.id}')" style="flex:0 0 auto;width:auto;padding:6px 11px;font-size:.68rem;background:transparent;color:#b5202a;border:1.5px solid #f0c0c0;box-shadow:none;margin:0">Remove</button>
+        </div>`).join('')}` : `<div style="padding:14px 0;color:#8b93a7;font-size:.85rem">No posts yet — customers see this as a live news feed on your page.</div>`}
+    </div>`;
+  }catch(e){
+    el.innerHTML = '<div class="card">Couldn\u2019t load your posts. Try again.</div>';
+  }
+}
+async function submitPost(){
+  const box = document.getElementById('postText');
+  const text = (box.value || '').trim();
+  if(!text) return;
+  const r = await fetch(api('/posts'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+  if(r.ok){ gwToast('Posted to your GateWay page \u2713', true); paintPosts(); }
+  else gwToast('Could not post. Try again.', false);
+}
+async function deletePost(id){
+  const ok = await gwConfirm({title:'Remove this post?', body:'It will disappear from your page immediately.', danger:true});
+  if(!ok) return;
+  await fetch(api('/posts/' + id), {method:'DELETE'});
+  paintPosts();
+}
 async function toggleHistory(){
   const el = document.getElementById('historyPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }

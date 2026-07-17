@@ -24,21 +24,49 @@ def _new_portal_token() -> str:
     return "kt-" + secrets.token_hex(5)
 
 
+@router.get("/v0/partners/{code}/posts")
+def partner_news_feed(code: str):
+    """A kitchen's own 'Happening now' — their real, dated updates, newest
+    first. Empty when they haven't posted anything; we never invent filler."""
+    from .models import PartnerPost
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(PartnerPost).filter(PartnerPost.partner_code == code.lower().strip())
+               .order_by(PartnerPost.created_at.desc()).limit(10).all())
+        return {"posts": [{"text": r.text, "created_at": r.created_at.isoformat()}
+                          for r in rows]}
+    finally:
+        db.close()
+
+
 @router.get("/v0/highlights")
 def highlights():
     """The storefront's news rail — real happenings, never filler:
+      * kitchen-authored posts ('Back from vacation!', 'New menu is in!')
       * today's specials each kitchen actually posted from their own screen
       * kitchens new to GateWay in the last 21 days ('Just joined')
       * a Neighbor Fund milestone when there's a fresh one
     Empty sections simply don't appear; we never invent news."""
     from datetime import datetime, timezone, timedelta
-    from .models import Event
+    from .models import Event, PartnerPost
     import json as _j
     out = []
     db: Session = SessionLocal()
     try:
         partners = (db.query(Partner)
                     .filter(Partner.status.in_(["active", "pilot"])).all())
+        by_code = {p.code: p for p in partners}
+        # kitchen posts — the real 'blog' content, most valuable on the rail
+        recent_posts = (db.query(PartnerPost)
+                        .order_by(PartnerPost.created_at.desc()).limit(20).all())
+        for post in recent_posts:
+            p = by_code.get(post.partner_code)
+            if not p:
+                continue
+            out.append({"kind": "post", "partner": p.code,
+                        "partner_name": p.display_name,
+                        "logo_url": p.logo_url, "brand_color": p.brand_color,
+                        "text": post.text, "posted_at": post.created_at.isoformat()})
         for p in partners:
             sp = _todays_special(p)
             if sp:
@@ -76,7 +104,7 @@ def highlights():
                         "text": f"Neighbors have now covered {covered} deliveries for each other 🤝"})
     finally:
         db.close()
-    return {"highlights": out[:8]}
+    return {"highlights": out[:10]}
 
 
 def seed_partners():

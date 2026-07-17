@@ -278,6 +278,60 @@ async def kitchen_accepting(token: str, request: Request,
     return {"ok": True, "accepting": on}
 
 
+@router.post("/api/kitchen/{token}/posts")
+async def create_post(token: str, request: Request):
+    """The kitchen's own news feed — 'Back from vacation!', 'New menu is in!'.
+    Real, dated, kitchen-authored, capped at the last 20 so it never turns into
+    an unmoderated wall."""
+    from .models import PartnerPost
+    p = _partner_by_token(token)
+    body = await request.json()
+    text = str(body.get("text", "")).strip()[:280]
+    if not text:
+        raise HTTPException(400, "Post can't be empty")
+    db: Session = SessionLocal()
+    try:
+        db.add(PartnerPost(partner_code=p.code, text=text))
+        # trim to the most recent 20 for this partner — a feed, not an archive
+        old = (db.query(PartnerPost).filter(PartnerPost.partner_code == p.code)
+               .order_by(PartnerPost.created_at.desc()).offset(20).all())
+        for row in old:
+            db.delete(row)
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
+@router.get("/api/kitchen/{token}/posts")
+async def list_own_posts(token: str):
+    from .models import PartnerPost
+    p = _partner_by_token(token)
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(PartnerPost).filter(PartnerPost.partner_code == p.code)
+               .order_by(PartnerPost.created_at.desc()).limit(20).all())
+        return {"posts": [{"id": r.id, "text": r.text,
+                           "created_at": r.created_at.isoformat()} for r in rows]}
+    finally:
+        db.close()
+
+
+@router.delete("/api/kitchen/{token}/posts/{post_id}")
+async def delete_post(token: str, post_id: str):
+    from .models import PartnerPost
+    p = _partner_by_token(token)
+    db: Session = SessionLocal()
+    try:
+        row = db.get(PartnerPost, post_id)
+        if row and row.partner_code == p.code:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+    return {"ok": True}
+
+
 @router.post("/api/kitchen/{token}/special")
 async def set_special(token: str, request: Request):
     """The cook posts today's special — no corporate approval, no ad buy."""

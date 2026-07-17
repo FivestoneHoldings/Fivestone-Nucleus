@@ -22,7 +22,7 @@ def test_highlights_never_leaks_tokens_or_phones():
 def test_highlights_caps_output():
     # even with many partners, the rail is bounded so it can't be flooded
     src = _f("app/identity.py")
-    assert "out[:8]" in src
+    assert "out[:10]" in src
 
 
 def test_kitchen_accept_estimate_cannot_be_negative_or_huge():

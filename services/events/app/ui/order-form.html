@@ -140,6 +140,14 @@ display:flex;align-items:center;justify-content:center}
 .rhead .img .nm{position:absolute;left:18px;right:18px;bottom:14px;color:#fff;
 font-weight:900;font-size:1.35rem;line-height:1.15;text-shadow:0 2px 12px rgba(0,0,0,.4)}
 .rhead .meta{padding:14px 18px 16px}
+.pnews{background:#fff;border:1px solid #e4e8f2;border-radius:16px;padding:14px 16px;
+margin:0 0 16px;box-shadow:0 3px 14px rgba(20,30,60,.05)}
+.pnewshead{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.1em;
+text-transform:uppercase;color:#9199a8;margin-bottom:9px}
+.pnewsitem{padding:9px 0;border-top:1px solid #f2f4f8}
+.pnewsitem:first-of-type{border-top:none}
+.pnewsitem p{font-size:.86rem;line-height:1.45;color:#2a2d33;margin-bottom:3px}
+.pnewsitem span{font-size:.68rem;color:#9a9ea5;font-weight:600}
 .rhead .story{font-size:.86rem;line-height:1.55;color:#3a3f47;margin-bottom:10px}
 .rhead .facts{display:flex;gap:8px;flex-wrap:wrap}
 .rhead .fact{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.08em;
@@ -741,6 +749,34 @@ function setWhen(sched){
   a.style.background = sched?'#fff':'#16337a'; a.style.color = sched?'#16337a':'#fff';
   s.style.background = sched?'#16337a':'#fff'; s.style.color = sched?'#fff':'#16337a';
 }
+// The kitchen's own "Happening now" — real, dated posts, newest first. Empty
+// when they haven't posted anything; we never invent filler for a restaurant.
+function relTimeNews(iso){
+  try{
+    const mins = Math.floor((Date.now() - new Date(iso).getTime())/60000);
+    if(mins < 1) return 'just now';
+    if(mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins/60);
+    if(hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs/24) + 'd ago';
+  }catch(e){ return ''; }
+}
+async function paintPartnerNews(code){
+  const el = document.getElementById('partnerNews');
+  if(!el || !code) return;
+  try{
+    const d = await (await fetch(`/v0/partners/${encodeURIComponent(code)}/posts`)).json();
+    const posts = d.posts || [];
+    if(!posts.length){ el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="pnews">
+      <div class="pnewshead">📣 Happening at ${(window._PARTNER_META?.display_name||'this kitchen').replace(/</g,'&lt;')}</div>
+      ${posts.map(p=>`<div class="pnewsitem">
+        <p>${p.text.replace(/</g,'&lt;')}</p>
+        <span>${relTimeNews(p.created_at)}</span>
+      </div>`).join('')}
+    </div>`;
+  }catch(e){ el.innerHTML = ''; }
+}
 function applyPartnerMeta(d){
   if(!d) return;
   window._PARTNER_META = d;
@@ -852,7 +888,8 @@ function renderMenu(m){
     <div class="meta">
       ${meta.about_blurb?`<div class="story">${(meta.about_blurb||'').replace(/</g,'&lt;')}</div>`:''}
       <div class="facts">${facts.map(f=>`<span class="fact">${String(f).replace(/</g,'&lt;')}</span>`).join('')}</div>
-    </div></div>`;
+    </div></div>
+    <div id="partnerNews"></div>`;
   const search = `<input class="msearch" id="msearch" placeholder="Search the menu…" oninput="filterMenu()">`;
   const cats = m.categories.filter(c=>c.items && c.items.length);
   const nav = cats.length > 1
@@ -891,6 +928,7 @@ function renderMenu(m){
                    </div>`)}
         </div>
       </div>`;}).join('')).join('');
+  paintPartnerNews(meta.code);
   const itemsField = document.querySelector('[name="items_description"]');
   if(itemsField) itemsField.placeholder = 'Your selections appear here — add notes if you like';
   maybeReorder();

@@ -141,6 +141,20 @@ class PromoCode(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
+class PartnerPost(Base):
+    """A kitchen's own news feed post — 'Back from vacation!', 'New winter menu
+    is in!' — real, dated, kitchen-authored updates. Shown newest-first on their
+    storefront and rolled into the home highlights rail. Distinct from
+    special_text/special_date (today's single dish special): a post is a running
+    blog, not a single slot."""
+    __tablename__ = "partner_posts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False)
+    text: Mapped[str] = mapped_column(String(280), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
 class Lead(Base):
     """Someone raised their hand — a driver who wants to drive, a merchant who
     wants in. Customer service is everything; nothing gets lost."""
