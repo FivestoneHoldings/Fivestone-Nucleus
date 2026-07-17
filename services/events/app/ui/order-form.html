@@ -857,7 +857,7 @@ function renderMenu(m){
   const cats = m.categories.filter(c=>c.items && c.items.length);
   const nav = cats.length > 1
     ? `<div class="catnav">${cats.map((c,i)=>
-        `<a href="#cat${i}" class="${i===0?'on':''}" onclick="navPick(this)">${c.name.split('—')[0].trim().replace(/</g,'&lt;')}</a>`).join('')}</div>`
+        `<a href="#cat${i}" class="${i===0?'on':''}" onclick="return navPick(this,event)">${c.name.split('—')[0].trim().replace(/</g,'&lt;')}</a>`).join('')}</div>`
     : '';
   z.innerHTML = head + search + nav + cats.map((c,i) => `<div class="mcat" id="cat${i}">${c.name.replace(/</g,'&lt;')}</div>` +
     c.items.map(i2 => {
@@ -948,10 +948,23 @@ async function itemNote(id){
   }
   compose();
 }
-function navPick(el){
+function navPick(el, evt){
+  // CRITICAL: category chips used to be real <a href="#catN"> anchor navigation
+  // — every tap pushed a new browser history entry. On a 22-category menu,
+  // tapping through a few categories meant 9+ taps of the back button just to
+  // leave the page. preventDefault stops the browser's own navigation; we do
+  // the scroll ourselves and never touch history at all.
+  if(evt) evt.preventDefault();
   document.querySelectorAll('.catnav a').forEach(a=>a.classList.remove('on'));
   el.classList.add('on');
   centerChip(el);
+  const id = el.getAttribute('href').slice(1);
+  const target = document.getElementById(id);
+  if(target){
+    const y = target.getBoundingClientRect().top + window.pageYOffset - 128;
+    window.scrollTo({top: y, behavior: 'smooth'});
+  }
+  return false;
 }
 /* keep the active chip visible in the horizontal rail so you always see where
    you are, even on a long menu where the chip would otherwise scroll off. */
@@ -983,6 +996,22 @@ function menuSpy(){
   });
 }
 window.addEventListener('scroll', menuSpy, {passive:true});
+window.addEventListener('resize', () => requestAnimationFrame(repositionToTop));
+function repositionToTop(){
+  // The floating cart bar (z-index:70) can grow tall enough to sit on top of
+  // the back-to-top button (z-index:40, fixed at bottom:120px) — once a
+  // customer has anything in their cart, which is almost always, the cart bar
+  // physically covers the button and swallows the click. Push it above the
+  // cart bar's real measured height whenever the bar is showing.
+  const tt = document.getElementById('toTop');
+  const bar = document.getElementById('cartbar');
+  if(!tt) return;
+  if(bar && bar.classList.contains('show')){
+    tt.style.bottom = (bar.offsetHeight + 28) + 'px';
+  } else {
+    tt.style.bottom = '120px';
+  }
+}
 function scrollTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function maybeReorder(){
   try{
@@ -1180,6 +1209,7 @@ function compose(){
   if(!entries.length){
     if(itemsField) itemsField.value='';
     bar.classList.remove('show');
+    requestAnimationFrame(repositionToTop);
     const tw = document.getElementById('tipWrap'); if(tw) tw.style.display='none';
     const sb = document.querySelector('button[type="submit"]');
     if(sb && !sb.disabled) sb.textContent = 'Send Order to GateWay';
@@ -1192,6 +1222,7 @@ function compose(){
     }).join(', ') + ` — subtotal ${money(sub)}`;
   if(STEP === 'checkout'){ bar.classList.remove('show'); paintReview(); }
   else if(HAS_MENU) bar.classList.add('show');
+  requestAnimationFrame(repositionToTop);
   if(TIP_MODE === 'pct') TIP_CENTS = Math.round(sub * TIP_PCT / 100);
   paintTips();
   const total = sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS;

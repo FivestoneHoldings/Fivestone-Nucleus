@@ -25,6 +25,36 @@ body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:va
 background:var(--card);color:var(--dim);font-weight:800;font-size:.82rem;cursor:pointer}
 .tab.on{background:#14213d;color:var(--green);border-color:#2c4a9e}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+/* Ticket modal — a real overlay, decoupled from the order list entirely. The
+   old pattern (scroll-to-top + render into a shared #orderDetail div sitting in
+   normal page flow) fought with the board's 60s poll re-rendering #orders
+   underneath it — that's the 'scrolls to top then unclickable' bug. A fixed
+   overlay can never be pushed around by a list re-render, and closing it never
+   touches the order list's DOM. */
+.tmwrap{display:none;position:fixed;inset:0;z-index:200;background:rgba(8,12,22,.62);
+backdrop-filter:blur(2px);padding:0;overflow-y:auto}
+.tmwrap.show{display:block}
+.tmodal{background:var(--card,#131b2e);max-width:520px;margin:0 auto;min-height:100%;
+padding:20px 18px calc(30px + env(safe-area-inset-bottom));
+animation:tmIn .22s cubic-bezier(.2,.9,.4,1)}
+@media (min-width:560px){
+  .tmwrap{padding:40px 16px}
+  .tmodal{min-height:0;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.5);
+  border:1px solid var(--line);margin-top:0}
+}
+@keyframes tmIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.tmodal{animation:none}}
+.tmhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.tmclose{background:transparent;border:1.5px solid var(--line);color:#8b93a7;width:36px;height:36px;
+border-radius:50%;font-size:1.1rem;cursor:pointer;flex:0 0 auto;box-shadow:none}
+.tmsection{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+text-transform:uppercase;color:#8b93a7;margin:16px 0 8px}
+.tmrow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:.86rem;
+border-bottom:1px solid rgba(255,255,255,.05)}
+.tmrow b{color:#9199b8;font-weight:600;flex:0 0 auto}
+.tmactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.tmactions button{margin:0}
+.tmactions .full{grid-column:1/-1}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--dim)}
 .chip{float:right;font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:3px 8px;border-radius:20px;text-transform:uppercase}
 .chip.received{background:#263252;color:#b9bec6}.chip.confirmed{background:#173042;color:#6db3e8}
@@ -124,7 +154,6 @@ pre,code{white-space:pre-wrap;word-break:break-word}
     oninput="renderOrders()" style="width:100%;padding:11px 14px;margin-bottom:10px;border-radius:11px;
     border:1.5px solid #263252;background:#151d33;color:#e8eaf0;font-family:inherit;font-size:.85rem">
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
-  <div id="orderDetail"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
 </div>
 <div id="drivers" style="display:none"></div>
@@ -445,33 +474,95 @@ async function toggleTrend(){
     : '<div class="empty" style="padding:12px">No orders this week.</div>';
 }
 async function findOrder(){
+  // header search box: same lookup, opens the same rich modal
   let v = document.getElementById('findOrd').value.trim().toUpperCase();
-  if(!v) { document.getElementById('orderDetail').innerHTML=''; return; }
+  if(!v) return;
   if(!v.startsWith('ORD-') && v.length===8) v = 'ORD-' + v;
-  const r = await fetch(api('/order-detail/' + encodeURIComponent(v)));
-  const box = document.getElementById('orderDetail');
-  if(!r.ok){ box.innerHTML = `<div class="card"><div class="empty" style="padding:14px">No order found for ${v}.</div></div>`; return; }
-  const d = await r.json(); const f = d.fields;
-  const stampRow = (label, val) => val?`<div class="line"><b>${label}</b><span style="font-family:'IBM Plex Mono',monospace;font-size:.72rem">${val.replace('T',' ').slice(0,19)} UTC</span></div>`:'';
-  box.innerHTML = `<div class="card" style="border-color:#2c4a9e">
-    <span class="chip ${f.status}">${(f.status||'').replace('_',' ')}</span>
-    <div class="oid">${f.order_id}</div>
-    ${f.partner_code?`<div class="line"><b>Partner</b>${f.partner_code}</div>`:''}
-    ${f.customer_name_raw?`<div class="line"><b>Customer</b>${esc(f.customer_name_raw)} ${f.customer_phone_raw||''}</div>`:''}
-    <div class="line"><b>Pickup</b>${esc(f.pickup_address)||'—'}</div>
-    <div class="line"><b>Drop</b>${esc(f.dropoff_address)||'—'} ${f.dropoff_contact_name?('· '+f.dropoff_contact_name):''}</div>
-    ${f.items_description?`<div class="line"><b>Items</b>${esc(f.items_description)}</div>`:''}
-    ${f.special_instructions?`<div class="line"><b>Notes</b>${esc(f.special_instructions)}</div>`:''}
-    ${f.cancel_reason?`<div class="line"><b>Cancel reason</b>${esc(f.cancel_reason)}</div>`:''}
+  openTicketModal(v);
+}
+let _ticketOid = null;
+async function openTicketModal(oid){
+  _ticketOid = oid;
+  const wrap = document.getElementById('ticketModalWrap');
+  const box = document.getElementById('ticketModal');
+  wrap.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  box.innerHTML = '<div class="skel" style="height:220px"></div>';
+  const r = await fetch(api('/order-detail/' + encodeURIComponent(oid)));
+  if(!r.ok){
+    box.innerHTML = `<div class="tmhead"><b style="font-size:1.1rem">Not found</b>
+      <button class="tmclose" onclick="closeTicketModal()">\u2715</button></div>
+      <div class="empty" style="padding:14px 0">No order found for ${esc(oid)}.</div>`;
+    return;
+  }
+  const d = await r.json(); const f = d.fields; const rid = d.record_id;
+  paintTicketModal(d, f, rid);
+}
+function closeTicketModal(){
+  document.getElementById('ticketModalWrap').classList.remove('show');
+  document.body.style.overflow = '';
+  _ticketOid = null;
+}
+function paintTicketModal(d, f, rid){
+  const box = document.getElementById('ticketModal');
+  const money = c => c ? '$' + (Number(c)/100).toFixed(2) : '';
+  const stampRow = (label, val) => val?`<div class="tmrow"><b>${label}</b><span style="font-family:'IBM Plex Mono',monospace;font-size:.72rem">${val.replace('T',' ').slice(0,19)} UTC</span></div>`:'';
+  const moneyRow = (label, val) => val?`<div class="tmrow"><b>${label}</b><span>${money(val)}</span></div>`:'';
+  // quick actions mirror exactly what the ticket card on the board offers —
+  // act right from the full-detail window, no need to close and hunt for the card
+  let actions = '';
+  if(f.status === 'received') actions += `<button class="ghost full" onclick="confirmO('${rid}');closeTicketModal()">Confirm order</button>`;
+  if(['received','confirmed'].includes(f.status)) actions += `<button class="full" onclick="closeTicketModal();document.getElementById('findOrd').value='${esc(f.order_id)}';assignFromModal('${rid}')">Assign a driver \u2192</button>`;
+  if(f.status === 'delivered') actions += `<button class="ghost full" onclick="closeO('${rid}');closeTicketModal()">Close order \u2713</button>`;
+  if(f.status === 'failed') actions += `<button class="full" onclick="requeueO('${rid}');closeTicketModal()">Requeue \u21bb</button>`;
+  if(f.status !== 'delivered') actions += `<button class="warn full" onclick="cancelO('${rid}');closeTicketModal()">Cancel order</button>`;
+  if(['assigned','in_transit'].includes(f.status)) actions += `<button class="ghost full" onclick="notifyO('${rid}')">Text the customer an update</button>`;
+  box.innerHTML = `
+    <div class="tmhead">
+      <div>
+        <span class="chip ${f.status}">${(f.status||'').replace('_',' ')}</span>
+        <div class="oid" style="margin-top:6px">${f.order_id}</div>
+      </div>
+      <button class="tmclose" onclick="closeTicketModal()" aria-label="Close">\u2715</button>
+    </div>
+    <div class="tmsection">Who</div>
+    ${f.customer_name_raw?`<div class="tmrow"><b>Customer</b><span>${esc(f.customer_name_raw)}${f.customer_phone_raw?` \u00b7 <a href="tel:${esc(f.customer_phone_raw).replace(/[^0-9+]/g,'')}" style="color:#6fa0ff">${esc(f.customer_phone_raw)}</a>`:''}</span></div>`:''}
+    ${f.partner_code?`<div class="tmrow"><b>Kitchen</b><span>${esc(f.partner_code)}</span></div>`:''}
+    ${d.driver_name?`<div class="tmrow"><b>Driver</b><span>${esc(d.driver_name)}</span></div>`:'<div class="tmrow"><b>Driver</b><span style="color:#6a7180">Not yet assigned</span></div>'}
+    <div class="tmsection">Where</div>
+    <div class="tmrow"><b>Pickup</b><span>${esc(f.pickup_address)||'\u2014'}</span></div>
+    <div class="tmrow"><b>Drop-off</b><span>${esc(f.dropoff_address)||'\u2014'}${f.dropoff_contact_name?(' \u00b7 '+esc(f.dropoff_contact_name)):''}</span></div>
+    ${f.requested_for?`<div class="tmrow"><b>Scheduled</b><span>${esc(f.requested_for).replace('T',' ').slice(0,16)}</span></div>`:''}
+    <div class="tmsection">What</div>
+    ${f.items_description?`<div class="tmrow" style="display:block"><b style="display:block;margin-bottom:4px">Items</b>${esc(f.items_description)}</div>`:''}
+    ${f.special_instructions?`<div class="tmrow" style="display:block"><b style="display:block;margin-bottom:4px">Notes</b>\ud83d\udcdd ${esc(f.special_instructions)}</div>`:''}
+    ${f.cancel_reason?`<div class="tmrow" style="display:block;color:#e0605f"><b style="display:block;margin-bottom:4px">Cancel reason</b>${esc(f.cancel_reason)}</div>`:''}
+    <div class="tmsection">Money</div>
+    ${moneyRow('Subtotal', f.subtotal_cents)}
+    ${moneyRow('Discount', f.discount_cents ? -Math.abs(f.discount_cents) : 0)}
+    ${f.promo_code?`<div class="tmrow"><b>Promo</b><span style="font-family:'IBM Plex Mono',monospace">${esc(f.promo_code)}</span></div>`:''}
+    ${moneyRow('Delivery fee', f.fee_cents)}
+    ${moneyRow('Tip', f.tip_cents)}
+    <div class="tmrow" style="font-weight:900;font-size:.95rem;border-top:1.5px solid rgba(255,255,255,.1);padding-top:8px"><b style="color:#c9cdd3">Total</b><span>${money(f.total_cents)}</span></div>
+    ${f.collect_cash_cents?`<div class="tmrow" style="color:#f0a04b"><b>Collect cash</b><span>${money(f.collect_cash_cents)}</span></div>`:''}
+    ${f.payment_method?`<div class="tmrow"><b>Payment</b><span>${esc(f.payment_method)}</span></div>`:''}
+    ${f.prep_estimate_minutes?`<div class="tmrow"><b>Kitchen's estimate</b><span>~${esc(f.prep_estimate_minutes)} min</span></div>`:''}
+    <div class="tmsection">Timeline</div>
     ${stampRow('Received', f.received_at)}${stampRow('Confirmed', f.confirmed_at)}
     ${stampRow('Assigned', f.assigned_at)}${stampRow('Picked up', f.in_transit_at)}
     ${stampRow('Delivered', f.delivered_at)}${stampRow('Closed', f.closed_at)}
     ${stampRow('Cancelled', f.cancelled_at)}${stampRow('Failed', f.failed_at)}
-    ${d.has_proof?`<div class="line"><b>Proof</b><a href="/proof/${f.order_id}" target="_blank" style="color:#6fa0ff">📷 view photo</a></div>`:''}
-    ${d.events.length?`<div class="line" style="margin-top:10px"><b>Event trail</b></div>` +
-      d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> <span>· ${e.actor} · ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join(''):''}
-    <div class="row"><button class="ghost" onclick="document.getElementById('orderDetail').innerHTML='';document.getElementById('findOrd').value=''">Close ✕</button></div>
-  </div>`;
+    ${d.has_proof?`<div class="tmrow"><b>Proof</b><a href="/proof/${f.order_id}" target="_blank" style="color:#6fa0ff">\ud83d\udcf7 view photo</a></div>`:''}
+    ${d.events.length?`<div class="tmsection">Event trail</div>` +
+      d.events.map(e=>`<div class="ev"><b>${e.event_type}</b> <span>\u00b7 ${e.actor} \u00b7 ${e.occurred_at.replace('T',' ').slice(0,19)} UTC</span></div>`).join(''):''}
+    <div class="tmactions">${actions}</div>
+  `;
+}
+function assignFromModal(rid){
+  // reuse the ticket card's own assign UI by scrolling to it, if present on the
+  // current filter; otherwise the Assign quick-action inside the card list works.
+  const card = document.getElementById(rid);
+  if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.style.outline='2px solid #2f6fe0'; setTimeout(()=>card.style.outline='', 1600); }
 }
 function paintStats(d){
   try{
@@ -496,11 +587,53 @@ async function load(){
     return;
   }
   const d = await r.json(); DRIVERS = d.drivers; SNAP = d.orders;
+  detectNewOrders(SNAP);
   paintFilters();
   renderOrders();
   paintStats(d.stats);
   maybeDayOpen();
 }
+/* New-order alert — a dispatcher can't stare at the board every second. When a
+   fresh 'received' order appears, chime once and badge the tab title so it
+   catches the eye even from another tab. Silent on first load (no false alarm
+   for the backlog already sitting there). */
+let _seenOrderIds = null, _titleBase = document.title, _pendingNew = 0;
+function detectNewOrders(orders){
+  const ids = new Set((orders||[]).map(o=>o.order_id));
+  if(_seenOrderIds === null){ _seenOrderIds = ids; return; }  // first load: seed, don't alert
+  let fresh = 0;
+  (orders||[]).forEach(o=>{
+    if(!_seenOrderIds.has(o.order_id) && o.status === 'received') fresh++;
+  });
+  _seenOrderIds = ids;
+  if(fresh){
+    boardChime();
+    _pendingNew += fresh;
+    document.title = `(${_pendingNew}) NEW · ${_titleBase}`;
+    if(window.gwToast) gwToast(`${fresh} new order${fresh>1?'s':''} just came in`, true);
+  }
+}
+function boardChime(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const notes = [880, 1174.7];  // a bright two-note rise
+    notes.forEach((f,i)=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      o.connect(g); g.connect(ctx.destination);
+      const t = ctx.currentTime + i*0.14;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.28, t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+      o.start(t); o.stop(t+0.24);
+    });
+  }catch(e){}
+}
+// clear the title badge as soon as the dispatcher looks at the board
+window.addEventListener('focus', ()=>{ _pendingNew = 0; document.title = _titleBase; });
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden){ _pendingNew = 0; document.title = _titleBase; }
+});
 /* --- INBOX (v1.1) --- Leads and support tickets are worthless in a database
    nobody reads. Every hand raised lands here, in front of the founder. --- */
 async function showInbox(){
@@ -691,9 +824,9 @@ async function maybeDayOpen(){
     </div>`;
 }
 function jumpTo(oid){
-  document.getElementById('findOrd').value = oid;
-  findOrder();
-  window.scrollTo({top:0, behavior:'smooth'});
+  // opens the real ticket modal — no more scroll-to-top-and-hope; the modal is
+  // a fixed overlay so it can never be fought over by the board's poll re-render
+  openTicketModal(oid);
 }
 function dismissDayOpen(){
   try{ localStorage.setItem('gw_dayopen_' + todayStr(), '1'); }catch(e){}
@@ -925,6 +1058,10 @@ function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
 load(); setInterval(()=>{ if(VIEW==='orders') load(); }, 60000);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTicketModal(); });
 </script>
+<div id="ticketModalWrap" class="tmwrap" onclick="if(event.target===this)closeTicketModal()">
+  <div id="ticketModal" class="tmodal" role="dialog" aria-label="Order ticket"></div>
+</div>
 </body>
 </html>

@@ -37,20 +37,33 @@ def kitchen_page(token: str):
 async def kitchen_orders(token: str):
     p = _partner_by_token(token)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    # scheduled-order fix: an order placed Wednesday FOR Friday must appear Friday —
-    # match on received today OR requested_for today.
-    records = await at.list_records(
-        at.ORDERS,
-        formula=(f"AND({{partner_code}}='{p.code}',"
-                 f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
-                 f"DATETIME_FORMAT({{requested_for}},'YYYY-MM-DD')='{today}'),"
-                 f"NOT(OR({{status}}='closed',{{status}}='cancelled')))"),
-        max_records=100)
+    # CRITICAL: a ticket the kitchen still has to work must NEVER disappear
+    # because of a date-format edge case. The active rail is queried by STATUS
+    # ONLY — no date filter at all — so a scheduled order, a UTC-midnight
+    # boundary, or an Airtable field-type quirk on received_at can never make an
+    # open ticket vanish. (Root-caused a real 'orders not popping up' report:
+    # the old single query required received_at OR requested_for to
+    # DATETIME_FORMAT-match today, which is fragile if that field isn't a true
+    # Airtable date type or the record sits right at a day boundary.)
+    ACTIVE = ("received", "confirmed", "assigned")
+    import asyncio as _aio
+    active_records, day_all = await _aio.gather(
+        at.list_records(
+            at.ORDERS,
+            formula=(f"AND({{partner_code}}='{p.code}',"
+                     f"OR({{status}}='received',{{status}}='confirmed',{{status}}='assigned'))"),
+            max_records=100),
+        at.list_records(
+            at.ORDERS,
+            formula=(f"AND({{partner_code}}='{p.code}',"
+                     f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
+                     f"DATETIME_FORMAT({{requested_for}},'YYYY-MM-DD')='{today}'))"),
+            max_records=100),
+    )
     # the kitchen's active rail: tickets still in the kitchen's hands.
     # picked-up and delivered tickets leave the rail (counted instead).
-    ACTIVE = ("received", "confirmed", "assigned")
-    # pride stats — the kitchen's whole day, computed before we filter to the active rail
-    day_all = records
+    # pride stats — the kitchen's whole day (today's records only; cosmetic, not
+    # load-bearing for whether a ticket is visible)
     picked_up_today = sum(1 for r in day_all
                           if r["fields"].get("status") in ("in_transit", "delivered"))
     delivered_today = sum(1 for r in day_all
@@ -62,7 +75,7 @@ async def kitchen_orders(token: str):
     hours = Counter((r["fields"].get("received_at") or "")[11:13]
                     for r in day_all if r["fields"].get("received_at"))
     peak_hour = hours.most_common(1)[0][0] if hours else ""
-    records = [r for r in records if r["fields"].get("status") in ACTIVE]
+    records = [r for r in active_records if r["fields"].get("status") in ACTIVE]
     records.sort(key=lambda r: (r["fields"].get("requested_for")
                                 or r["fields"].get("received_at") or "9999"))
     order_ids = [r["fields"].get("order_id", "") for r in records]

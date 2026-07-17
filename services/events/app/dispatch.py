@@ -728,11 +728,24 @@ async def order_detail(key: str, order_id: str):
             "dropoff_contact_phone", "items_description", "special_instructions",
             "cancel_reason", "received_at", "confirmed_at", "assigned_at",
             "in_transit_at", "delivered_at", "closed_at", "cancelled_at", "failed_at",
-            "customer_name_raw", "customer_phone_raw",
-            "subtotal_cents", "fee_cents", "total_cents"]
+            "customer_name_raw", "customer_phone_raw", "requested_for",
+            "subtotal_cents", "fee_cents", "total_cents", "tip_cents",
+            "discount_cents", "promo_code", "payment_method", "collect_cash_cents",
+            "prep_estimate_minutes"]
+    driver_name = ""
+    driver_ids = f.get("driver") or []
+    if driver_ids:
+        drivers = _cget("drivers:list")
+        if drivers is None:
+            drivers = await at.list_records(at.DRIVERS)
+            _cput("drivers:list", drivers, 45)
+        match = next((d for d in drivers if d["id"] == driver_ids[0]), None)
+        if match:
+            driver_name = match["fields"].get("display_name", "")
     return {
         "record_id": recs[0]["id"],
         "fields": {k: f.get(k, "") for k in keep if f.get(k)},
+        "driver_name": driver_name,
         "has_proof": has_proof,
         "events": [{"event_type": e.event_type, "actor": e.actor,
                     "occurred_at": e.occurred_at.isoformat(), "payload": e.payload}
