@@ -29,3 +29,9 @@ def test_tracking_receipt_itemizes_and_breaks_down_money():
     assert "Subtotal" in t and "Delivery fee" in t and "Driver tip" in t
     assert "rctot" in t  # a real total row
     assert "Discount" in t  # promo discounts shown when present
+
+
+def test_driver_delivery_items_are_formatted():
+    d = _f("app/ui/driver.html")
+    assert "function fmtItems" in d
+    assert "fmtItems(o.items)" in d

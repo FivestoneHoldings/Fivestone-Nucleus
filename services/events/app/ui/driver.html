@@ -158,7 +158,7 @@ async function load(){
       ${o.requested_for?`<div class="sched">SCHEDULED · ${esc(o.requested_for).replace('T',' ').slice(0,16)}</div>`:''}
       <div class="addr"><b>Pickup</b>${esc(o.pickup)||'—'}</div>
       <div class="addr"><b>Dropoff</b>${esc(o.dropoff)||'—'}</div>
-      ${o.items?`<div class="items">${esc(o.items)}</div>`:''}
+      ${o.items?`<div class="items">${fmtItems(o.items)}</div>`:''}
       ${(o.contact||o.phone)?`<div class="contact">${esc(o.contact)||'Customer'}${o.phone?` · <a href="tel:${esc(o.phone).replace(/[^0-9+]/g,'')}">${esc(o.phone)}</a>`:''}</div>`:''}
       ${o.notes?`<div class="items">📝 ${esc(o.notes)}</div>`:''}
       <div class="row">
@@ -325,6 +325,17 @@ function doneText(d){
   return t;
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
+// Clean per-line items on the delivery card, quantity broken out — a driver
+// double-checking the bag at the door reads a list, not a run-on string.
+function fmtItems(raw){
+  if(!raw) return '';
+  let s = String(raw).split(' — subtotal')[0];
+  return s.split(/,\s*(?=\d+\s*[×xX])/).map(p=>{
+    const m = p.match(/^\s*(\d+)\s*[×xX]\s*(.+?)(?:\s*\(\$[\d.]+\))?\s*$/);
+    if(m) return `<div><b style="font-family:'IBM Plex Mono',monospace;color:#16337a">${esc(m[1])}×</b> ${esc(m[2].trim())}</div>`;
+    return `<div>${esc(p.trim())}</div>`;
+  }).join('');
+}
 function paintShift(){
   const b = document.getElementById('shiftBtn');
   b.textContent = SHIFT ? '● ON SHIFT — tap to end' : '○ OFF SHIFT — tap to start';
