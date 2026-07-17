@@ -890,9 +890,12 @@ function renderMenu(m){
 const NOTES = {};
 function filterMenu(){
   const q = (document.getElementById('msearch').value || '').toLowerCase().trim();
+  let shown = 0;
   document.querySelectorAll('.mitem').forEach(el=>{
     const t = el.textContent.toLowerCase();
-    el.style.display = (!q || t.includes(q)) ? '' : 'none';
+    const vis = (!q || t.includes(q));
+    el.style.display = vis ? '' : 'none';
+    if(vis && q) shown++;
   });
   document.querySelectorAll('.mcat').forEach(cat=>{
     let n = cat.nextElementSibling, any = false;
@@ -902,6 +905,25 @@ function filterMenu(){
     }
     cat.style.display = any ? '' : 'none';
   });
+  // the jump-bar and back-to-top are noise while searching — a filtered menu
+  // isn't a browseable one. Hide them, and show a live result count + empty msg.
+  const nav = document.querySelector('.catnav');
+  if(nav) nav.style.display = q ? 'none' : '';
+  let msg = document.getElementById('msearchMsg');
+  if(!msg){
+    msg = document.createElement('div');
+    msg.id = 'msearchMsg';
+    msg.style.cssText = 'font-size:.82rem;color:#7a7f87;margin:2px 0 12px;font-weight:600';
+    const box = document.getElementById('msearch');
+    if(box && box.parentNode) box.parentNode.insertBefore(msg, box.nextSibling);
+  }
+  if(!q){ msg.style.display = 'none'; }
+  else {
+    msg.style.display = '';
+    msg.textContent = shown === 0
+      ? `No dishes match "${q}" — try another word.`
+      : `${shown} ${shown===1?'dish':'dishes'} match "${q}"`;
+  }
 }
 async function itemNote(id){
   const name = ((window._ITEMS && window._ITEMS[id]) || {}).name || 'this item';

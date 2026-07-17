@@ -61,6 +61,14 @@ padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15
 .gw-bar .surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
 text-transform:uppercase;letter-spacing:.14em}
 .items{box-shadow:0 3px 16px rgba(20,30,60,.06);border-radius:14px !important;border:1px solid #e4e8f2 !important}
+.receipt{background:#fff;border:1px solid #e4e8f2;border-radius:16px;padding:16px 18px;
+box-shadow:0 3px 16px rgba(20,30,60,.06)}
+.rchead{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+text-transform:uppercase;color:#9199a8;margin-bottom:10px}
+.rcsep{height:1px;background:#eef0f5;margin:10px 0}
+.rcline{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:.9rem;color:#44474d}
+.rctot{border-top:2px solid #eef0f5;margin-top:6px;padding-top:10px;font-weight:900;
+font-size:1.05rem;color:#16337a}
 .mark{font-weight:800;font-size:1.15rem}.mark span{color:#16337a}
 .oid{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#6b6f76;margin:4px 0 22px}
 .sharebtn{margin-left:9px;background:#eef2fc;color:#16337a;border:none;border-radius:20px;
@@ -490,13 +498,46 @@ async def track(order_id: str):
     raw_items = f.get("items_description", "")
     # cart strings look like "2× A ($9.00), 1× B ($4.00) — subtotal $13.00"
     raw_items = raw_items.split(" — subtotal")[0]
-    items_line = _esc(raw_items).replace("), ", ")<br>")
-    total = f.get("total_cents")
-    if total:
+    # render each item on its own line with the quantity broken out
+    import re as _re
+    _item_rows = ""
+    for _part in _re.split(r",\s*(?=\d+\s*[×xX])", raw_items):
+        _m = _re.match(r"^\s*(\d+)\s*[×xX]\s*(.+?)(?:\s*\(\$([\d.]+)\))?\s*$", _part)
+        if _m:
+            _qty, _nm, _pr = _m.group(1), _m.group(2).strip(), _m.group(3)
+            _price = f'<span style="color:#6b7280">${_pr}</span>' if _pr else ""
+            _item_rows += (f'<div style="display:flex;justify-content:space-between;gap:12px;'
+                           f'padding:5px 0;font-size:.9rem">'
+                           f'<span><b style="color:#16337a;font-family:\'IBM Plex Mono\',monospace">'
+                           f'{_esc(_qty)}×</b> {_esc(_nm)}</span>{_price}</div>')
+        elif _part.strip():
+            _item_rows += f'<div style="padding:5px 0;font-size:.9rem">{_esc(_part.strip())}</div>'
+
+    def _c(field):
         try:
-            items_line += f'<br><b style="color:#16337a">Total ${int(total)/100:.2f}</b>'
+            return int(f.get(field) or 0)
         except (ValueError, TypeError):
-            pass
+            return 0
+    _sub, _fee, _disc, _tip, _tot = (_c("subtotal_cents"), _c("fee_cents"),
+                                     _c("discount_cents"), _c("tip_cents"), _c("total_cents"))
+    _money = lambda c: f"${c/100:.2f}"
+    _breakdown = ""
+    if _sub:
+        _breakdown += f'<div class="rcline"><span>Subtotal</span><span>{_money(_sub)}</span></div>'
+    if _disc:
+        _breakdown += f'<div class="rcline" style="color:#1a7f4b"><span>Discount</span><span>−{_money(_disc)}</span></div>'
+    if _fee:
+        _breakdown += f'<div class="rcline"><span>Delivery fee</span><span>{_money(_fee)}</span></div>'
+    if _tip:
+        _breakdown += f'<div class="rcline"><span>Driver tip</span><span>{_money(_tip)}</span></div>'
+    _total_row = (f'<div class="rcline rctot"><span>Total</span><span>{_money(_tot)}</span></div>'
+                  if _tot else "")
+    items_line = (f'<div class="receipt">'
+                  f'<div class="rchead">Your order</div>'
+                  f'{_item_rows}'
+                  f'{("<div class=rcsep></div>" + _breakdown) if _breakdown else ""}'
+                  f'{_total_row}'
+                  f'</div>')
 
     proof_html = ""
     celebrate_html = ""

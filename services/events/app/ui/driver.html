@@ -291,7 +291,19 @@ async function showEarnings(){
   </div>`;
 }
 function nav(addr){
-  window.open('https://maps.apple.com/?daddr=' + encodeURIComponent(addr), '_blank');
+  if(!addr) return;
+  const q = encodeURIComponent(addr);
+  const ua = navigator.userAgent || '';
+  // Apple Maps only opens on Apple devices; every Android driver got a dead
+  // link before. Route by platform, with a universal Google Maps fallback that
+  // works on Android, desktop, and any browser.
+  let url;
+  if(/iPhone|iPad|iPod|Macintosh/.test(ua)){
+    url = 'https://maps.apple.com/?daddr=' + q;
+  } else {
+    url = 'https://www.google.com/maps/dir/?api=1&destination=' + q;
+  }
+  window.open(url, '_blank', 'noopener');
 }
 async function headsUp(id){
   const presets = ['On my way now 🚗','About 5 minutes out','Running a few minutes late, sorry!','I\'m outside 👋'];
