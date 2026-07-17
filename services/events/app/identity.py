@@ -207,6 +207,7 @@ def partner_lookup(code: str):
         db.close()
     if not p:
         raise HTTPException(404, "Unknown partner")
+    prep = _prep_minutes_by_partner().get(p.code)
     return {"code": p.code, "display_name": p.display_name, "status": p.status,
             "address": p.address, "delivery_fee_cents": p.delivery_fee_cents,
             "accepting_orders": p.accepting_orders,
@@ -218,6 +219,7 @@ def partner_lookup(code: str):
             "logo_url": p.logo_url,
             "cover_url": p.cover_url,
             "demo": p.demo,
+            "prep_minutes": prep,
             "special": _todays_special(p)}
 
 

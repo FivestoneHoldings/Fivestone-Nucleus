@@ -294,6 +294,9 @@ text-transform:uppercase;color:#7a7f87;font-weight:500;margin-bottom:10px}
 .orvedit{width:100%;margin-top:12px;padding:11px;border-radius:11px;background:#fff;
 border:1.5px solid #d9deea;color:#16337a;font-weight:800;font-size:.84rem;font-family:'Archivo';cursor:pointer}
 .orvmoney{margin-top:12px;padding-top:11px;border-top:1.5px solid #dfe4ee}
+.orveta{margin-top:12px;background:#eef6f0;border:1px solid #cfe6d8;border-radius:11px;
+padding:10px 13px;font-size:.82rem;color:#256c47}
+.orveta b{color:#1a5236}
 .orvm{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;
 font-size:.85rem;color:#5a5e64}
 .orvm span:last-child{font-variant-numeric:tabular-nums;font-weight:700;color:#16181b}
@@ -577,6 +580,15 @@ function paintReview(){
   const entries = Object.entries(CART);
   const sub = subtotalCents();
   const total = sub + FEE_CENTS + TIP_CENTS - DISCOUNT_CENTS;
+  // Honest ETA: only shown when the kitchen has real prep telemetry (median of
+  // its last 20 orders). prep + a ~14 min dispatch/drive tail, shown as a
+  // window. Never a fabricated number — if we don't know, we don't claim.
+  const prep = window._PARTNER_META && window._PARTNER_META.prep_minutes;
+  let etaLine = '';
+  if(prep){
+    const lo = prep + 10, hi = prep + 22;
+    etaLine = `<div class="orveta">🕒 Estimated arrival <b>${lo}–${hi} min</b> after the kitchen accepts</div>`;
+  }
   document.getElementById('orderReview').innerHTML = `
     <div class="orv">
       <h2>Your order${PARTNER_NAME ? ' · ' + PARTNER_NAME.replace(/</g,'&lt;') : ''}</h2>
@@ -589,6 +601,7 @@ function paintReview(){
           ${id.includes('::') ? `<button type="button" class="orv-rm" onclick="removeCartLine('${id}')">✕</button>` : ''}
         </div>`).join('')}
       <button type="button" class="orvedit" onclick="goMenu()">＋ Add more / change items</button>
+      ${etaLine}
       <div class="orvmoney">
         <div class="orvm"><span>Subtotal</span><span>${money(sub)}</span></div>
         <div class="orvm"><span>Delivery fee</span><span>${FEE_CENTS?money(FEE_CENTS):'Free'}</span></div>
