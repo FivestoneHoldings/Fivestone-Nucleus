@@ -106,6 +106,11 @@ letter-spacing:.14em;color:#16337a;font-weight:500;padding:0 4px}
 input,textarea,select{background:#f2f4fa !important;border:1.5px solid transparent !important;
 border-radius:12px !important;transition:border-color .15s, background .15s}
 input:focus,textarea:focus{background:#fff !important;border-color:#2f6fe0 !important;outline:none}
+/* input:focus (0,1,1) outranks :focus-visible (0,1,0), so the rule above was
+   quietly stripping the focus ring for KEYBOARD users too. Put it back for
+   keyboard focus only — a mouse click stays clean, tabbing stays visible. */
+input:focus-visible,textarea:focus-visible,select:focus-visible{
+outline:3px solid #2f6fe0 !important;outline-offset:2px}
 button[type="submit"]{background:linear-gradient(135deg,#16337a,#1e4292) !important;
 box-shadow:0 8px 22px rgba(22,51,122,.32);border-radius:14px !important;font-size:1rem !important;
 letter-spacing:.01em}
@@ -207,6 +212,7 @@ display:flex;flex-direction:column;align-items:center;line-height:1.15;transitio
 .msearch{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;
 border:1.5px solid transparent;background:#f2f4fa;font-family:inherit;font-size:.9rem;margin-bottom:10px}
 .msearch:focus{background:#fff;border-color:#2f6fe0;outline:none}
+.msearch:focus-visible{outline:3px solid #2f6fe0 !important;outline-offset:2px}
 
 /* ===== MENU — single authoritative block (v1.0.1) ===== */
 .mcat{scroll-margin-top:118px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;text-transform:uppercase;
@@ -317,6 +323,7 @@ border:1.5px solid #d9deea;border-radius:14px;overflow:hidden;transition:border-
 padding:13px 8px;font-size:.88rem;font-family:'Archivo';color:#16181b}
 .promo-row input::placeholder{color:#b3b9c6;font-weight:500}
 .promo-row input:focus{outline:none}
+.promo-row input:focus-visible{outline:2px solid #2f6fe0 !important;outline-offset:2px;border-radius:6px}
 .promo-row button{flex:0 0 auto;margin:6px 6px 6px 0;padding:0 16px;border-radius:9px;
 border:none;background:#eef1f7;color:#8a90a0;font-weight:800;font-family:'Archivo';
 font-size:.82rem;cursor:pointer;transition:background .15s ease,color .15s ease}
@@ -455,7 +462,7 @@ cursor:pointer;flex:0 0 auto}
         <button type="button" id="asapBtn" onclick="setWhen(false)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#16337a;color:#fff;font-weight:800">ASAP</button>
         <button type="button" id="schedBtn" onclick="setWhen(true)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #16337a;background:#fff;color:#16337a;font-weight:800">Schedule</button>
       </div>
-      <input type="datetime-local" name="requested_for" id="reqFor" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
+      <input type="datetime-local" name="requested_for" id="reqFor" aria-label="Choose the date and time you'd like this delivered" style="display:none;width:100%;padding:12px;border-radius:10px;border:1.5px solid #d9deea;font-family:'IBM Plex Mono',monospace;font-size:.85rem">
     </fieldset>
 
     <div class="tipwrap" id="tipWrap" style="display:none">
