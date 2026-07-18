@@ -439,21 +439,24 @@ cursor:pointer;flex:0 0 auto}
     <fieldset id="deliverFs">
       <legend>Deliver to</legend>
       <label class="req" for="da">Your delivery address</label>
-      <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"></textarea>
+      <textarea id="da" name="dropoff_address" required placeholder="Street, City, TN"
+        autocomplete="street-address"></textarea>
       <div id="recipientRow">
         <label for="dcn">Recipient name <span class="opt">(if not you)</span></label>
-        <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it">
+        <input id="dcn" name="dropoff_contact_name" placeholder="Who receives it" autocomplete="name">
         <label for="dcp">Recipient phone <span class="opt">(optional)</span></label>
-        <input id="dcp" name="dropoff_contact_phone" type="tel" placeholder="865-555-0199">
+        <input id="dcp" name="dropoff_contact_phone" type="tel" inputmode="tel"
+          autocomplete="tel" placeholder="865-555-0199">
       </div>
     </fieldset>
 
     <fieldset id="whoFs">
       <legend id="whoLeg">Your contact info</legend>
       <label class="req" for="cn" id="cnLabel">Your name</label>
-      <input id="cn" name="customer_name" required placeholder="Alex Johnson">
+      <input id="cn" name="customer_name" required placeholder="Alex Johnson" autocomplete="name">
       <label class="req" for="cp">Phone <span class="opt" id="cpOpt">(for delivery updates)</span></label>
-      <input id="cp" name="customer_phone" type="tel" required placeholder="865-555-0100">
+      <input id="cp" name="customer_phone" type="tel" inputmode="tel"
+        autocomplete="tel" required placeholder="865-555-0100">
     </fieldset>
 
     <fieldset id="whenFs">
