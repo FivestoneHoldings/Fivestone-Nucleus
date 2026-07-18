@@ -54,6 +54,13 @@ def _fingerprint(dropoff: str, items: str, requested_for: str) -> str:
     return hashlib.md5((dropoff.lower() + items.lower() + bucket.lower()).encode()).hexdigest()
 
 
+# How close together two identical orders must be to count as an accidental
+# double-submit rather than a genuine repeat order. Long enough to absorb a
+# double-tap, a rage-refresh, or a flaky connection retry; far short of the
+# hours between a real lunch and a real dinner.
+DEDUP_WINDOW_SECONDS = 8 * 60
+
+
 def _log_owned(event_type: str, entity_ref: str, payload: dict):
     db = SessionLocal()
     try:
@@ -180,8 +187,31 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
 
     duplicate = False
     try:
-        existing = await at.list_records(at.ORDERS, formula=f"{{fingerprint}}='{fp}'", max_records=1)
-        duplicate = bool(existing)
+        # Duplicate protection is meant to catch an ACCIDENTAL DOUBLE-SUBMIT
+        # (double-tapped button, impatient refresh) — NOT a legitimate repeat
+        # order. The old check treated any same-items/same-address order on the
+        # same calendar day as a duplicate and silently refused to create it,
+        # which broke real cases: an office where two people each want the same
+        # dish, or a household that orders the same thing for lunch and again
+        # for dinner. Now the fingerprint still buckets by day (so the Airtable
+        # query stays a cheap exact match), but a match only counts as a
+        # duplicate if it landed within the last few minutes.
+        existing = await at.list_records(at.ORDERS, formula=f"{{fingerprint}}='{fp}'",
+                                         max_records=5)
+        now_utc = datetime.now(timezone.utc)
+        for _rec in existing:
+            _stamp = _rec.get("fields", {}).get("received_at", "")
+            if not _stamp:
+                continue
+            try:
+                _when = datetime.fromisoformat(str(_stamp).replace("Z", "+00:00"))
+                if _when.tzinfo is None:
+                    _when = _when.replace(tzinfo=timezone.utc)
+            except (ValueError, TypeError):
+                continue
+            if (now_utc - _when).total_seconds() <= DEDUP_WINDOW_SECONDS:
+                duplicate = True
+                break
         if not duplicate:
             # --- STANDING DELIVERY PREFERENCES (v1.5) ---
             # "Megan prefers no-contact delivery. Blue house, no garage. Always
@@ -313,7 +343,7 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
         if duplicate:
             return HTMLResponse(CONFIRM_PAGE.format(
                 headline="We already have this one!", order_id=order_id,
-                message="This exact order was already received today — no duplicate was created. We're on it."))
+                message="You just sent this same order a moment ago, so we didn't create a second one. We're already on it."))
         return HTMLResponse(
             f'<!DOCTYPE html><html><head><meta charset="UTF-8">'
             f'<meta http-equiv="refresh" content="0; url=/track/{order_id}">'

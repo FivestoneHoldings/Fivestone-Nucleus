@@ -59,14 +59,47 @@ def test_intake_json_response():
     assert r.json()["received"] is True
 
 
-def test_intake_dedup_blocks_second():
+def test_intake_dedup_blocks_an_accidental_double_submit():
+    """A double-tapped button fires the same order seconds apart — that must
+    never create two orders."""
     global EXISTING
-    EXISTING = [{"id": "recX", "fields": {}}]
+    from datetime import datetime, timezone
+    just_now = datetime.now(timezone.utc).isoformat()
+    EXISTING = [{"id": "recX", "fields": {"received_at": just_now}}]
     n = len(CREATED)
     r = client.post("/v0/intake", json={
         "dropoff_address": "123 J St", "items_description": "box"})
     assert r.json()["duplicate"] is True
     assert len(CREATED) == n  # nothing new created
+    EXISTING = []
+
+
+def test_intake_allows_a_genuine_repeat_order_later_the_same_day():
+    """An office where two people want the same dish, or a household ordering
+    the same thing for lunch and again for dinner, must NOT have the second
+    order silently swallowed. Dedup is for double-taps, not repeat business."""
+    global EXISTING
+    from datetime import datetime, timezone, timedelta
+    hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
+    EXISTING = [{"id": "recOld", "fields": {"received_at": hours_ago}}]
+    n = len(CREATED)
+    r = client.post("/v0/intake", json={
+        "dropoff_address": "123 J St", "items_description": "box"})
+    assert r.json()["duplicate"] is False
+    assert len(CREATED) == n + 1  # the repeat order really was created
+    EXISTING = []
+
+
+def test_intake_creates_order_when_match_has_no_timestamp():
+    """If we can't tell when a fingerprint-matching order happened, let the new
+    one through — losing a real order is far worse than a rare duplicate."""
+    global EXISTING
+    EXISTING = [{"id": "recNoStamp", "fields": {}}]
+    n = len(CREATED)
+    r = client.post("/v0/intake", json={
+        "dropoff_address": "123 J St", "items_description": "box"})
+    assert r.json()["duplicate"] is False
+    assert len(CREATED) == n + 1
     EXISTING = []
 
 
@@ -87,3 +120,15 @@ def test_proof_roundtrip():
 
 def test_proof_404_when_missing():
     assert client.get("/proof/ORD-NOPE").status_code == 404
+
+
+def test_order_form_has_client_side_double_submit_guard():
+    """Belt and suspenders: the browser shouldn't even fire the second request."""
+    import os
+    ui = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "order-form.html")
+    src = open(ui).read()
+    assert "_GW_SENDING" in src
+    assert "ev.preventDefault()" in src
+    assert "Sending your order…" in src
+    # and it must release the button if navigation never happens (offline)
+    assert "sb.disabled = false" in src

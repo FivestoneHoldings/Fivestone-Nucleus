@@ -848,7 +848,23 @@ try{
   if((prof.addresses||[])[0] && !document.getElementById('da').value)
     document.getElementById('da').value = prof.addresses[0];
   if(typeof prof.defaultTip === 'number' && typeof setTip === 'function') setTip(prof.defaultTip);
-  document.querySelector('form').addEventListener('submit', ()=>{
+  document.querySelector('form').addEventListener('submit', (ev)=>{
+    // Double-submit guard: a double-tapped button (or an impatient second tap
+    // while the request is in flight) must never fire two orders. The server
+    // also dedups, but stopping it here is instant and gives honest feedback.
+    const sb = document.querySelector('button[type="submit"]');
+    if(window._GW_SENDING){ ev.preventDefault(); return false; }
+    window._GW_SENDING = true;
+    if(sb){
+      sb.disabled = true;
+      sb.dataset.label = sb.textContent;
+      sb.textContent = 'Sending your order…';
+    }
+    // if navigation somehow doesn't happen (offline, blocked), give it back
+    setTimeout(()=>{
+      window._GW_SENDING = false;
+      if(sb && sb.disabled){ sb.disabled = false; if(sb.dataset.label) sb.textContent = sb.dataset.label; }
+    }, 12000);
     if(p) localStorage.setItem('gw_last_partner', JSON.stringify(
       {code: p, name: (document.querySelector('.tag').textContent||'').split(' × ')[0]}));
     // save-back: quietly learn for next time
