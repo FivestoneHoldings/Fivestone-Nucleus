@@ -55,7 +55,29 @@ def _resolve(tok: str, rec: dict):
     if tok.startswith("DATETIME_FORMAT("):
         inner = tok[len("DATETIME_FORMAT("):-1]
         field = _split_top(inner)[0].strip()
+        # Real Airtable renders DATETIME_FORMAT in UTC unless the field is
+        # wrapped in SET_TIMEZONE(...). GateWay wraps its UTC-written
+        # timestamps so that "today" means the MARKET's today (a 9 PM Knoxville
+        # delivery is already tomorrow in UTC). Model that faithfully here, or
+        # these tests would pass against behaviour real Airtable doesn't have.
+        tzname = ""
+        if field.startswith("SET_TIMEZONE("):
+            tz_inner = field[len("SET_TIMEZONE("):-1]
+            parts = _split_top(tz_inner)
+            field = parts[0].strip()
+            if len(parts) > 1:
+                tzname = parts[1].strip().strip("'")
         val = rec["fields"].get(field[1:-1], "") or ""
+        if tzname and val:
+            try:
+                from datetime import datetime, timezone
+                from zoneinfo import ZoneInfo
+                dt = datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(ZoneInfo(tzname)).strftime("%Y-%m-%d")
+            except Exception:
+                return str(val)[:10]
         return str(val)[:10]  # YYYY-MM-DD
     if tok.startswith("{") and tok.endswith("}"):
         v = rec["fields"].get(tok[1:-1], "")

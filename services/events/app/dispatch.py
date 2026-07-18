@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from . import airtable_client as at
 from . import notify
+from .bizday import business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Proof, DriverLocation
 
@@ -168,7 +169,7 @@ async def driver_orders(day_token: str):
         raise HTTPException(503, "AIRTABLE_PAT not configured")
     drv = await _driver_by_token(day_token)
     pay_by_order: dict = {}
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     # Split queries: active (assigned/in_transit) and delivered-today run
     # separately AND concurrently. The old combined query capped at 100 records
     # total — on a busy day, delivered rows could crowd active assignments out
@@ -184,7 +185,7 @@ async def driver_orders(day_token: str):
         at.list_records(
             at.ORDERS,
             formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
-                     f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}')"),
+                     f"DATETIME_FORMAT(SET_TIMEZONE({{delivered_at}},'America/New_York'),'YYYY-MM-DD')='{today}')"),
             max_records=100),
     )
     combined = list(records) + list(done_today)
@@ -645,9 +646,9 @@ def _minutes_between(a: str, b: str):
 @router.get("/api/board/{key}/stats")
 async def board_stats(key: str):
     _check_key(key)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     records = await at.list_records(
-        at.ORDERS, formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
+        at.ORDERS, formula=f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{today}'",
         max_records=100)
     by_status: dict = {}
     partners: dict = {}
@@ -856,8 +857,8 @@ async def track_location(order_id: str):
 @router.get("/api/board/{key}/summary")
 async def day_summary(key: str, date: str = "", partner: str = ""):
     _check_key(key)
-    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{day}'"
+    day = date or business_day()
+    formula = f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{day}'"
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
@@ -892,11 +893,11 @@ async def export_day_csv(key: str, date: str = "", partner: str = "", days: int 
     import csv
     import io
     from datetime import timedelta
-    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = date or business_day()
     days = max(1, min(days, 31))
     start = (datetime.fromisoformat(day) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
-    formula = (f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
-               f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')<='{day}')")
+    formula = (f"AND(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')>='{start}',"
+               f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')<='{day}')")
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
@@ -923,7 +924,7 @@ async def weekly_digest(key: str, partner: str = "", days: int = 7):
     from datetime import timedelta
     days = max(1, min(days, 31))
     start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
-    formula = f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}'"
+    formula = f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')>='{start}'"
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
@@ -998,7 +999,7 @@ async def board_snapshot(key: str):
     Orders arrive urgency-sorted: needs-attention first, oldest first within a group."""
     _check_key(key)
     import asyncio
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     # open orders and today's orders are two independent reads — fetch together.
     records, today_records = await asyncio.gather(
         at.list_records(
@@ -1006,7 +1007,7 @@ async def board_snapshot(key: str):
             max_records=100),
         at.list_records(
             at.ORDERS,
-            formula=f"DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}'",
+            formula=f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{today}'",
             max_records=100),
     )
     drivers = _cget("drivers:list")
@@ -1072,7 +1073,7 @@ async def partner_statement(key: str, partner: str, days: int = 7):
     start = (end - timedelta(days=days - 1)).strftime("%Y-%m-%d")
     end_s = end.strftime("%Y-%m-%d")
     p = _fq(partner.lower())
-    formula = (f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
+    formula = (f"AND(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')>='{start}',"
                f"{{partner_code}}='{p}')")
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
     records.sort(key=lambda r: r["fields"].get("received_at", ""))
@@ -1201,7 +1202,7 @@ async def local_impact():
     try:
         records = await at.list_records(
             at.ORDERS,
-            formula=(f"AND(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')>='{start}',"
+            formula=(f"AND(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')>='{start}',"
                      f"OR({{status}}='delivered',{{status}}='closed'))"),
             max_records=100)
     except Exception:
@@ -1441,7 +1442,7 @@ async def driver_earnings(day_token: str, days: int = 7):
     records = await at.list_records(
         at.ORDERS,
         formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
-                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')>='{start}')"),
+                 f"DATETIME_FORMAT(SET_TIMEZONE({{delivered_at}},'America/New_York'),'YYYY-MM-DD')>='{start}')"),
         max_records=100)
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     by_day: dict = {}

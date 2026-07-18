@@ -10,6 +10,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from . import airtable_client as at
+from .bizday import business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Partner
 
@@ -36,7 +37,7 @@ def kitchen_page(token: str):
 @router.get("/api/kitchen/{token}/orders")
 async def kitchen_orders(token: str):
     p = _partner_by_token(token)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     # CRITICAL: a ticket the kitchen still has to work must NEVER disappear
     # because of a date-format edge case. The active rail is queried by STATUS
     # ONLY — no date filter at all — so a scheduled order, a UTC-midnight
@@ -56,7 +57,7 @@ async def kitchen_orders(token: str):
         at.list_records(
             at.ORDERS,
             formula=(f"AND({{partner_code}}='{p.code}',"
-                     f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
+                     f"OR(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{today}',"
                      f"DATETIME_FORMAT({{requested_for}},'YYYY-MM-DD')='{today}'))"),
             max_records=100),
     )
@@ -128,12 +129,12 @@ async def kitchen_history(token: str):
     (out for delivery / delivered), newest first, plus today's top sellers
     parsed from real tickets — the depth a serious operation reviews at close."""
     p = _partner_by_token(token)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     records = await at.list_records(
         at.ORDERS,
         formula=(f"AND({{partner_code}}='{p.code}',"
-                 f"OR(DATETIME_FORMAT({{received_at}},'YYYY-MM-DD')='{today}',"
-                 f"DATETIME_FORMAT({{delivered_at}},'YYYY-MM-DD')='{today}'),"
+                 f"OR(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{today}',"
+                 f"DATETIME_FORMAT(SET_TIMEZONE({{delivered_at}},'America/New_York'),'YYYY-MM-DD')='{today}'),"
                  f"OR({{status}}='in_transit',{{status}}='delivered',{{status}}='closed'))"),
         max_records=100)
     records.sort(key=lambda r: (r["fields"].get("delivered_at")
@@ -338,7 +339,7 @@ async def set_special(token: str, request: Request):
     p = _partner_by_token(token)
     body = await request.json()
     text = str(body.get("text", "")).strip()[:200]
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     db: Session = SessionLocal()
     try:
         row = db.get(Partner, p.code)

@@ -6,6 +6,7 @@ import secrets
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from .bizday import business_day, business_day_of
 from .db import SessionLocal
 from .models import Partner, ReopenAlert
 
@@ -16,7 +17,7 @@ SEED = [("asiacafe", "Asia Cafe"), ("asiacafexpress", "Asia Cafe Xpress")]
 
 def _todays_special(p) -> str:
     from datetime import datetime, timezone
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = business_day()
     return p.special_text if (p.special_date == today and p.special_text) else ""
 
 
