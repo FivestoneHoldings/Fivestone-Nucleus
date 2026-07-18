@@ -766,8 +766,19 @@ function setTip(cents){
   paintTips(); compose();
 }
 function setWhen(sched){
-  document.getElementById('reqFor').style.display = sched ? '' : 'none';
-  if(!sched) document.getElementById('reqFor').value = '';
+  const rf = document.getElementById('reqFor');
+  rf.style.display = sched ? '' : 'none';
+  if(!sched){ rf.value = ''; }
+  else {
+    // The picker itself must never offer a past date/time — set min to right
+    // now (local), formatted the way datetime-local expects. Re-set on every
+    // toggle so it's never stale if the customer lingers on the page.
+    const now = new Date(Date.now() - Date.now() % 60000);  // strip seconds
+    const pad = n => String(n).padStart(2,'0');
+    const localMin = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    rf.min = localMin;
+    if(rf.value && rf.value < localMin) rf.value = '';
+  }
   const a = document.getElementById('asapBtn'), s = document.getElementById('schedBtn');
   a.style.background = sched?'#fff':'#16337a'; a.style.color = sched?'#16337a':'#fff';
   s.style.background = sched?'#16337a':'#fff'; s.style.color = sched?'#fff':'#16337a';

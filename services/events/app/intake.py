@@ -4,13 +4,14 @@ paths coexist. This is the canonical path from v0.4 forward.
 """
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import airtable_client as at
 from . import notify
+from .bizday import MARKET_TZ
 from .db import SessionLocal
 from .models import Event, MenuItem, Partner
 
@@ -140,6 +141,28 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                     order_id="—",
                     message="The kitchen is paused at the moment. Please check back soon — or call GateWay and we'll help."), status_code=423)
             return JSONResponse({"received": False, "error": "partner_paused"}, status_code=423)
+
+    # A scheduled order for a time that's already passed would sit forever as
+    # neither "now" nor "today" to the kitchen — never cooked, never delivered.
+    # The datetime picker sets a live min= to steer customers away from this,
+    # but that's client-side and can't be trusted (stale page, edited devtools,
+    # a direct API call). Reject anything more than a few minutes in the past;
+    # small clock skew between browser and server shouldn't hard-fail a real
+    # near-immediate order.
+    if data["requested_for"]:
+        try:
+            _req = datetime.fromisoformat(data["requested_for"])
+            if _req.tzinfo is None:
+                _req = _req.replace(tzinfo=MARKET_TZ)
+            if _req < datetime.now(MARKET_TZ) - timedelta(minutes=5):
+                if wants_html:
+                    return HTMLResponse(CONFIRM_PAGE.format(
+                        headline="That time has already passed",
+                        order_id="—",
+                        message="Pick an upcoming time for a scheduled order, or choose ASAP instead."), status_code=400)
+                return JSONResponse({"received": False, "error": "requested_for_in_past"}, status_code=400)
+        except (ValueError, TypeError):
+            data["requested_for"] = ""  # unparseable — drop it rather than 500 later
 
     fp = _fingerprint(data["dropoff_address"], data["items_description"], data["requested_for"])
     order_id = "ORD-" + fp[:8].upper()

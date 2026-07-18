@@ -93,12 +93,14 @@ def test_pause_blocks_intake_and_resume_restores():
 
 
 def test_scheduled_order_carried():
+    from datetime import datetime, timedelta
+    future = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%dT18:30")
     r = client.post("/v0/intake", json={
         "dropoff_address": "2 Oak", "items_description": "calzone",
-        "partner": "stephens", "requested_for": "2026-07-10T18:30"},
+        "partner": "stephens", "requested_for": future},
         headers={"x-forwarded-for": "6.6.6.6"})
     assert r.status_code == 200
-    assert CREATED[-1]["requested_for"] == "2026-07-10T18:30"
+    assert CREATED[-1]["requested_for"] == future
 
 
 def test_driver_sheet_shows_kitchen_ready(monkeypatch):
