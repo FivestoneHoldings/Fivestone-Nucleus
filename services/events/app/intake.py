@@ -169,12 +169,18 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
 
     # --- CART RE-PRICING (v1.4), run BEFORE the try/except below ---
     # A raised HTTPException here must reach the customer as its real status
-    # code and message ("Choose your protein first"), not get swallowed by the
-    # broad except-Exception handler further down and turned into a generic
-    # 503. The server re-derives EVERY line's price from the database and
-    # overwrites subtotal_cents — same posture as the v1.1 promo fix. Options
-    # can only ADD cost (enforced at creation/edit time), so this can only
-    # ever raise the subtotal versus a naive client total, never lower it.
+    # code and message ("An item in your cart is no longer available"), not get
+    # swallowed by the broad except-Exception handler further down and turned
+    # into a generic 503. It's caught and rendered locally (see except
+    # HTTPException below) rather than left to propagate: the app-wide handler
+    # in main.py only brands 404s and treats every /v0/ path as not wanting
+    # HTML regardless of Accept header, so a real customer on a real GET form
+    # submission would otherwise see a raw JSON blob mid-checkout instead of
+    # GateWay's confirmation page. The server re-derives EVERY line's price
+    # from the database and overwrites subtotal_cents — same posture as the
+    # v1.1 promo fix. Options can only ADD cost (enforced at creation/edit
+    # time), so this can only ever raise the subtotal versus a naive client
+    # total, never lower it.
     cart_subtotal_override = None
     cart_raw = data.get("cart_json") or "[]"
     try:
@@ -198,6 +204,20 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                 delta = validate_selected_options(_db2, item_id, choice_ids)
                 recomputed += (item.price_cents + delta) * qty
             cart_subtotal_override = recomputed
+        except HTTPException as _cart_exc:
+            # The global handler only brands 404s and never treats /v0/ paths as
+            # HTML-wanting regardless of Accept header — so letting this
+            # propagate meant a real customer, mid-checkout on a real GET form
+            # submission, saw a raw {"detail":"..."} JSON blob instead of
+            # GateWay's confirmation page. Format it ourselves, the same way
+            # every other error in this function already does.
+            if wants_html:
+                return HTMLResponse(CONFIRM_PAGE.format(
+                    headline="One thing changed", order_id="—",
+                    message=f"{_cart_exc.detail} Please go back, refresh the menu, "
+                            f"and try again."), status_code=_cart_exc.status_code)
+            return JSONResponse({"received": False, "error": "cart_item_invalid",
+                                 "detail": _cart_exc.detail}, status_code=_cart_exc.status_code)
         finally:
             _db2.close()
 
