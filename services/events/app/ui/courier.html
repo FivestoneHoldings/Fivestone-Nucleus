@@ -411,7 +411,7 @@ async function sendCourier(){
     payment_method: PAY,
   });
   try{
-    const r = await fetch('/v0/intake?' + params.toString());
+    const r = await fetch('/v0/intake?' + params.toString(), {headers: {'Accept': 'application/json'}});
     if(!r.ok) throw new Error('intake');
     let oid = '';
     try{ const d = await r.json(); oid = d.order_id || d.id || ''; }catch(e){}

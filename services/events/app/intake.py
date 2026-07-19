@@ -112,7 +112,20 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
     from . import payments
     payment_method = payments.normalize_method(data.get("payment_method", ""))
     data = {k: str(data.get(k, "")).strip()[:CAPS[k]] for k in FIELDS}
-    wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
+    # A real browser form submission (order-form.html's <form method="GET">)
+    # and an AJAX fetch() GET call (courier.html, so it can stay on the page
+    # and show an inline confirmation card) are BOTH plain GET requests — the
+    # method alone can't tell them apart. Without this override, courier's
+    # fetch() got an HTML page back where its JS expected JSON: `await
+    # r.json()` silently failed inside a try/catch, leaving the order ID blank
+    # on the confirmation screen and the order never saved to the customer's
+    # local order history. A caller that explicitly asks for JSON is honored
+    # regardless of HTTP method.
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept and "text/html" not in accept:
+        wants_html = False
+    else:
+        wants_html = request.method == "GET" or "form" in request.headers.get("content-type", "")
     client_ip = (request.headers.get("x-forwarded-for", "") or
                  (request.client.host if request.client else "?")).split(",")[0].strip()
     if _throttled(client_ip):
