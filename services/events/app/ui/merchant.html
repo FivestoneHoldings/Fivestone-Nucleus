@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GateWay for Merchants — Sign in</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<meta name="description" content="Sign in to your GateWay kitchen screen — live tickets, prep times, your menu and your news feed.">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0e1526">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16181b;--paper:#f7f8fb;--blue:#16337a;--line:#d9deea;--dim:#5a5e64}
+*{box-sizing:border-box;margin:0;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{max-width:100%;overflow-x:clip}
+@supports not (overflow: clip){html,body{overflow-x:hidden}}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+max-width:460px;margin:0 auto;padding:88px 22px 60px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.gw-bar{position:fixed;top:0;left:0;right:0;z-index:50;background:#0e1526;display:flex;
+align-items:center;justify-content:space-between;padding:12px 16px;
+padding-top:max(12px, env(safe-area-inset-top));box-shadow:0 2px 14px rgba(10,15,30,.28);max-width:100vw}
+.gw-bar img{height:38px;width:auto;border-radius:7px}
+.surf{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#8b93a7;
+text-transform:uppercase;letter-spacing:.14em}
+h1{font-size:1.6rem;font-weight:900;letter-spacing:-.02em;line-height:1.1;margin-bottom:8px}
+.lede{font-size:.92rem;color:var(--dim);line-height:1.55;margin-bottom:22px}
+.card{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:20px;
+box-shadow:0 4px 18px rgba(20,30,60,.06)}
+label{display:block;font-size:.72rem;font-weight:800;color:var(--dim);
+text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+input{width:100%;padding:14px;border-radius:12px;border:1.5px solid transparent;
+background:#f2f4fa;font-family:'IBM Plex Mono',monospace;font-size:1rem;letter-spacing:.04em}
+input:focus{background:#fff;border-color:#2f6fe0;outline:none}
+input:focus-visible{outline:3px solid #2f6fe0 !important;outline-offset:2px}
+button{width:100%;margin-top:14px;padding:15px;border-radius:13px;border:none;font-weight:900;
+font-family:inherit;font-size:1rem;background:linear-gradient(135deg,#16337a,#1e4292);
+color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.err{display:none;margin-top:12px;background:#fdecec;border:1.5px solid #f0c0c0;color:#a83c3c;
+border-radius:12px;padding:11px 14px;font-size:.84rem;line-height:1.45}
+.hint{font-size:.8rem;color:#8a8e95;line-height:1.5;margin-top:16px}
+.hint b{color:var(--ink)}
+.feat{margin-top:26px}
+.rsec{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+text-transform:uppercase;color:#9a9ea5;margin-bottom:10px}
+.frow{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #eef0f5}
+.frow:last-child{border-bottom:none}
+.fico{font-size:1.15rem;flex:0 0 auto;line-height:1.3}
+.frow b{display:block;font-size:.87rem;margin-bottom:2px}
+.frow span{font-size:.8rem;color:var(--dim);line-height:1.45}
+.foot{text-align:center;color:#9199a8;font-size:.74rem;margin-top:30px;line-height:1.6}
+.foot a{color:#9199a8}
+</style>
+</head>
+<body>
+<div class="gw-bar">
+  <img src="/static/logo-bar.png" alt="GateWay">
+  <span class="surf">Merchant</span>
+</div>
+
+<h1>Your kitchen screen</h1>
+<p class="lede">Live tickets the moment they come in, your prep times, your menu,
+  and your own news feed — all in one place.</p>
+
+<div class="card">
+  <label for="code">Kitchen access code</label>
+  <input id="code" placeholder="kt-xxxxxxxxxx" autocomplete="off"
+    autocapitalize="none" spellcheck="false" enterkeyhint="go"
+    aria-describedby="err">
+  <button id="go" onclick="signIn()">Open my kitchen screen</button>
+  <div class="err" id="err" role="alert"></div>
+  <div class="hint">This device will stay signed in, so you'll land straight on
+    your tickets next time. Don't have a code? <b>Call GateWay</b> and we'll set
+    you up in a minute.</div>
+</div>
+
+<div class="feat">
+  <div class="rsec">What you get</div>
+  <div class="frow"><span class="fico">🔔</span><div><b>Never miss a ticket</b>
+    <span>A chime, a badge, and a real desktop alert the second an order lands —
+    even if the tab is behind another window.</span></div></div>
+  <div class="frow"><span class="fico">⏱️</span><div><b>Set your own prep time</b>
+    <span>Accept an order with a realistic estimate and the customer sees it on
+    their tracking screen. No algorithm overriding you.</span></div></div>
+  <div class="frow"><span class="fico">📊</span><div><b>Today in review</b>
+    <span>Top sellers, tickets out the door, and what you actually made — not
+    buried behind a dashboard login.</span></div></div>
+  <div class="frow"><span class="fico">📰</span><div><b>Your own news feed</b>
+    <span>Post an update and it shows on your page and the GateWay home screen.
+    No ad buy, no approval queue.</span></div></div>
+  <div class="frow"><span class="fico">🍽️</span><div><b>86 an item instantly</b>
+    <span>Sell out of something? One tap and it's off the menu — before the next
+    order comes in.</span></div></div>
+</div>
+
+<div class="foot">GateWay Delivery · Fivestone Holdings<br>
+  Knoxville, Tennessee &amp; surrounding areas<br>
+  <a href="/partner-with-us">Not a partner yet?</a></div>
+
+<script>
+const KEY = 'gw_kitchen_token';
+
+/* Already signed in on this device? Go straight to the tickets — a kitchen
+   shouldn't have to re-authenticate every morning mid-rush. */
+(function(){
+  try{
+    const saved = localStorage.getItem(KEY);
+    if(saved && /^kt-[a-z0-9]+$/i.test(saved)){
+      location.replace('/kitchen/' + encodeURIComponent(saved));
+    }
+  }catch(e){}
+})();
+
+function showErr(msg){
+  const e = document.getElementById('err');
+  e.textContent = msg; e.style.display = '';
+}
+
+async function signIn(){
+  const btn = document.getElementById('go');
+  const raw = (document.getElementById('code').value || '').trim().toLowerCase();
+  document.getElementById('err').style.display = 'none';
+  if(!raw) return showErr('Enter the access code GateWay gave you.');
+  // accept a pasted full URL as well as a bare code — merchants paste links
+  const m = raw.match(/kt-[a-z0-9]+/i);
+  const token = m ? m[0] : raw;
+  if(!/^kt-[a-z0-9]+$/i.test(token)){
+    return showErr("That doesn't look like a kitchen code. It starts with “kt-”.");
+  }
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try{
+    // verify before saving, so a bad code never gets remembered. This checks
+    // our own partner table, NOT Airtable — an outage there must never stop a
+    // merchant getting into their own screen.
+    const r = await fetch('/api/kitchen/' + encodeURIComponent(token) + '/verify',
+                          {headers:{'Accept':'application/json'}});
+    if(!r.ok){
+      btn.disabled = false; btn.textContent = 'Open my kitchen screen';
+      return showErr(r.status === 404
+        ? "We don't recognize that code. Double-check it, or call GateWay."
+        : 'Could not sign you in just now. Try again in a moment.');
+    }
+    let who = '';
+    try{ who = (await r.json()).display_name || ''; }catch(e){}
+    try{ localStorage.setItem(KEY, token); }catch(e){}
+    btn.textContent = who ? ('Opening ' + who + '…') : 'Opening…';
+    location.href = '/kitchen/' + encodeURIComponent(token);
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Open my kitchen screen';
+    showErr('No connection. Check your internet and try again.');
+  }
+}
+
+document.getElementById('code').addEventListener('keydown', e => {
+  if(e.key === 'Enter') signIn();
+});
+</script>
+</body>
+</html>

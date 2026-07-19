@@ -103,7 +103,27 @@ cursor:pointer;box-shadow:none}
 </head>
 <body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
-<span class="surf">Merchant <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<span class="surf" onclick="kitchenSignOut()" title="Sign out of this device"
+  style="cursor:pointer">Merchant <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<script>
+/* Remember this kitchen on this device so /merchant lands straight here next
+   time — and let a shared/borrowed device sign out cleanly. */
+(function(){
+  try{
+    const m = location.pathname.match(/\/kitchen\/(kt-[a-z0-9]+)/i);
+    if(m) localStorage.setItem('gw_kitchen_token', m[1]);
+  }catch(e){}
+})();
+async function kitchenSignOut(){
+  const ok = window.gwConfirm
+    ? await gwConfirm({title:'Sign out of this device?',
+        body:"You'll need your kitchen access code to get back in.", danger:true})
+    : confirm('Sign out of this device?');
+  if(!ok) return;
+  try{ localStorage.removeItem('gw_kitchen_token'); }catch(e){}
+  location.href = '/merchant';
+}
+</script>
 
 <div class="mark" style="display:none">GateWay <span>Merchant</span></div>
 <div class="who" id="who">LOADING…</div>

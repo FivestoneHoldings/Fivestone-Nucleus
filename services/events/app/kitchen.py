@@ -279,6 +279,18 @@ async def kitchen_accepting(token: str, request: Request,
     return {"ok": True, "accepting": on}
 
 
+@router.get("/api/kitchen/{token}/verify")
+async def verify_kitchen_token(token: str):
+    """Confirm a kitchen access code is real — local database only.
+
+    Sign-in must NOT depend on Airtable being reachable. Verifying against the
+    live orders endpoint meant any Airtable hiccup locked every merchant out of
+    their own screen mid-service. The partner record is the source of truth for
+    'is this a valid code', and it lives in our own database."""
+    p = _partner_by_token(token)
+    return {"ok": True, "code": p.code, "display_name": p.display_name}
+
+
 @router.post("/api/kitchen/{token}/posts")
 async def create_post(token: str, request: Request):
     """The kitchen's own news feed — 'Back from vacation!', 'New menu is in!'.

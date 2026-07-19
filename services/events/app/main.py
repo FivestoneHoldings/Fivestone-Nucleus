@@ -185,13 +185,21 @@ def roadmap_page():
     return _page("roadmap.html")
 
 
+@app.get("/merchant", response_class=HTMLResponse)
+def merchant_signin():
+    """Standalone front door for the Kitchen app. Merchants shouldn't have to go
+    through the command board to reach their own screen — this remembers the
+    device and lands them straight on their live tickets."""
+    return _page("merchant.html")
+
+
 @app.get("/order", response_class=HTMLResponse)
 def order_form():
     """Public partner order form — posts to the canonical intake webhook."""
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.24"
+NUCLEUS_VERSION = "1.9.25"
 
 
 @app.middleware("http")
