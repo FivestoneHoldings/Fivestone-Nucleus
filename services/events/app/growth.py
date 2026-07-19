@@ -61,6 +61,7 @@ _PARTNER_COLS = [
     ("delivery_radius_miles", "DOUBLE PRECISION NOT NULL DEFAULT 5.0"),
     ("lat", "DOUBLE PRECISION"),
     ("lng", "DOUBLE PRECISION"),
+    ("featured_label", "VARCHAR(60) NOT NULL DEFAULT ''"),
 ]
 
 

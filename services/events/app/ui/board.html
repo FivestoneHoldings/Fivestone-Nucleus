@@ -293,9 +293,10 @@ async function toggleMenu(code){
     `<div class="line" style="margin-top:8px"><b>${c.name}</b></div>` +
     c.items.map(i => `
       <div class="row" style="align-items:center">
-        <span style="flex:2;font-size:.82rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${i.name}</span>
+        <span style="flex:2;font-size:.82rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${i.featured?'⭐ ':''}${i.name}</span>
         <span class="oid copy" style="flex:0" onclick="menuPrice('${code}','${i.id}',${i.price_cents})">$${(i.price_cents/100).toFixed(2)} ✎</span>
         <span class="oid copy" style="flex:0" onclick="menuPhoto('${code}','${i.id}',${JSON.stringify(i.image_url||'')})">${i.image_url?'📷':'📷+'}</span>
+        <button class="ghost" style="padding:6px 10px" title="${i.featured?'Remove from Featured':'Show in Featured at the top of their menu'}" onclick="menuFeature('${code}','${i.id}',${!i.featured})">${i.featured?'★':'☆'}</button>
         <button class="ghost" style="padding:6px 10px" onclick="menuAvail('${code}','${i.id}',${!i.available})">${i.available?'86':'restore'}</button>
         <button class="warn" style="padding:6px 10px" onclick="menuDel('${code}','${i.id}')">✕</button>
       </div>`).join('')).join('');
@@ -329,6 +330,12 @@ async function menuPhoto(code, id, current){
   if(url === null) return;
   if(await post(`/partners/${code}/menu`, {id, image_url: url})){
     gwToast(url ? 'Photo saved ✓' : 'Photo removed');
+    document.getElementById('menu-'+code).style.display='none'; toggleMenu(code);
+  }
+}
+async function menuFeature(code, id, on){
+  if(await post(`/partners/${code}/menu`, {id, featured:on})){
+    gwToast(on ? 'Featured ⭐ — now at the top of their menu' : 'Removed from Featured', true);
     document.getElementById('menu-'+code).style.display='none'; toggleMenu(code);
   }
 }

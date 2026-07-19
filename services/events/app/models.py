@@ -62,6 +62,8 @@ class Partner(Base):
     delivery_radius_miles: Mapped[float] = mapped_column(Float, nullable=False, default=5.0)
     lat: Mapped[float] = mapped_column(Float, nullable=True)
     lng: Mapped[float] = mapped_column(Float, nullable=True)
+    # Title for the spotlight row at the top of their menu. Empty = "⭐ Featured".
+    featured_label: Mapped[str] = mapped_column(String(60), nullable=False, default="")
     accepting_orders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")

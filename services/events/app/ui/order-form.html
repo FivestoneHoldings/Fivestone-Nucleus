@@ -942,6 +942,17 @@ function renderMenu(m){
     <div id="partnerNews"></div>`;
   const search = `<input class="msearch" id="msearch" placeholder="Search the menu…" oninput="filterMenu()">`;
   const cats = m.categories.filter(c=>c.items && c.items.length);
+  // A kitchen can star any items to spotlight them — a signature dish, a
+  // seasonal special, or a separate product line they also sell (Phillip's
+  // coffee, say). They surface as a virtual category pinned to the top of the
+  // menu, while still living in their real category below, so nothing is
+  // hidden from someone browsing normally. Renders only when something is
+  // actually starred; an empty spotlight would just be noise.
+  const featured = [];
+  cats.forEach(c => (c.items||[]).forEach(i => { if(i.featured && i.available) featured.push(i); }));
+  if(featured.length){
+    cats.unshift({name: (meta.featured_label || '⭐ Featured'), items: featured, _virtual: true});
+  }
   const nav = cats.length > 1
     ? `<div class="catnav">${cats.map((c,i)=>
         `<a href="#cat${i}" class="${i===0?'on':''}" onclick="return navPick(this,event)">${c.name.split('—')[0].trim().replace(/</g,'&lt;')}</a>`).join('')}</div>`
@@ -973,7 +984,7 @@ function renderMenu(m){
                      Options <span id="oc-${i2.id}" class="occount" style="display:none">0</span></button>`
                 : `<div class="step">
                      <button type="button" aria-label="Remove one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}',-1)">−</button>
-                     <span id="q-${i2.id}">0</span>
+                     <span id="q-${i2.id}" class="qty-${i2.id}">0</span>
                      <button type="button" aria-label="Add one ${nm2.replace(/"/g,'&quot;')}" onclick="bump('${i2.id}',1)">+</button>
                    </div>`)}
         </div>
@@ -1126,7 +1137,10 @@ function restoreLines(lines, msg){
     if(live[line.id]){
       CART[line.id] = {name: live[line.id].name, cents: live[line.id].price_cents,
                        qty: line.qty, itemId: line.itemId||line.id, choiceIds: line.choiceIds||[]};
-      const q = document.getElementById('q-'+line.id); if(q) q.textContent = line.qty;
+      // An item can appear twice on the page (once in ⭐ Featured, once in its
+      // real category). getElementById returns only the first, so the second
+      // copy would silently freeze at 0 — update every copy.
+      document.querySelectorAll('.qty-'+CSS.escape(line.id)).forEach(q => q.textContent = line.qty);
       added += line.qty;
     }
   });
@@ -1260,7 +1274,7 @@ function bump(id, d){
   const e = CART[id] || {name: meta.name, cents: meta.cents, qty:0, itemId:id, choiceIds:[]};
   e.qty = Math.max(0, e.qty + d);
   if(e.qty === 0) delete CART[id]; else CART[id] = e;
-  document.getElementById('q-'+id).textContent = e.qty;
+  document.querySelectorAll('.qty-'+CSS.escape(id)).forEach(q => q.textContent = e.qty);
   compose();
 }
 function compose(){

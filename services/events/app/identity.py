@@ -222,6 +222,7 @@ def partner_lookup(code: str):
             "cover_url": p.cover_url,
             "demo": p.demo,
             "prep_minutes": prep,
+            "featured_label": p.featured_label,
             "special": _todays_special(p)}
 
 
