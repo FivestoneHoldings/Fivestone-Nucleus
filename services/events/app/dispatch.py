@@ -284,6 +284,69 @@ async def toggle_shift(day_token: str, request: Request):
 
 # ---------- PROOF OF DELIVERY ----------
 
+@router.get("/api/driver/{day_token}/hq")
+async def driver_hq_contact(day_token: str):
+    """How this driver reaches a human right now.
+
+    The phone number is configured per-deployment rather than hardcoded, and if
+    it isn't set we return an empty string so the UI hides the call/text buttons
+    instead of showing a dead link — a driver tapping 'Call dispatch' and
+    reaching nothing is worse than not offering it at all."""
+    await _driver_by_token(day_token)   # authenticates the driver
+    import os as _os
+    return {"phone": _os.environ.get("GATEWAY_HQ_PHONE", "").strip(),
+            "hours": _os.environ.get("GATEWAY_HQ_HOURS", "").strip()}
+
+
+# What a driver can flag, worst first. Severity decides how loudly the board
+# shouts, so a safety emergency never queues behind a missing-drink question.
+DRIVER_ISSUES = {
+    "safety":    ("🚨 Safety emergency", "critical"),
+    "accident":  ("🚗 Accident or vehicle trouble", "critical"),
+    "address":   ("📍 Can't find / unsafe address", "urgent"),
+    "customer":  ("🙍 Problem with the customer", "urgent"),
+    "kitchen":   ("🍳 Problem at the kitchen", "urgent"),
+    "order":     ("🧾 Order is wrong or incomplete", "normal"),
+    "app":       ("📱 Something in the app is broken", "normal"),
+    "other":     ("💬 Something else", "normal"),
+}
+
+
+@router.post("/api/driver/{day_token}/help")
+async def driver_help(day_token: str, request: Request):
+    """A driver raising their hand. Lands as a support ticket AND a permanent
+    event, so it can never be lost because a UI happened to be closed."""
+    from .models import SupportTicket
+    drv = await _driver_by_token(day_token)
+    body = await request.json()
+    kind = str(body.get("kind", "other"))[:20]
+    if kind not in DRIVER_ISSUES:
+        kind = "other"
+    label, severity = DRIVER_ISSUES[kind]
+    note = str(body.get("message", "")).strip()[:900]
+    order_id = str(body.get("order_id", "")).strip()[:40]
+    name = drv["fields"].get("display_name", "Driver")
+    phone = drv["fields"].get("phone", "")
+    message = f"[DRIVER · {severity.upper()}] {label}"
+    if order_id:
+        message += f" · order {order_id}"
+    if note:
+        message += f"\n{note}"
+    db: Session = SessionLocal()
+    try:
+        db.add(SupportTicket(name=f"{name} (driver)", phone=phone,
+                             order_id=order_id, message=message))
+        db.add(Event(event_type="driver.help_requested",
+                     entity_ref=order_id or drv["id"], tenant="gateway",
+                     actor=f"driver:{name}",
+                     payload=json.dumps({"kind": kind, "severity": severity,
+                                         "note": note, "order_id": order_id})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "severity": severity, "label": label}
+
+
 @router.post("/api/driver/{day_token}/orders/{record_id}/proof")
 async def upload_proof(day_token: str, record_id: str, request: Request):
     drv = await _driver_by_token(day_token)

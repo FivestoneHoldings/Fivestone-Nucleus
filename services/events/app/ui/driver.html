@@ -102,6 +102,8 @@ letter-spacing:.06em;text-transform:uppercase}
   <div class="who" id="who">…</div>
 </div>
 <div id="alertBanner" style="display:none"></div>
+<button onclick="toggleHelp()" id="helpBtn" style="width:100%;padding:12px;margin-bottom:12px;background:#fff4e0;border:1.5px solid #f0c88a;color:#8a4b0b;font-weight:800;font-size:.86rem;border-radius:11px;font-family:inherit">🆘 Get help — reach GateWay now</button>
+<div id="helpPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
 <button onclick="toggleMyDay()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">📜 My day — completed runs</button>
 <div id="myDayPanel" style="display:none;margin-bottom:14px"></div>
@@ -116,6 +118,81 @@ letter-spacing:.06em;text-transform:uppercase}
 const token = location.pathname.split('/').filter(Boolean).pop();
 const api = p => `/api/driver/${token}` + p;
 
+/* --- DRIVER HELP (v1.9.28) ---
+   A driver alone at a dark address, with a dead car or a hostile customer,
+   needs a human immediately — not a form buried three taps deep. Call and text
+   are one tap; the structured report is for anything that needs a record.
+   Severity is set by the category, not by asking a stressed driver to rate
+   their own emergency. */
+const HELP_KINDS = [
+  ['safety',   '🚨 Safety emergency',              'critical'],
+  ['accident', '🚗 Accident or vehicle trouble',   'critical'],
+  ['address',  "📍 Can't find / unsafe address",   'urgent'],
+  ['customer', '🙍 Problem with the customer',     'urgent'],
+  ['kitchen',  '🍳 Problem at the kitchen',        'urgent'],
+  ['order',    '🧾 Order is wrong or incomplete',  'normal'],
+  ['app',      '📱 Something in the app is broken','normal'],
+  ['other',    '💬 Something else',                'normal'],
+];
+let HQ = null;
+async function toggleHelp(){
+  const el = document.getElementById('helpPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="card">Loading…</div>';
+  if(HQ === null){
+    try{ HQ = await (await fetch(api('/hq'))).json(); }
+    catch(e){ HQ = {phone:'', hours:''}; }
+  }
+  const tel = (HQ.phone||'').replace(/[^0-9+]/g,'');
+  const activeOid = (window._DAY && (window._DAY.orders||[])[0] || {}).order_id || '';
+  el.innerHTML = `<div class="card">
+    ${tel ? `
+      <a href="tel:${tel}" style="display:block;text-align:center;background:#16337a;color:#fff;
+        padding:15px;border-radius:12px;font-weight:900;text-decoration:none;font-size:1rem">
+        📞 Call GateWay now</a>
+      <a href="sms:${tel}" style="display:block;text-align:center;background:#fff;color:#16337a;
+        border:1.5px solid #c3d0f0;padding:13px;border-radius:12px;font-weight:800;
+        text-decoration:none;margin-top:8px;font-size:.9rem">💬 Text GateWay</a>
+      ${HQ.hours?`<div style="text-align:center;font-size:.72rem;color:#8a8e95;margin-top:7px">${esc(HQ.hours)}</div>`:''}
+      <div style="height:1px;background:#eef0f5;margin:15px 0"></div>`
+    : `<div style="background:#fdf6e3;border:1px solid #f0dfb8;border-radius:11px;padding:11px 13px;
+        font-size:.8rem;color:#8a6d3b;margin-bottom:13px;line-height:1.45">
+        A direct phone line isn't set up yet. Send a report below — it reaches
+        GateWay right away and someone will call you back.</div>`}
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.1em;
+      text-transform:uppercase;color:#8b93a7;margin-bottom:9px">Report what's happening</div>
+    ${HELP_KINDS.map(([k,label,sev])=>`
+      <button onclick="sendHelp('${k}','${esc(label).replace(/'/g,"\\'")}')"
+        style="width:100%;text-align:left;background:${sev==='critical'?'#fdecec':'#fff'};
+        border:1.5px solid ${sev==='critical'?'#f0c0c0':'#dfe4ee'};
+        color:${sev==='critical'?'#a83c3c':'#2a2d33'};padding:12px 14px;border-radius:11px;
+        font-weight:${sev==='critical'?'800':'700'};font-size:.86rem;margin-bottom:7px;
+        font-family:inherit;box-shadow:none">${label}</button>`).join('')}
+    ${activeOid?`<div style="font-size:.72rem;color:#8a8e95;text-align:center;margin-top:4px">
+      We'll attach order ${esc(activeOid)} automatically.</div>`:''}
+  </div>`;
+}
+async function sendHelp(kind, label){
+  const note = await gwPrompt({title: label, multiline:true,
+    placeholder:'Anything that helps us help you faster (optional)',
+    confirm:'Send to GateWay',
+    body:"This goes straight to GateWay. If you're in danger, call 911 first."});
+  if(note === null) return;
+  const activeOid = (window._DAY && (window._DAY.orders||[])[0] || {}).order_id || '';
+  try{
+    const r = await fetch(api('/help'), {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({kind, message: note || '', order_id: activeOid})});
+    if(r.ok){
+      const d = await r.json();
+      gwToast(d.severity === 'critical'
+        ? "Sent — GateWay is being alerted right now 🚨"
+        : "Sent to GateWay ✓ Someone will follow up.", true);
+      document.getElementById('helpPanel').style.display = 'none';
+    } else gwToast('Could not send. Please call instead.', false);
+  }catch(e){ gwToast('No connection. Please call GateWay directly.', false); }
+}
 function driverChime(){
   try{
     const ctx = new (window.AudioContext||window.webkitAudioContext)();

@@ -367,6 +367,28 @@ def list_tickets(key: str):
         db.close()
 
 
+@router.patch("/v0/support-tickets/{ticket_id}")
+async def update_ticket(ticket_id: str, key: str, request: Request):
+    """Close out a ticket once a human has handled it. Without this, a driver's
+    emergency banner would stay pinned to the board forever after it was
+    resolved — and a board that cries wolf is a board people stop reading."""
+    _check_key(key)
+    body = await request.json()
+    status = str(body.get("status", "closed"))[:20]
+    if status not in ("open", "closed"):
+        raise HTTPException(400, "Status must be open or closed")
+    db: Session = SessionLocal()
+    try:
+        t = db.get(SupportTicket, ticket_id)
+        if not t:
+            raise HTTPException(404, "No such ticket")
+        t.status = status
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "status": status}
+
+
 # ---------- DELIVERY PREFERENCES (v1.5) ----------
 # "Megan prefers no-contact delivery. Blue house, no garage. Always knock."
 # The big apps give a customer one cramped text box per order and forget it the

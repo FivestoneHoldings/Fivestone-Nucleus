@@ -153,6 +153,7 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <input id="orderSearch" type="text" placeholder="Search order #, customer, or kitchen…"
     oninput="renderOrders()" style="width:100%;padding:11px 14px;margin-bottom:10px;border-radius:11px;
     border:1.5px solid #263252;background:#151d33;color:#e8eaf0;font-family:inherit;font-size:.85rem">
+  <div id="driverAlerts"></div>
   <div id="alertBanner" style="display:none"></div>
   <div id="filters" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px"></div>
   <div id="orders"><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;margin-bottom:12px"></div><div class="skel" style="height:118px;opacity:.6"></div></div>
@@ -596,6 +597,7 @@ async function load(){
   }
   const d = await r.json(); DRIVERS = d.drivers; SNAP = d.orders;
   detectNewOrders(SNAP);
+  checkDriverAlerts();
   paintFilters();
   renderOrders();
   paintStats(d.stats);
@@ -646,6 +648,59 @@ function detectNewOrders(orders){
       n.onclick = () => { window.focus(); openTicketModal(first.order_id); n.close(); };
     }
   }
+}
+/* --- DRIVER EMERGENCIES (v1.9.28) ---
+   A driver's safety call cannot sit behind a collapsed Inbox button. Any open
+   driver report is pinned to the top of the board until it's resolved;
+   critical ones chime and fire a desktop alert the first time they're seen. */
+let _seenDriverAlerts = new Set();
+async function checkDriverAlerts(){
+  let tickets = [];
+  try{
+    const d = await (await fetch(`/v0/support-tickets?key=${encodeURIComponent(key)}`)).json();
+    tickets = (d.tickets || d || []).filter(t =>
+      (t.message||'').startsWith('[DRIVER ·') && (t.status||'open') === 'open');
+  }catch(e){ return; }
+  const host = document.getElementById('driverAlerts');
+  if(!host) return;
+  if(!tickets.length){ host.innerHTML = ''; return; }
+  const critical = tickets.filter(t => (t.message||'').includes('· CRITICAL]'));
+  // alert once per ticket, not on every 20s poll
+  const fresh = critical.filter(t => !_seenDriverAlerts.has(t.id));
+  fresh.forEach(t => _seenDriverAlerts.add(t.id));
+  if(fresh.length){
+    boardChime();
+    if('Notification' in window && Notification.permission === 'granted'){
+      const n = new Notification('🚨 DRIVER NEEDS HELP', {
+        body: (fresh[0].message||'').split('\n')[0].replace('[DRIVER · CRITICAL] ',''),
+        tag: 'gw-driver-sos', requireInteraction: true});
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+  }
+  host.innerHTML = tickets.map(t => {
+    const isCrit = (t.message||'').includes('· CRITICAL]');
+    const lines = (t.message||'').split('\n');
+    const head = lines[0].replace(/^\[DRIVER · \w+\]\s*/,'');
+    const body = lines.slice(1).join(' ').trim();
+    return `<div style="background:${isCrit?'#3a1216':'#3a2a12'};
+      border:1.5px solid ${isCrit?'#7a2530':'#5a4420'};border-left:5px solid ${isCrit?'#e0384a':'#f0a04b'};
+      border-radius:12px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-weight:900;color:${isCrit?'#ff8f9a':'#f0a04b'};font-size:.9rem">
+        ${isCrit?'🚨 ':''}${esc(head)}</div>
+      <div style="font-size:.78rem;color:#c9d2e6;margin-top:3px">${esc(t.name||'')}${t.phone?` · <a href="tel:${esc(t.phone).replace(/[^0-9+]/g,'')}" style="color:#6fa0ff">${esc(t.phone)}</a>`:''}</div>
+      ${body?`<div style="font-size:.8rem;color:#9aa3b8;margin-top:5px;line-height:1.4">${esc(body)}</div>`:''}
+      <button class="ghost" style="margin-top:9px;padding:7px 12px;font-size:.75rem"
+        onclick="resolveDriverAlert('${t.id}')">Mark handled ✓</button>
+    </div>`;
+  }).join('');
+}
+async function resolveDriverAlert(id){
+  try{
+    await fetch(`/v0/support-tickets/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}`,
+      {method:'PATCH', headers:{'Content-Type':'application/json'},
+       body: JSON.stringify({status:'closed'})});
+  }catch(e){}
+  checkDriverAlerts();
 }
 function boardChime(){
   try{
