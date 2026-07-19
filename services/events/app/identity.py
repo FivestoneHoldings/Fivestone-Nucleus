@@ -1,6 +1,7 @@
 """Identity v0 — partner/tenant registry (staged in the monolith per ADR-008).
 Public: name lookup for co-branding. Key-gated: full list + create/update.
 """
+import json
 import os
 import secrets
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from .bizday import business_day, business_day_of
 from .db import SessionLocal
-from .models import Partner, ReopenAlert
+from .models import Event, Partner, ReopenAlert
 
 router = APIRouter()
 
@@ -300,6 +301,36 @@ async def upsert_partner(key: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "code": code, "order_link": f"/order?partner={code}"}
+
+
+@router.post("/api/board/{key}/partners/{code}/radius")
+async def set_delivery_radius(key: str, code: str, request: Request):
+    """Set a kitchen's delivery radius in miles. 0 turns the service-area check
+    off entirely for that kitchen (useful for a caterer, or while an address is
+    being corrected). Clearing lat/lng forces a re-geocode on the next order, so
+    fixing a wrong address actually takes effect."""
+    _check_key(key)
+    body = await request.json()
+    try:
+        miles = float(body.get("miles", 5))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Radius must be a number")
+    miles = max(0.0, min(100.0, miles))
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.delivery_radius_miles = miles
+        if body.get("recheck_address"):
+            p.lat, p.lng = None, None
+        db.add(Event(event_type="partner.radius_set", entity_ref=p.code,
+                     tenant="gateway", actor="board",
+                     payload=json.dumps({"miles": miles})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "miles": miles}
 
 
 @router.post("/api/board/{key}/partners/{code}/accepting")

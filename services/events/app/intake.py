@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import airtable_client as at
+from . import geo
 from . import notify
 from .bizday import MARKET_TZ
 from .db import SessionLocal
@@ -241,6 +242,48 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                 message="Our order system is briefly unavailable. Please call GateWay and we'll take it by phone — sorry for the trouble."), status_code=503)
         return JSONResponse({"received": False, "error": "intake_unavailable"}, status_code=503)
 
+    # --- SERVICE AREA (v1.9.26) ---
+    # Every kitchen has a delivery radius (5 miles default, per-partner
+    # adjustable, 0 to disable). Checked here so a customer finds out BEFORE
+    # they've paid attention to a menu they can't order from. Fails open: if
+    # geocoding is unavailable we accept the order and flag it as
+    # distance-unverified for dispatch rather than turning away a real customer
+    # because a third-party service was slow.
+    geo_note = ""
+    if data["partner"] and data["dropoff_address"]:
+        _gdb = SessionLocal()
+        try:
+            _gp = _gdb.get(Partner, data["partner"].lower())
+        finally:
+            _gdb.close()
+        if _gp is not None:
+            try:
+                verdict = geo.check_delivery_range(_gp, data["dropoff_address"])
+            except Exception:
+                verdict = {"allowed": True, "miles": None,
+                           "radius": 0, "verified": False}
+            if not verdict["allowed"]:
+                miles = verdict["miles"]
+                headline = "That address is outside their delivery area"
+                msg = (f"{_gp.display_name} delivers within "
+                       f"{verdict['radius']:g} miles, and that address is about "
+                       f"{miles:g} miles away. Try a kitchen closer to you — or "
+                       f"call GateWay, we may still be able to help.")
+                _log_owned("order.out_of_range", order_id,
+                           {"partner": _gp.code, "miles": miles,
+                            "radius": verdict["radius"]})
+                if wants_html:
+                    return HTMLResponse(CONFIRM_PAGE.format(
+                        headline=headline, order_id="—", message=msg),
+                        status_code=422)
+                return JSONResponse({"received": False, "error": "out_of_delivery_area",
+                                     "miles": miles, "radius_miles": verdict["radius"]},
+                                    status_code=422)
+            if verdict["verified"] and verdict["miles"] is not None:
+                geo_note = f"{verdict['miles']:g} mi"
+            elif verdict["radius"]:
+                geo_note = "distance unverified"
+
     duplicate = False
     try:
         # Duplicate protection is meant to catch an ACCIDENTAL DOUBLE-SUBMIT
@@ -319,6 +362,12 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
             merged_instructions = data["special_instructions"]
             if std_note:
                 merged_instructions = (std_note + (" — " + merged_instructions if merged_instructions else ""))[:600]
+            # Only the EXCEPTION is worth a dispatcher's attention. An in-range
+            # order needs no annotation; one we couldn't verify does, so nobody
+            # discovers a 40-mile run after a driver has already accepted it.
+            if geo_note == "distance unverified":
+                merged_instructions = ("⚠ Distance unverified — confirm address is in range"
+                                       + (" — " + merged_instructions if merged_instructions else ""))[:600]
 
             fields = {
                 "order_id": order_id, "status": "received",

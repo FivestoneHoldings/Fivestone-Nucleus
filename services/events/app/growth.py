@@ -58,6 +58,9 @@ _PARTNER_COLS = [
     ("logo_url", "VARCHAR(500) NOT NULL DEFAULT ''"),
     ("featured", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("demo", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("delivery_radius_miles", "DOUBLE PRECISION NOT NULL DEFAULT 5.0"),
+    ("lat", "DOUBLE PRECISION"),
+    ("lng", "DOUBLE PRECISION"),
 ]
 
 

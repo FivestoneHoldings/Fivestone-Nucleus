@@ -3,7 +3,7 @@ No update or delete path exists in this service. None will be added.
 """
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Integer, String, DateTime, Text, Index
+from sqlalchemy import Boolean, Float, Integer, String, DateTime, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
@@ -56,6 +56,12 @@ class Partner(Base):
     contact: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     address: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     delivery_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=599)
+    # Service area. Radius is a business setting the founder can tune per
+    # kitchen; 0 disables the check entirely for that partner. lat/lng are
+    # geocoded from `address` once and then reused forever.
+    delivery_radius_miles: Mapped[float] = mapped_column(Float, nullable=False, default=5.0)
+    lat: Mapped[float] = mapped_column(Float, nullable=True)
+    lng: Mapped[float] = mapped_column(Float, nullable=True)
     accepting_orders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")
