@@ -280,6 +280,37 @@ async def kitchen_accepting(token: str, request: Request,
     return {"ok": True, "accepting": on}
 
 
+@router.post("/api/kitchen/{token}/hours")
+async def set_hours(token: str, request: Request):
+    """A kitchen sets its own trading hours. Sending {} clears them, which
+    returns the kitchen to always-open — the same as never having set any."""
+    from .hours import parse_hours, DAYS
+    p = _partner_by_token(token)
+    body = await request.json()
+    raw = body.get("hours")
+    cleaned = parse_hours(raw) if raw else {}
+    # keep explicit nulls (closed that day); drop unspecified days entirely
+    payload = {d: cleaned[d] for d in DAYS if d in cleaned}
+    db: Session = SessionLocal()
+    try:
+        row = db.get(Partner, p.code)
+        row.hours_json = json.dumps(payload) if payload else ""
+        db.add(Event(event_type="partner.hours_set", entity_ref=p.code,
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"hours": payload})))
+        db.commit()
+    finally:
+        db.close()
+    return {"ok": True, "hours": payload}
+
+
+@router.get("/api/kitchen/{token}/hours")
+async def get_hours(token: str):
+    from .hours import parse_hours, status as hstatus
+    p = _partner_by_token(token)
+    return {"hours": parse_hours(p.hours_json), "status": hstatus(p)}
+
+
 @router.get("/api/kitchen/{token}/insights")
 async def kitchen_insights(token: str, days: int = 30):
     """A kitchen's own history, trend and run-rate.

@@ -7,6 +7,7 @@ import secrets
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from . import hours
 from .bizday import business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Partner, ReopenAlert
@@ -223,6 +224,8 @@ def partner_lookup(code: str):
             "demo": p.demo,
             "prep_minutes": prep,
             "featured_label": p.featured_label,
+            "hours": hours.summary(p),
+            "hours_status": hours.status(p),
             "special": _todays_special(p)}
 
 

@@ -132,6 +132,8 @@ async function kitchenSignOut(){
 <div id="fbPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="show86()" id="menu86Btn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🍽 86 an item</button>
 <div id="menu86Panel" style="display:none;margin-bottom:14px"></div>
+<button onclick="toggleHours()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🕒 My hours — when you're open</button>
+<div id="hoursPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleInsights()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📈 My numbers — history &amp; what's ahead</button>
 <div id="insightsPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleHistory()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📊 Today in review</button>
@@ -326,6 +328,66 @@ async function deletePost(id){
   if(!ok) return;
   await fetch(api('/posts/' + id), {method:'DELETE'});
   paintPosts();
+}
+const HDAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+async function toggleHours(){
+  const el = document.getElementById('hoursPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading…</div>';
+  try{
+    const d = await (await fetch(api('/hours'))).json();
+    const h = d.hours || {};
+    const st = d.status || {};
+    el.innerHTML = `<div class="card">
+      <div style="font-size:.82rem;color:${st.open?'#1a7f4b':'#a83c3c'};font-weight:800;margin-bottom:4px">
+        ${st.open ? '● Open right now' : '● Closed right now'}</div>
+      <div style="font-size:.76rem;color:#8b93a7;margin-bottom:13px;line-height:1.45">
+        ${st.reason === 'no_hours'
+          ? "No hours set — your page stays open around the clock. Set them and it closes itself."
+          : esc(st.message || 'Your storefront follows these hours automatically.')}</div>
+      ${HDAYS.map(([k,label])=>{
+        const span = h[k];
+        const closed = span === null;
+        const o = span ? span[0] : '11:00', c = span ? span[1] : '21:00';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f2f4f8">
+          <span style="width:34px;font-weight:800;font-size:.82rem">${label}</span>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:#8b93a7">
+            <input type="checkbox" id="hc-${k}" ${closed?'checked':''} onchange="hoursToggle('${k}')" style="width:auto"> closed</label>
+          <input type="time" id="ho-${k}" value="${o}" ${closed?'disabled':''} style="flex:1;min-width:0;padding:7px;font-size:.8rem">
+          <span style="color:#8b93a7">–</span>
+          <input type="time" id="hx-${k}" value="${c}" ${closed?'disabled':''} style="flex:1;min-width:0;padding:7px;font-size:.8rem">
+        </div>`}).join('')}
+      <button onclick="saveHours()" style="margin-top:12px">Save my hours</button>
+      <button onclick="clearHours()" style="margin-top:7px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;box-shadow:none;font-size:.8rem">Clear hours (stay open always)</button>
+      <div style="font-size:.72rem;color:#9199a8;margin-top:9px;line-height:1.45">
+        Closing after midnight? Set close earlier than open (e.g. 5:00pm – 2:00am) and we'll handle it.</div>
+    </div>`;
+  }catch(e){ el.innerHTML = '<div class="card">Couldn\u2019t load your hours.</div>'; }
+}
+function hoursToggle(k){
+  const off = document.getElementById('hc-'+k).checked;
+  document.getElementById('ho-'+k).disabled = off;
+  document.getElementById('hx-'+k).disabled = off;
+}
+async function saveHours(){
+  const out = {};
+  HDAYS.forEach(([k])=>{
+    if(document.getElementById('hc-'+k).checked){ out[k] = null; return; }
+    const o = document.getElementById('ho-'+k).value, c = document.getElementById('hx-'+k).value;
+    if(o && c) out[k] = [o, c];
+  });
+  const r = await fetch(api('/hours'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({hours: out})});
+  if(r.ok){ gwToast('Hours saved ✓ Your page follows them now.', true);
+    document.getElementById('hoursPanel').style.display='none'; toggleHours(); }
+  else gwToast('Could not save hours.', false);
+}
+async function clearHours(){
+  if(!await gwConfirm({title:'Clear your hours?',
+    body:'Your page will stay open around the clock until you set them again.'})) return;
+  const r = await fetch(api('/hours'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({hours: null})});
+  if(r.ok){ gwToast('Hours cleared'); document.getElementById('hoursPanel').style.display='none'; toggleHours(); }
 }
 async function toggleInsights(){
   const el = document.getElementById('insightsPanel');

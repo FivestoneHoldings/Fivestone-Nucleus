@@ -64,6 +64,9 @@ class Partner(Base):
     lng: Mapped[float] = mapped_column(Float, nullable=True)
     # Title for the spotlight row at the top of their menu. Empty = "⭐ Featured".
     featured_label: Mapped[str] = mapped_column(String(60), nullable=False, default="")
+    # Opening hours as {"mon":["11:00","21:00"], ..., "sun":null}. Empty means
+    # "no hours set", which means always open — see app/hours.py.
+    hours_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
     accepting_orders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     portal_token: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     thank_you_note: Mapped[str] = mapped_column(String(300), nullable=False, default="")

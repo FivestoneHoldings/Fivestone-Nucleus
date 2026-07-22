@@ -834,6 +834,25 @@ function applyPartnerMeta(d){
     b.textContent = d.display_name + " isn't taking orders right now — check back soon.";
     const send = document.querySelector('button[type="submit"]');
     if(send){ send.disabled = true; send.style.opacity = .45; send.textContent = 'Ordering paused'; }
+  } else if(d.hours_status && d.hours_status.open === false){
+    // Closed by their posted hours (not a manual pause). Say so plainly and
+    // point at scheduling — an order FOR when they reopen is still welcome,
+    // so this shouldn't read like a dead end.
+    const b = document.getElementById('pausedBanner');
+    b.style.display = '';
+    b.innerHTML = '🕒 <b>' + (d.display_name||'This kitchen').replace(/</g,'&lt;') + '</b> is closed right now — ' +
+      (d.hours_status.message || '').replace(/</g,'&lt;') +
+      '.<br><span style="font-weight:600">You can still schedule an order for when they reopen.</span>';
+    const send = document.querySelector('button[type="submit"]');
+    if(send){ send.disabled = true; send.style.opacity = .45; send.textContent = 'Closed — schedule instead'; }
+    // switching to a scheduled time re-enables ordering; the server checks the
+    // requested time against their hours, so this can't be used to sneak an
+    // order into a closed kitchen.
+    const rf = document.getElementById('reqFor');
+    if(rf) rf.addEventListener('change', ()=>{
+      const s = document.querySelector('button[type="submit"]');
+      if(s && rf.value){ s.disabled = false; s.style.opacity = 1; s.textContent = 'Schedule this order'; }
+    });
   }
   if(d.address){
     const pa = document.getElementById('pa');

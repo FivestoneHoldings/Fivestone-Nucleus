@@ -62,6 +62,7 @@ _PARTNER_COLS = [
     ("lat", "DOUBLE PRECISION"),
     ("lng", "DOUBLE PRECISION"),
     ("featured_label", "VARCHAR(60) NOT NULL DEFAULT ''"),
+    ("hours_json", "TEXT"),
 ]
 
 
