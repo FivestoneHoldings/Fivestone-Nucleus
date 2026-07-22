@@ -1104,11 +1104,22 @@ function repositionToTop(){
   // cart bar's real measured height whenever the bar is showing.
   const tt = document.getElementById('toTop');
   const bar = document.getElementById('cartbar');
+  const nav = document.querySelector('.gw-nav');
+  const barUp = !!(bar && bar.classList.contains('show'));
+  // The bottom nav and the cart bar both live at the bottom of the screen and
+  // would stack on top of each other. When there's something in the cart,
+  // checkout IS the job — the cart bar takes the space and the nav steps
+  // aside. An empty cart means the customer may want to leave, so the nav
+  // comes back rather than trapping them on the menu.
+  if(nav){
+    nav.style.display = barUp ? 'none' : '';
+    document.body.style.paddingBottom = barUp ? '' : '96px';
+  }
   if(!tt) return;
-  if(bar && bar.classList.contains('show')){
+  if(barUp){
     tt.style.bottom = (bar.offsetHeight + 28) + 'px';
   } else {
-    tt.style.bottom = '120px';
+    tt.style.bottom = nav ? '120px' : '120px';
   }
 }
 function scrollTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
@@ -1344,5 +1355,6 @@ function compose(){
 <button id="toTop" onclick="scrollTop()" aria-label="Back to top" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 </button>
+<script src="/static/gw-nav.js" defer></script>
 </body>
 </html>

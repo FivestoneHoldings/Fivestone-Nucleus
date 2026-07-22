@@ -26,15 +26,18 @@ def test_kitchen_has_desktop_notification_alert():
 
 
 def test_bottom_nav_tabs_have_clear_gaps_everywhere():
+    """Tabs looked 'stuck together' at 2px. Now asserted once against the
+    shared component rather than five duplicated stylesheets."""
+    nav = _f(os.path.join("static", "gw-nav.js"))
+    assert "gap:5px" in nav
     for name in ("home.html", "activity.html", "courier.html", "me.html", "support.html"):
-        s = _f(name)
-        assert ".gw-navin{pointer-events:auto;display:flex;gap:5px" in s, name
+        assert "gw-nav.js" in _f(name), name
 
 
 def test_bottom_nav_never_touches_screen_edge():
-    for name in ("home.html", "activity.html", "courier.html", "me.html", "support.html"):
-        s = _f(name)
-        assert "padding:0 12px max(10px" in s, name
+    nav = _f(os.path.join("static", "gw-nav.js"))
+    assert "padding:0 12px max(10px" in nav
+    assert "max-width:calc(100vw - 24px)" in nav
 
 
 def test_cover_photo_is_doordash_proportioned_not_16_9():

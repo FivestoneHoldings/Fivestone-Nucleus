@@ -14,9 +14,13 @@ def _f(n):
 
 
 def test_courier_is_in_the_bottom_nav_on_consumer_surfaces():
+    """The nav moved from seven duplicated copies into one shared component
+    (static/gw-nav.js). The guarantee still holds — Courier is a first-class
+    destination — it's just asserted once at the source instead of per page."""
+    nav = open(os.path.join(UI, "static", "gw-nav.js")).read()
+    assert "'/courier'" in nav and "'Courier'" in nav
     for page in ("home.html", "me.html", "activity.html", "courier.html"):
-        s = _f(page)
-        assert 'href="/courier"' in s and "<span>Courier</span>" in s, page
+        assert "gw-nav.js" in _f(page), page
 
 
 def test_courier_card_sits_above_the_fold_not_in_a_footnote_section():

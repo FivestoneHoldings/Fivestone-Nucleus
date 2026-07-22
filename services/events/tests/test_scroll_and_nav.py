@@ -79,7 +79,7 @@ def test_courier_page_has_the_same_nav_as_every_other_consumer_surface():
     """Courier was missing the bottom nav entirely — a dead end with no way to
     get to Home/Order/Activity/Account short of the back button."""
     c = _page("courier.html")
-    assert 'class="gw-nav"' in c
+    assert "gw-nav.js" in c
     assert "gwActivity" in c
 
 

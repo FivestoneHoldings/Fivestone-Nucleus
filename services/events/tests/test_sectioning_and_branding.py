@@ -38,7 +38,7 @@ def test_courier_tile_lives_inside_a_named_section():
     # promoted above the restaurant list, not below it
     assert home.index('class="courier"') < home.index('id="restaurants"')
     # and it's an independent nav destination
-    assert "<span>Courier</span>" in home
+    assert "gw-nav.js" in home  # nav is the shared component now
 
 
 def test_tracking_tile_also_has_a_section_header():

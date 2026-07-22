@@ -69,29 +69,12 @@ text-transform:uppercase;letter-spacing:.08em;text-align:center}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 /* ===== FLOATING NAV (v1.2) — glassy, weighted, with a real active state.
    v1.1 was a flat dark pill with emoji; it read like a prototype. ===== */
-.gw-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;justify-content:center;
-padding:0 12px max(10px, env(safe-area-inset-bottom));pointer-events:none;
-background:linear-gradient(180deg, rgba(247,248,251,0) 0%, rgba(247,248,251,.82) 45%, #f7f8fb 100%)}
-.gw-navin{pointer-events:auto;display:flex;gap:5px;align-items:center;
-background:rgba(14,21,38,.94);-webkit-backdrop-filter:blur(16px) saturate(1.5);
-backdrop-filter:blur(16px) saturate(1.5);border-radius:22px;padding:6px;
-border:1px solid rgba(255,255,255,.08);max-width:calc(100vw - 24px);
-box-shadow:0 12px 34px rgba(10,15,30,.34), 0 2px 8px rgba(10,15,30,.2),
-inset 0 1px 0 rgba(255,255,255,.09)}
-.gw-nav a{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;
-color:#8791a8;text-decoration:none;font-size:.58rem;font-weight:700;letter-spacing:.02em;
-padding:8px 8px 7px;border-radius:17px;font-family:'Archivo',system-ui,sans-serif;
-transition:color .2s ease,background .24s cubic-bezier(.2,1,.3,1);min-width:48px}
-.gw-nav a svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
-stroke-linecap:round;stroke-linejoin:round;transition:transform .24s cubic-bezier(.2,1.3,.4,1)}
-.gw-nav a:active svg{transform:scale(.88)}
-.gw-nav a.on{color:#fff;background:linear-gradient(135deg,#2f6fe0,#16337a);
-box-shadow:0 4px 14px rgba(47,111,224,.4)}
+
 .gw-nav a.on svg{stroke-width:2.2}
 .gw-nav .dot{position:absolute;top:5px;right:11px;width:7px;height:7px;border-radius:50%;
 background:#d81f2a;border:1.5px solid #0e1526;display:none}
 .gw-nav .dot.on{display:block}
-@media (prefers-reduced-motion: reduce){.gw-nav a,.gw-nav a svg{transition:none}}
+@media (prefers-reduced-motion: reduce){.gw-nav a,}
 body{padding-bottom:112px}
 </style>
 </head>
@@ -199,7 +182,8 @@ async function sendLead(){
 }
 
 </script>
-<nav class="gw-nav"><div class="gw-navin"><a href="/" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6h5v6H18a1 1 0 0 0 1-1V9.5"/></svg><span>Home</span></a><a href="/order" class=""><svg viewBox="0 0 24 24"><path d="M4 7h16l-1.2 12.1a2 2 0 0 1-2 1.9H7.2a2 2 0 0 1-2-1.9L4 7Z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg><span>Order</span></a><a href="/courier"><svg viewBox="0 0 24 24"><path d="M3 8h13v9H3z"/><path d="M16 11h4l1 3v3h-5z"/><circle cx="7" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg><span>Courier</span></a><a href="#" class="" onclick="gwActivity();return false"><svg viewBox="0 0 24 24"><path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg><span>Activity</span></a><a href="/me" class=""><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg><span>Account</span></a></div></nav>
+
 <script>function gwActivity(){location.href="/activity";}</script>
+<script src="/static/gw-nav.js" defer></script>
 </body>
 </html>

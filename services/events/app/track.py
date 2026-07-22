@@ -351,6 +351,7 @@ try{
   } else if(btn){ btn.style.display = 'block'; }
 }catch(e){}
 </script>
+<script src="/static/gw-nav.js" defer></script>
 </body></html>"""
 
 
@@ -423,7 +424,7 @@ async def track(order_id: str):
                 f'<div class="oid">{_esc(oid)}</div>'
                 f'<div class="status">Order not found</div>'
                 f'<div class="items">Double-check the tracking link, or call GateWay.</div>')
-        return HTMLResponse(_HEAD + body + "</body></html>", status_code=404)
+        return HTMLResponse(_HEAD + body + '<script src="/static/gw-nav.js" defer></script></body></html>', status_code=404)
 
     f = recs[0]["fields"]
     status = f.get("status", "received")

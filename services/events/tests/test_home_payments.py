@@ -32,7 +32,7 @@ def test_home_storefront_first_and_no_team_gate():
     # sits ABOVE the restaurant list (still after the featured/category browse
     # entry), not buried in a footnote section below the food.
     assert 'href="/courier"' in html
-    assert "<span>Courier</span>" in html  # first-class bottom-nav destination
+    assert "gw-nav.js" in html  # first-class bottom-nav destination (shared component)
     # v1.1: a food court does NOT ask its customers for a work badge at the door.
     # Team entry lives at /team; the home shows growth CTAs instead.
     assert "GateWay team" not in html
