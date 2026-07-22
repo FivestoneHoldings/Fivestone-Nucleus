@@ -458,6 +458,9 @@ function paint86(){
     ${c.items.map(i => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e2942">
         <span style="flex:1;font-size:.86rem;${i.available?'':'opacity:.4;text-decoration:line-through'}">${esc(i.name)}</span>
+        <button onclick="editItem('${i.id}', ${JSON.stringify(i.name)}, ${i.price_cents})" title="Edit name or price"
+          style="flex:0 0 auto;padding:8px 11px;border-radius:20px;font-size:.76rem;font-weight:800;
+          background:transparent;color:#8b93a7;border:1.5px solid #dfe4ee;box-shadow:none">$${(i.price_cents/100).toFixed(2)} ✎</button>
         <button onclick="toggle86('${i.id}', ${i.available})"
           style="flex:0 0 auto;padding:8px 14px;border-radius:20px;font-size:.76rem;font-weight:800;
           background:${i.available?'transparent':'#d81f2a'};color:${i.available?'#f0a04b':'#fff'};
@@ -465,7 +468,48 @@ function paint86(){
           ${i.available ? '86 this' : "We're back"}</button>
       </div>`).join('')}`).join('')
     : `<div style="padding:16px 0;color:#8b93a7;font-size:.85rem">Nothing matches "${esc(q)}".</div>`;
-  el.innerHTML = '<div class="card">' + search + body + '</div>';
+  el.innerHTML = '<div class="card">' + search + body + '<button onclick="addMenuItem()" style="margin-top:12px;background:transparent;border:1.5px dashed #c3d0f0;color:#16337a;box-shadow:none;font-size:.84rem">＋ Add an item to my menu</button>' + '</div>';
+}
+async function editItem(id, name, cents){
+  const v = await gwPrompt({title: 'Edit ' + name,
+    value: (cents/100).toFixed(2), inputmode:'decimal', confirm:'Save price',
+    body:"Your menu, your prices. This updates your storefront immediately."});
+  if(v === null) return;
+  const dollars = parseFloat(String(v).replace(/[^0-9.]/g,''));
+  if(isNaN(dollars) || dollars < 0) return gwToast('Enter a price like 12.50', false);
+  const r = await fetch(api(`/menu-items/${id}`), {method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({price_cents: Math.round(dollars*100)})});
+  if(r.ok){
+    gwToast('Price updated ✓', true);
+    MENU86_CACHE = await (await fetch(api('/menu'))).json(); paint86();
+  } else {
+    let msg='Could not save.'; try{ msg=(await r.json()).detail||msg; }catch(e){}
+    gwToast(msg, false);
+  }
+}
+async function addMenuItem(){
+  const name = await gwPrompt({title:'Add an item', placeholder:'e.g. Seasonal Special',
+    confirm:'Next', body:'Adds it straight to your storefront.'});
+  if(!name) return;
+  const price = await gwPrompt({title:`Price for ${name}`, placeholder:'12.50',
+    inputmode:'decimal', confirm:'Next'});
+  if(price === null) return;
+  const dollars = parseFloat(String(price).replace(/[^0-9.]/g,''));
+  if(isNaN(dollars) || dollars < 0) return gwToast('Enter a price like 12.50', false);
+  const cat = await gwPrompt({title:'Which section?', placeholder:'e.g. Appetizers',
+    confirm:'Add it', body:'Leave blank to put it under "More".'});
+  if(cat === null) return;
+  const r = await fetch(api('/menu-items'), {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, price_cents: Math.round(dollars*100), category: cat || 'More'})});
+  if(r.ok){
+    gwToast(`${name} added to your menu ✓`, true);
+    MENU86_CACHE = await (await fetch(api('/menu'))).json(); paint86();
+  } else {
+    let msg='Could not add it.'; try{ msg=(await r.json()).detail||msg; }catch(e){}
+    gwToast(msg, false);
+  }
 }
 async function toggle86(id, wasAvailable){
   const r = await fetch(api(`/menu-items/${id}/86`), {method:'POST',

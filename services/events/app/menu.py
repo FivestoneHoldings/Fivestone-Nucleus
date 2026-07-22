@@ -3,6 +3,7 @@ Public read for the order form; board-key writes for management.
 Seeded menus are DRAFTS grounded in each restaurant's published menus;
 prices are confirmed/corrected by the partner via the board editor.
 """
+import json
 import os
 import secrets
 from fastapi import APIRouter, HTTPException, Request
@@ -131,6 +132,86 @@ async def kitchen_toggle_86(token: str, item_id: str, request: Request):
                      payload=f'{{"name":"{item.name[:80]}"}}'))
         db.commit()
         return {"ok": True, "id": item.id, "available": item.available, "name": item.name}
+    finally:
+        db.close()
+
+
+@router.patch("/api/kitchen/{token}/menu-items/{item_id}")
+async def kitchen_edit_item(token: str, item_id: str, request: Request):
+    """A kitchen editing its own menu.
+
+    Changing a price shouldn't require phoning GateWay and waiting for someone
+    to do it on the board — it's their menu and their business. Scoped hard to
+    the caller's own partner_code so one kitchen can never reach another's."""
+    from .kitchen import _partner_by_token
+    p = _partner_by_token(token)
+    body = await request.json()
+    db: Session = SessionLocal()
+    try:
+        item = db.get(MenuItem, item_id)
+        if not item or item.partner_code != p.code:
+            raise HTTPException(404, "No such item on your menu")
+        changed = {}
+        if "price_cents" in body:
+            try:
+                cents = int(body["price_cents"])
+            except (TypeError, ValueError):
+                raise HTTPException(400, "Price must be a number")
+            if cents < 0 or cents > 100000:      # $0–$1000 is a sane menu range
+                raise HTTPException(400, "That price doesn't look right")
+            changed["price_cents"] = [item.price_cents, cents]
+            item.price_cents = cents
+        if "name" in body:
+            name = str(body["name"]).strip()[:120]
+            if not name:
+                raise HTTPException(400, "An item needs a name")
+            changed["name"] = [item.name, name]
+            item.name = name
+        if "description" in body:
+            item.description = str(body["description"]).strip()[:300]
+            changed["description"] = True
+        db.add(Event(event_type="menu.item_edited", entity_ref=item.id,
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"changed": changed})[:900]))
+        db.commit()
+        return {"ok": True, "id": item.id, "name": item.name,
+                "price_cents": item.price_cents}
+    finally:
+        db.close()
+
+
+@router.post("/api/kitchen/{token}/menu-items")
+async def kitchen_add_item(token: str, request: Request):
+    """Add something to your own menu — a seasonal dish, a new product line."""
+    from .kitchen import _partner_by_token
+    p = _partner_by_token(token)
+    body = await request.json()
+    name = str(body.get("name", "")).strip()[:120]
+    category = str(body.get("category", "")).strip()[:80] or "More"
+    if not name:
+        raise HTTPException(400, "An item needs a name")
+    try:
+        cents = int(body.get("price_cents", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Price must be a number")
+    if cents < 0 or cents > 100000:
+        raise HTTPException(400, "That price doesn't look right")
+    db: Session = SessionLocal()
+    try:
+        existing = (db.query(MenuItem)
+                    .filter(MenuItem.partner_code == p.code).count())
+        if existing >= 600:
+            raise HTTPException(400, "That's a very large menu — call GateWay and we'll help.")
+        item = MenuItem(partner_code=p.code, category=category, name=name,
+                        description=str(body.get("description", "")).strip()[:300],
+                        price_cents=cents, sort=existing + 1)
+        db.add(item)
+        db.flush()
+        db.add(Event(event_type="menu.item_added", entity_ref=item.id,
+                     tenant="gateway", actor=f"kitchen:{p.code}",
+                     payload=json.dumps({"name": name, "price_cents": cents})))
+        db.commit()
+        return {"ok": True, "id": item.id, "name": item.name}
     finally:
         db.close()
 
