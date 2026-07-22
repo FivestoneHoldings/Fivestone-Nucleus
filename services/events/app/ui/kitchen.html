@@ -132,6 +132,8 @@ async function kitchenSignOut(){
 <div id="fbPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="show86()" id="menu86Btn" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🍽 86 an item</button>
 <div id="menu86Panel" style="display:none;margin-bottom:14px"></div>
+<button onclick="toggleInsights()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📈 My numbers — history &amp; what's ahead</button>
+<div id="insightsPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleHistory()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📊 Today in review</button>
 <button onclick="togglePosts()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📰 Post an update — your news feed</button>
 <div id="postsPanel" style="display:none;margin-bottom:14px"></div>
@@ -324,6 +326,16 @@ async function deletePost(id){
   if(!ok) return;
   await fetch(api('/posts/' + id), {method:'DELETE'});
   paintPosts();
+}
+async function toggleInsights(){
+  const el = document.getElementById('insightsPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading your numbers…</div>';
+  try{
+    const d = await (await fetch(api('/insights'))).json();
+    el.innerHTML = '<div class="card"><div id="insightsBody"></div></div>';
+    gwInsights.render(document.getElementById('insightsBody'), d, {});
+  }catch(e){ el.innerHTML = '<div class="card">Couldn\u2019t load your numbers. Try again.</div>'; }
 }
 async function toggleHistory(){
   const el = document.getElementById('historyPanel');
@@ -580,5 +592,6 @@ const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
 load(); paintAlertBanner(); setInterval(load, 20000);
 </script>
+<script src="/static/gw-insights.js" defer></script>
 </body>
 </html>

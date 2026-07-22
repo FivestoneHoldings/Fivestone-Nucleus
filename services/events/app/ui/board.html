@@ -24,6 +24,7 @@ body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:va
 .tab{flex:1;padding:10px;text-align:center;border-radius:8px;border:1px solid var(--line);
 background:var(--card);color:var(--dim);font-weight:800;font-size:.82rem;cursor:pointer}
 .tab.on{background:#14213d;color:var(--green);border-color:#2c4a9e}
+:root{--gwi-card:#131b2e;--gwi-line:#263252;--gwi-ink:#6fa0ff;--gwi-soft:#0f1729}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 /* Ticket modal — a real overlay, decoupled from the order list entirely. The
    old pattern (scroll-to-top + render into a shared #orderDetail div sitting in
@@ -145,7 +146,9 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <div id="dayopen"></div>
   <button onclick="showReadiness()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚦 Launch readiness</button>
   <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
-  <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
+  <button onclick="toggleInsights()" id="insightsBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📈 Insights — history, trend &amp; what's ahead</button>
+<div id="insightsPanel" style="display:none;margin-bottom:12px"></div>
+<button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
   <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="showDriverRequests()" id="drReqBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚗 Driver requests</button>
   <div id="drReqPanel" style="display:none;margin-bottom:12px"></div>
@@ -725,6 +728,16 @@ document.addEventListener('visibilitychange', ()=>{
 });
 /* --- INBOX (v1.1) --- Leads and support tickets are worthless in a database
    nobody reads. Every hand raised lands here, in front of the founder. --- */
+async function toggleInsights(){
+  const el = document.getElementById('insightsPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading insights…</div>';
+  try{
+    const d = await (await fetch(api('/insights'))).json();
+    el.innerHTML = '<div class="card"><div id="insightsBody"></div></div>';
+    gwInsights.render(document.getElementById('insightsBody'), d, {});
+  }catch(e){ el.innerHTML = '<div class="card">Could not load insights.</div>'; }
+}
 async function showInbox(){
   const el = document.getElementById('inboxPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
@@ -1152,5 +1165,6 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTicketMo
 <div id="ticketModalWrap" class="tmwrap" onclick="if(event.target===this)closeTicketModal()">
   <div id="ticketModal" class="tmodal" role="dialog" aria-label="Order ticket"></div>
 </div>
+<script src="/static/gw-insights.js" defer></script>
 </body>
 </html>

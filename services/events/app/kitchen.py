@@ -2,7 +2,7 @@
 Shows today's active orders, beeps on new ones, one button: READY FOR PICKUP.
 """
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -10,7 +10,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from . import airtable_client as at
-from .bizday import business_day, business_day_of
+from . import insights
+from .bizday import at_day, business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Partner
 
@@ -277,6 +278,27 @@ async def kitchen_accepting(token: str, request: Request,
         from .identity import _flush_reopen_alerts
         background_tasks.add_task(_flush_reopen_alerts, p.code, p.display_name)
     return {"ok": True, "accepting": on}
+
+
+@router.get("/api/kitchen/{token}/insights")
+async def kitchen_insights(token: str, days: int = 30):
+    """A kitchen's own history, trend and run-rate.
+
+    This is the data the big platforms keep for themselves and sell back as an
+    'analytics tier'. It's the kitchen's own business — they should be able to
+    see whether they're growing, when their rush really is, what actually
+    sells, and how many neighbors come back."""
+    p = _partner_by_token(token)
+    days = max(7, min(90, days))
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=(f"AND({{partner_code}}='{p.code}',"
+                 f"{at_day('received_at')}>='{since}')"),
+        max_records=1000)
+    report = insights.build_report(records)
+    report["kitchen"] = p.display_name
+    return report
 
 
 @router.get("/api/kitchen/{token}/verify")

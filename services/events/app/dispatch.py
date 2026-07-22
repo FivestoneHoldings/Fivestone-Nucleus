@@ -5,7 +5,7 @@ Temporarily hosted inside the events service per ADR-008 (split at M3).
 import json
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from . import airtable_client as at
 from . import notify
-from .bizday import business_day, business_day_of
+from . import insights
+from .bizday import at_day, business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Proof, DriverLocation
 
@@ -345,6 +346,54 @@ async def driver_help(day_token: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "severity": severity, "label": label}
+
+
+@router.get("/api/board/{key}/insights")
+async def board_insights(key: str, days: int = 30):
+    """The whole operation's history, trend and run-rate — for the founder.
+
+    Every figure carries its own confidence. A number that isn't trustworthy
+    yet is returned as 'insufficient' with what's still needed, rather than
+    printed anyway and left to look like fact."""
+    _check_key(key)
+    days = max(7, min(90, days))
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS, formula=f"{at_day('received_at')}>='{since}'", max_records=1000)
+    report = insights.build_report(records)
+    # who's carrying the volume — only the founder's view needs this breakdown
+    by_partner = {}
+    for r in records:
+        code = r["fields"].get("partner_code", "") or "(courier)"
+        slot = by_partner.setdefault(code, {"orders": 0, "revenue_cents": 0})
+        slot["orders"] += 1
+        if r["fields"].get("status") in insights.REVENUE_STATUSES:
+            try:
+                slot["revenue_cents"] += int(r["fields"].get("subtotal_cents") or 0)
+            except (TypeError, ValueError):
+                pass
+    report["by_partner"] = sorted(
+        [{"partner": k, **v} for k, v in by_partner.items()],
+        key=lambda x: x["orders"], reverse=True)
+    return report
+
+
+@router.get("/api/driver/{day_token}/insights")
+async def driver_insights(day_token: str, days: int = 30):
+    """A driver's own record: runs, tips, best hours, and what this pace is
+    worth over a week. Their data belongs to them."""
+    drv = await _driver_by_token(day_token)
+    days = max(7, min(90, days))
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=(f"AND({at_day('delivered_at')}>='{since}',"
+                 f"OR({{status}}='delivered',{{status}}='closed'))"),
+        max_records=1000)
+    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    report = insights.build_report(mine, include_items=False)
+    report["driver"] = drv["fields"].get("display_name", "Driver")
+    return report
 
 
 @router.post("/api/driver/{day_token}/orders/{record_id}/proof")

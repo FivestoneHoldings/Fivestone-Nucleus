@@ -105,6 +105,8 @@ letter-spacing:.06em;text-transform:uppercase}
 <button onclick="toggleHelp()" id="helpBtn" style="width:100%;padding:12px;margin-bottom:12px;background:#fff4e0;border:1.5px solid #f0c88a;color:#8a4b0b;font-weight:800;font-size:.86rem;border-radius:11px;font-family:inherit">🆘 Get help — reach GateWay now</button>
 <div id="helpPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="showEarnings()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">💰 My earnings this week</button>
+<button onclick="toggleInsights()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">📈 My record — earnings &amp; best hours</button>
+<div id="insightsPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleMyDay()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit">📜 My day — completed runs</button>
 <div id="myDayPanel" style="display:none;margin-bottom:14px"></div>
 <button onclick="toggleProfile()" style="width:100%;padding:11px;margin-bottom:12px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-weight:700;font-size:.82rem;border-radius:11px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">⭐ My profile — what customers see <span id="profBadge"></span></button>
@@ -288,6 +290,16 @@ async function load(){
 }
 const DRIVER_AVATARS = ['😎','🚗','🧢','🕶️','🤠','🥳','😊','🙂','👩','👨','🧔','🦊','🐻','🦁','🌟','🔥','💙','🧡','🛵'];
 let PROFILE = null;
+async function toggleInsights(){
+  const el = document.getElementById('insightsPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading your record…</div>';
+  try{
+    const d = await (await fetch(api('/insights'))).json();
+    el.innerHTML = '<div class="card"><div id="insightsBody"></div></div>';
+    gwInsights.render(document.getElementById('insightsBody'), d, {hideRevenue:true, showTips:true});
+  }catch(e){ el.innerHTML = '<div class="card">Couldn\u2019t load your record. Try again.</div>'; }
+}
 function toggleMyDay(){
   const el = document.getElementById('myDayPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
@@ -575,5 +587,6 @@ async function pingLoc(){
 }
 setInterval(pingLoc, 45000);
 </script>
+<script src="/static/gw-insights.js" defer></script>
 </body>
 </html>
