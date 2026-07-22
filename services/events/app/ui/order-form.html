@@ -145,6 +145,15 @@ display:flex;align-items:center;justify-content:center}
 .rhead .img .nm{position:absolute;left:18px;right:18px;bottom:14px;color:#fff;
 font-weight:900;font-size:1.35rem;line-height:1.15;text-shadow:0 2px 12px rgba(0,0,0,.4)}
 .rhead .meta{padding:14px 18px 16px}
+.rhours{margin-top:11px;border-top:1px solid #eef0f5;padding-top:9px}
+.rhours summary{font-size:.8rem;font-weight:800;color:#16337a;cursor:pointer;
+list-style:none;padding:3px 0}
+.rhours summary::-webkit-details-marker{display:none}
+.rhours summary::after{content:' ▾';color:#9199a8;font-weight:600}
+.rhours[open] summary::after{content:' ▴'}
+.rhrow{display:flex;justify-content:space-between;gap:12px;padding:4px 0;
+font-size:.8rem;color:#5a5e64}
+.rhrow span:last-child{font-weight:700;color:#2a2d33}
 .pnews{background:#fff;border:1px solid #e4e8f2;border-radius:16px;padding:14px 16px;
 margin:0 0 16px;box-shadow:0 3px 14px rgba(20,30,60,.05)}
 .pnewshead{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.1em;
@@ -957,6 +966,10 @@ function renderMenu(m){
     <div class="meta">
       ${meta.about_blurb?`<div class="story">${(meta.about_blurb||'').replace(/</g,'&lt;')}</div>`:''}
       <div class="facts">${facts.map(f=>`<span class="fact">${String(f).replace(/</g,'&lt;')}</span>`).join('')}</div>
+      ${(meta.hours && meta.hours.length) ? `<details class="rhours">
+        <summary>🕒 Hours</summary>
+        ${meta.hours.map(h=>`<div class="rhrow"><span>${String(h.day).replace(/</g,'&lt;')}</span><span>${String(h.text).replace(/</g,'&lt;')}</span></div>`).join('')}
+      </details>` : ''}
     </div></div>
     <div id="partnerNews"></div>`;
   const search = `<input class="msearch" id="msearch" placeholder="Search the menu…" oninput="filterMenu()">`;

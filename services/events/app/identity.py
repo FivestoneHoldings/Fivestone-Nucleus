@@ -183,6 +183,7 @@ def public_partner_directory():
                     "address": p.address,
                     "delivery_fee_cents": p.delivery_fee_cents,
                     "accepting_orders": p.accepting_orders,
+                    "hours_status": hours.status(p),
                     "hero_url": p.hero_url,
                     "about_blurb": p.about_blurb,
                     "special": _todays_special(p),

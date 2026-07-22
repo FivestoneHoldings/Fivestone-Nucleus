@@ -410,7 +410,11 @@ function setCat(c){ CAT = c; paintChips(); paintList(); paintFeatured();
 
 function paintFeatured(){
   const el = document.getElementById('featured');
+  // A closed kitchen shouldn't be spotlighted — the featured rail is a
+  // recommendation, and recommending somewhere you can't order from right now
+  // wastes the customer's tap. They're still reachable in the list below.
   const feat = ALL.filter(p=>p.featured && p.accepting_orders !== false &&
+    !(p.hours_status && p.hours_status.open === false) &&
     (CAT==='all' || p.cuisine===CAT));
   if(!feat.length){ el.innerHTML = ''; return; }
   el.innerHTML = '<div class="rsec">✨ Featured kitchens</div><div class="frail">' + feat.map(p=>`
@@ -447,6 +451,21 @@ function paintList(){
           <div class="rmeta" style="color:#d81f2a;font-weight:700">Paused — the kitchen is catching up</div></div>
         <button class="rpausebtn" onclick="notifyMe('${esc(p.code)}','${name.replace(/'/g,"\\'")}')">🔔 Text me when they're back</button>
       </div>`;
+    }
+    // Closed by their posted hours is different from a manual pause: the
+    // kitchen is fine, just shut for now, and a scheduled order is still
+    // welcome — so this stays a working link rather than a dead row.
+    const hs = p.hours_status || {};
+    if(hs.open === false){
+      return `<a class="rrow" href="/order?partner=${encodeURIComponent(p.code)}" style="opacity:.72">
+        ${thumb(p,'rthumb')}
+        <div class="rinfo">
+          <div class="rname">${name}${demo}</div>
+          <div class="rmeta" style="color:#8a6d3b;font-weight:700">🕒 ${esc(hs.message || 'Closed right now')}</div>
+          <div class="rmeta" style="font-size:.72rem">Tap to schedule for later</div>
+        </div>
+        <span class="rgo">›</span>
+      </a>`;
     }
     return `<a class="rrow" href="/order?partner=${encodeURIComponent(p.code)}">
       ${thumb(p,'rthumb')}
