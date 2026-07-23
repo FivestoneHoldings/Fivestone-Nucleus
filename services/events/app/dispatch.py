@@ -1543,6 +1543,65 @@ async def kitchen_feedback(token: str):
         db.close()
 
 
+@router.get("/api/board/{key}/feedback")
+async def board_feedback(key: str, days: int = 14):
+    """What customers actually said — for the person who can act on it.
+
+    Feedback was reaching the kitchen and nobody else. Two problems with that:
+    a complaint about DELIVERY (late, wrong address, rude driver) landed on a
+    kitchen that can't fix it and shouldn't be judged for it, and GateWay never
+    learned it happened. An unhappy customer whose complaint vanishes is a
+    customer lost without ever knowing why.
+
+    Unresolved unhappy feedback comes back first — it's the only kind that
+    needs someone to do something today."""
+    _check_key(key)
+    days = max(1, min(90, days))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    db: Session = SessionLocal()
+    try:
+        rows = (db.query(Event)
+                .filter(Event.event_type.in_(["order.feedback", "order.feedback_handled"]))
+                .filter(Event.occurred_at >= cutoff)
+                .order_by(Event.occurred_at.desc()).limit(400).all())
+        handled = set()
+        items = []
+        for e in rows:
+            if e.event_type == "order.feedback_handled":
+                handled.add(e.entity_ref)
+                continue
+            try:
+                d = json.loads(e.payload)
+            except Exception:
+                continue
+            items.append({
+                "order_id": e.entity_ref,
+                "good": bool(d.get("good", True)),
+                "note": d.get("note", ""),
+                "partner": d.get("partner", ""),
+                "at": e.occurred_at.isoformat(),
+            })
+        for it in items:
+            it["handled"] = it["order_id"] in handled
+        # unhappy and unhandled first: that's the queue, the rest is context
+        items.sort(key=lambda x: (x["handled"], x["good"], x["at"]))
+        unresolved = sum(1 for i in items if not i["good"] and not i["handled"])
+        return {"feedback": items[:150], "unresolved_unhappy": unresolved,
+                "total": len(items),
+                "happy": sum(1 for i in items if i["good"]),
+                "unhappy": sum(1 for i in items if not i["good"])}
+    finally:
+        db.close()
+
+
+@router.post("/api/board/{key}/feedback/{order_id}/handled")
+async def mark_feedback_handled(key: str, order_id: str):
+    """Someone reached out and made it right. Clears it from the queue."""
+    _check_key(key)
+    _log_event("order.feedback_handled", _fq(order_id.upper().strip()), "board", {})
+    return {"ok": True}
+
+
 @router.get("/api/driver/{day_token}/earnings")
 async def driver_earnings(day_token: str, days: int = 7):
     """The driver's own ledger: deliveries and tips, day by day. Their work, their numbers,

@@ -146,7 +146,9 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <div id="dayopen"></div>
   <button onclick="showReadiness()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚦 Launch readiness</button>
   <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
-  <button onclick="toggleInsights()" id="insightsBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📈 Insights — history, trend &amp; what's ahead</button>
+  <button onclick="toggleFeedback()" id="fbBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">💬 What customers said</button>
+<div id="feedbackPanel" style="display:none;margin-bottom:12px"></div>
+<button onclick="toggleInsights()" id="insightsBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📈 Insights — history, trend &amp; what's ahead</button>
 <div id="insightsPanel" style="display:none;margin-bottom:12px"></div>
 <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
   <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
@@ -728,6 +730,50 @@ document.addEventListener('visibilitychange', ()=>{
 });
 /* --- INBOX (v1.1) --- Leads and support tickets are worthless in a database
    nobody reads. Every hand raised lands here, in front of the founder. --- */
+async function toggleFeedback(){
+  const el = document.getElementById('feedbackPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; el.innerHTML = '<div class="card">Loading…</div>';
+  try{
+    const d = await (await fetch(api('/feedback'))).json();
+    const list = d.feedback || [];
+    if(!list.length){
+      el.innerHTML = '<div class="card"><div class="empty" style="padding:20px 0">No feedback yet in the last two weeks.</div></div>';
+      return;
+    }
+    el.innerHTML = `<div class="card">
+      <div style="display:flex;gap:14px;padding-bottom:11px;border-bottom:1px solid #263252;margin-bottom:10px">
+        <div><b style="font-size:1.2rem;color:#4ade80">${d.happy}</b>
+          <span style="display:block;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.06em">Loved it</span></div>
+        <div><b style="font-size:1.2rem;color:${d.unhappy?'#f0a04b':'#8b93a7'}">${d.unhappy}</b>
+          <span style="display:block;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.06em">Had a problem</span></div>
+        <div><b style="font-size:1.2rem;color:${d.unresolved_unhappy?'#e0384a':'#8b93a7'}">${d.unresolved_unhappy}</b>
+          <span style="display:block;font-size:.6rem;color:#8b93a7;text-transform:uppercase;letter-spacing:.06em">Need you</span></div>
+      </div>
+      ${list.map(f=>{
+        const needs = !f.good && !f.handled;
+        return `<div style="padding:10px 0;border-bottom:1px solid #1e2942;${f.handled?'opacity:.5':''}">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div style="min-width:0">
+              <span style="font-weight:800;color:${f.good?'#4ade80':'#f0a04b'};font-size:.85rem">
+                ${f.good?'🧡 Loved it':'⚠ Had a problem'}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:#8b93a7;margin-left:6px">
+                ${esc(f.order_id)}${f.partner?' · '+esc(f.partner):''}</span>
+              ${f.note?`<div style="font-size:.83rem;color:#c9d2e6;margin-top:4px;line-height:1.45">${esc(f.note)}</div>`:''}
+            </div>
+            <button class="ghost" style="flex:0 0 auto;padding:6px 11px;font-size:.7rem"
+              onclick="openTicketModal('${esc(f.order_id)}')">Open</button>
+          </div>
+          ${needs?`<button class="ghost" style="margin-top:7px;padding:6px 12px;font-size:.72rem"
+            onclick="markFeedbackHandled('${esc(f.order_id)}')">Mark made-right ✓</button>`:''}
+        </div>`}).join('')}
+    </div>`;
+  }catch(e){ el.innerHTML = '<div class="card">Could not load feedback.</div>'; }
+}
+async function markFeedbackHandled(oid){
+  try{ await fetch(api(`/feedback/${encodeURIComponent(oid)}/handled`), {method:'POST'}); }catch(e){}
+  document.getElementById('feedbackPanel').style.display='none'; toggleFeedback();
+}
 async function toggleInsights(){
   const el = document.getElementById('insightsPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }
