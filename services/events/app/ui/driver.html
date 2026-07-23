@@ -415,6 +415,12 @@ async function showEarnings(){
       </div>`).join('')
       : '<div style="color:#9a9ea5;font-size:.85rem">No deliveries logged in the last 7 days.</div>'}
     <div style="font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:#9a9ea5;margin-top:10px;letter-spacing:.06em">TIPS ARE 100% YOURS · GATEWAY TAKES NO CUT OF THEM</div>
+    <a href="${api('/statement.csv?days=90')}" download
+      style="display:block;text-align:center;margin-top:12px;padding:11px;border-radius:11px;
+      background:#fff;border:1.5px solid #dfe4ee;color:#16337a;font-weight:800;font-size:.82rem;
+      text-decoration:none">⬇ Download my earnings record (90 days)</a>
+    <div style="font-size:.68rem;color:#9a9ea5;margin-top:6px;line-height:1.45;text-align:center">
+      A spreadsheet of every run and tip — yours to keep for taxes.</div>
   </div>`;
 }
 function nav(addr){

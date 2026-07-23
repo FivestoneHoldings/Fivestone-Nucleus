@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from . import airtable_client as at
 from . import notify
 from . import insights
-from .bizday import at_day, business_day, business_day_of
+from .bizday import MARKET_TZ, at_day, business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Proof, DriverLocation
 
@@ -1604,21 +1604,26 @@ async def mark_feedback_handled(key: str, order_id: str):
 
 @router.get("/api/driver/{day_token}/earnings")
 async def driver_earnings(day_token: str, days: int = 7):
-    """The driver's own ledger: deliveries and tips, day by day. Their work, their numbers,
-    visible without asking anyone."""
+    """The driver's own ledger: deliveries and tips, day by day. Their work,
+    their numbers, visible without asking anyone."""
     drv = await _driver_by_token(day_token)
-    from datetime import timedelta
     days = max(1, min(days, 31))
-    start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    start = (datetime.now(MARKET_TZ) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
     records = await at.list_records(
         at.ORDERS,
         formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
-                 f"DATETIME_FORMAT(SET_TIMEZONE({{delivered_at}},'America/New_York'),'YYYY-MM-DD')>='{start}')"),
-        max_records=100)
+                 f"{at_day('delivered_at')}>='{start}')"),
+        max_records=1000)
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     by_day: dict = {}
     for r in mine:
-        d = (r["fields"].get("delivered_at") or "")[:10]
+        # The QUERY filters on market-local dates, but this used to bucket on
+        # the raw UTC timestamp — so a 9pm Knoxville delivery (1am UTC the next
+        # day) was credited to the wrong day and a driver's daily totals didn't
+        # match the day they actually worked.
+        d = business_day_of(r["fields"].get("delivered_at") or "")
+        if not d:
+            continue
         row = by_day.setdefault(d, {"date": d, "deliveries": 0, "tips_cents": 0})
         row["deliveries"] += 1
         row["tips_cents"] += int(r["fields"].get("tip_cents") or 0)
@@ -1630,6 +1635,55 @@ async def driver_earnings(day_token: str, days: int = 7):
         "totals": {"deliveries": sum(d["deliveries"] for d in days_list),
                    "tips_cents": sum(d["tips_cents"] for d in days_list)},
     }
+
+
+@router.get("/api/driver/{day_token}/statement.csv")
+async def driver_statement_csv(day_token: str, days: int = 90):
+    """A downloadable earnings record.
+
+    Drivers are independent contractors: at tax time they need their own proof
+    of what they earned, and 'log into an app and squint at a dashboard' is not
+    a record. This is a plain CSV they can keep, email to an accountant, or
+    import into a spreadsheet — one row per delivery, with the date, the
+    kitchen, and the tip. It says plainly that GateWay takes no cut of tips,
+    because that's the number their taxes turn on."""
+    import csv
+    import io
+    drv = await _driver_by_token(day_token)
+    days = max(1, min(days, 366))
+    start = (datetime.now(MARKET_TZ) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    records = await at.list_records(
+        at.ORDERS,
+        formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
+                 f"{at_day('delivered_at')}>='{start}')"),
+        max_records=5000)
+    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    rows = []
+    for r in mine:
+        f = r["fields"]
+        rows.append({
+            "date": business_day_of(f.get("delivered_at") or ""),
+            "order_id": f.get("order_id", ""),
+            "kitchen": f.get("partner_code", "") or "courier",
+            "tip": int(f.get("tip_cents") or 0) / 100,
+        })
+    rows.sort(key=lambda x: (x["date"], x["order_id"]))
+    name = drv["fields"].get("display_name", "driver")
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow([f"GateWay Delivery — earnings record for {name}"])
+    w.writerow([f"{start} through {business_day()}",
+                "All tips are 100% yours; GateWay takes no cut."])
+    w.writerow([])
+    w.writerow(["Date", "Order", "Kitchen", "Tip ($)"])
+    for row in rows:
+        w.writerow([row["date"], row["order_id"], row["kitchen"], f'{row["tip"]:.2f}'])
+    w.writerow([])
+    w.writerow(["Deliveries", len(rows)])
+    w.writerow(["Total tips ($)", f'{sum(r["tip"] for r in rows):.2f}'])
+    fname = f"gateway-earnings-{name.lower().replace(' ', '-')}-{business_day()}.csv"
+    return Response(content=buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @router.get("/api/board/{key}/readiness")
