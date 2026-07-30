@@ -201,7 +201,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.35"
+NUCLEUS_VERSION = "1.9.36"
 
 
 @app.middleware("http")
@@ -229,6 +229,51 @@ async def timing_and_slow_log(request, call_next):
             db.close()
         except Exception:
             pass
+    return response
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    """Baseline browser-side hardening. None of this replaces server-side
+    validation — it's a second layer that costs nothing and blocks whole
+    classes of attack outright.
+
+    HSTS: once a browser has loaded us over https, force https for a year,
+    including subdomains. Kills 'downgrade to http and intercept' outright.
+
+    X-Frame-Options + frame-ancestors: nobody can put the board, kitchen, or
+    driver screens in a hidden iframe on another site to trick a click
+    ("clickjacking") — e.g. a fake page overlaying our real 'Confirm delivery'
+    button.
+
+    X-Content-Type-Options: stops the browser from guessing a file's type from
+    its content, closing off a class of upload-disguised-as-script attack.
+
+    Referrer-Policy: a link out from a customer's page doesn't leak the full
+    URL — including any token in it — to whatever site it points to.
+
+    CSP is scoped to exactly what this app actually loads (checked against
+    every external URL in the codebase): unpkg for Leaflet, OSM for map tiles,
+    Google Fonts for type. script-src allows 'unsafe-inline' because every page
+    here is inline-script HTML, not a bundled SPA — but framing and
+    unauthorized script origins are still blocked, which is what matters most
+    for a token-gated app.
+    """
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self' https://nominatim.openstreetmap.org; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    )
     return response
 
 
