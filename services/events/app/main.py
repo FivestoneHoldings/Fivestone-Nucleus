@@ -18,6 +18,7 @@ from .menu import router as menu_router, seed_menus
 from .track import router as track_router
 from .kitchen import router as kitchen_router
 from .guides import router as guides_router
+from . import boardauth  # noqa: F401 — registers BoardAccess on Base.metadata
 
 Base.metadata.create_all(bind=engine)
 
@@ -201,7 +202,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.36"
+NUCLEUS_VERSION = "1.9.37"
 
 
 @app.middleware("http")

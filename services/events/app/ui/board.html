@@ -146,7 +146,9 @@ pre,code{white-space:pre-wrap;word-break:break-word}
   <div id="dayopen"></div>
   <button onclick="showReadiness()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚦 Launch readiness</button>
   <div id="readyPanel" style="display:none;margin-bottom:12px"></div>
-  <button onclick="toggleFeedback()" id="fbBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">💬 What customers said</button>
+  <button onclick="toggleTeamAccess()" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🔑 Team access</button>
+<div id="teamAccessPanel" style="display:none;margin-bottom:12px"></div>
+<button onclick="toggleFeedback()" id="fbBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">💬 What customers said</button>
 <div id="feedbackPanel" style="display:none;margin-bottom:12px"></div>
 <button onclick="toggleInsights()" id="insightsBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📈 Insights — history, trend &amp; what's ahead</button>
 <div id="insightsPanel" style="display:none;margin-bottom:12px"></div>
@@ -730,6 +732,57 @@ document.addEventListener('visibilitychange', ()=>{
 });
 /* --- INBOX (v1.1) --- Leads and support tickets are worthless in a database
    nobody reads. Every hand raised lands here, in front of the founder. --- */
+async function toggleTeamAccess(){
+  const el = document.getElementById('teamAccessPanel');
+  if(el.style.display !== 'none'){ el.style.display='none'; return; }
+  el.style.display=''; await paintTeamAccess();
+}
+async function paintTeamAccess(){
+  const el = document.getElementById('teamAccessPanel');
+  el.innerHTML = '<div class="card">Loading…</div>';
+  try{
+    const d = await (await fetch(api('/team-access'))).json();
+    const rows = d.access || [];
+    el.innerHTML = `<div class="card">
+      <div style="font-size:.76rem;color:#8b93a7;margin-bottom:11px;line-height:1.5">
+        Give someone their own key instead of sharing yours — revoke theirs
+        anytime without touching your own access.</div>
+      <button onclick="mintTeamAccess()" style="margin-bottom:12px">＋ Give someone access</button>
+      ${rows.length ? rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;
+        gap:10px;padding:9px 0;border-bottom:1px solid #1e2942;${r.revoked?'opacity:.45':''}">
+        <div style="min-width:0">
+          <div style="font-weight:800;font-size:.85rem">${esc(r.name)}${r.revoked?' <span style="color:#e0384a;font-weight:700;font-size:.7rem">· revoked</span>':''}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:#8b93a7">
+            …${esc(r.hint)} · ${r.last_used_at ? 'used '+relTime(r.last_used_at) : 'never used'}</div>
+        </div>
+        ${!r.revoked?`<button class="warn" style="flex:0 0 auto;padding:6px 11px;font-size:.7rem"
+          onclick="revokeTeamAccess('${r.id}','${esc(r.name).replace(/'/g,"\\'")}')">Revoke</button>`:''}
+      </div>`).join('') : '<div style="padding:10px 0;color:#8b93a7;font-size:.84rem">Just you so far.</div>'}
+    </div>`;
+  }catch(e){ el.innerHTML = '<div class="card">Could not load team access.</div>'; }
+}
+async function mintTeamAccess(){
+  const name = await gwPrompt({title:'Who is this for?', placeholder:'e.g. Jasmine — ops',
+    confirm:'Create their key'});
+  if(!name) return;
+  const r = await fetch(api('/team-access'), {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+  if(!r.ok){ gwToast('Could not create that.', false); return; }
+  const d = await r.json();
+  const url = location.origin + '/board/' + d.key;
+  await gwConfirm({title:`${d.name}'s board link`,
+    body: url + "\n\nCopy this now — it won't be shown again. Send it to them directly, never by public post.",
+    confirm:'Copy link'});
+  try{ await navigator.clipboard.writeText(url); gwToast('Link copied ✓', true); }catch(e){}
+  paintTeamAccess();
+}
+async function revokeTeamAccess(id, name){
+  if(!await gwConfirm({title:`Revoke ${name}'s access?`,
+    body:'Their link stops working immediately. Nobody else is affected.', danger:true})) return;
+  await fetch(api(`/team-access/${id}`), {method:'DELETE'});
+  gwToast(`${name}'s access revoked`, true);
+  paintTeamAccess();
+}
 async function toggleFeedback(){
   const el = document.getElementById('feedbackPanel');
   if(el.style.display !== 'none'){ el.style.display='none'; return; }

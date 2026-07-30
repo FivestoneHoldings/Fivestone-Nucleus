@@ -25,10 +25,9 @@ router = APIRouter()
 
 
 def _check_key(key: str):
-    import os
-    admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or not secrets.compare_digest(str(key), admin):
-        raise HTTPException(403, "Bad board key")
+    """Delegates to app.boardauth — see app/boardauth.py for the design."""
+    from . import boardauth
+    boardauth.check_key(key)
 
 
 def _partner_by_token(token: str) -> Partner:

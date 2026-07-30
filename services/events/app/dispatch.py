@@ -523,9 +523,12 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
 # ---------- BOARD API (founder) ----------
 
 def _check_key(key: str):
-    admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or not secrets.compare_digest(str(key), admin):
-        raise HTTPException(403, "Bad board key")
+    """Delegates to app.boardauth — the single source of truth for board
+    access, so revoking one person's key doesn't require touching five files.
+    Kept as a thin per-module wrapper so no call site elsewhere needs to
+    change."""
+    from . import boardauth
+    boardauth.check_key(key)
 
 
 @router.get("/api/board/{key}/orders")

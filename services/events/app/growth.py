@@ -337,9 +337,12 @@ def create_ticket(request: Request, body: SupportIn):
 
 
 def _check_key(key: str):
-    admin = os.environ.get("ADMIN_KEY", "")
-    if not admin or not secrets.compare_digest(str(key), admin):
-        raise HTTPException(403, "Bad board key")
+    """Delegates to app.boardauth — the single source of truth for board
+    access, so revoking one person's key doesn't require touching five files.
+    Kept as a thin per-module wrapper so no call site elsewhere needs to
+    change."""
+    from . import boardauth
+    boardauth.check_key(key)
 
 
 @router.get("/v0/leads")
@@ -472,6 +475,49 @@ def save_delivery_prefs(body: DeliveryPrefIn):
 
 
 # ---------- DRIVER REQUESTS (v1.5) — the board's half of "request a driver" ----------
+
+def _require_founder(key: str):
+    """The narrow set of actions ONLY the founder's own master key can do —
+    granting or revoking someone else's access. A team member's own key, valid
+    for running the board, must not be enough to mint more keys."""
+    import os
+    import secrets as _secrets
+    admin = os.environ.get("ADMIN_KEY", "")
+    if not admin or not _secrets.compare_digest(str(key), admin):
+        raise HTTPException(403, "Only the founder's own key can manage team access")
+
+
+@router.get("/api/board/{key}/team-access")
+def list_team_access(key: str):
+    from . import boardauth
+    _require_founder(key)
+    return {"access": boardauth.list_keys()}
+
+
+@router.post("/api/board/{key}/team-access")
+async def create_team_access(key: str, request: Request):
+    """Mint a new named key for a team member. The raw key is returned exactly
+    once — same posture as any real credential — and never stored or shown
+    again after this response."""
+    from . import boardauth
+    _require_founder(key)
+    body = await request.json()
+    name = str(body.get("name", "")).strip()[:80]
+    if not name:
+        raise HTTPException(400, "Give this person a name so you recognize it later")
+    return boardauth.mint_key(name)
+
+
+@router.delete("/api/board/{key}/team-access/{access_id}")
+def revoke_team_access(key: str, access_id: str):
+    """Revoke one person's key. Nobody else's access is touched — that's the
+    entire point of per-person keys over one shared secret."""
+    from . import boardauth
+    _require_founder(key)
+    if not boardauth.revoke_key(access_id):
+        raise HTTPException(404, "No such access record")
+    return {"ok": True}
+
 
 @router.get("/api/board/{key}/driver-requests")
 def list_driver_requests(key: str, unresolved_only: bool = True):
