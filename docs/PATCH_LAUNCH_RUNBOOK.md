@@ -34,6 +34,7 @@ The app refuses or degrades honestly when these are absent:
 | `OPS_DIGEST_KEY` | yes | Aggregate daily operations digest |
 | `GATEWAY_HQ_PHONE` | yes | Human escalation for drivers |
 | `GATEWAY_HQ_HOURS` | recommended | Honest dispatch availability |
+| `GATEWAY_BACKUP_VERIFIED_AT` | yes | UTC timestamp of the latest restore-checked backup; readiness requires it to be no more than seven days old |
 | `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM` | recommended | Automatic customer SMS |
 | `STRIPE_SECRET_KEY` | no | Card payments; remain off for cash pilot |
 | `CUSTOMER_PROFILES_ENABLED` | no | Keep off until phone ownership is verified |
@@ -45,7 +46,8 @@ Never put a secret in source, chat, issue text, a screenshot, or a query string.
 1. Confirm Railway shows one healthy production application and one healthy
    PostgreSQL service.
 2. Confirm a recoverable database backup exists. If Railway managed backups are
-   unavailable, create and verify an encrypted manual `pg_dump` before live data.
+   unavailable, create and verify an encrypted manual `pg_dump` before live data,
+   then set `GATEWAY_BACKUP_VERIFIED_AT` to its UTC verification timestamp.
 3. Rotate every legacy driver and merchant bearer link. Deliver each replacement
    only to its owner. Old links must return 404.
 4. Create one named dispatcher board key. Keep `ADMIN_KEY` founder-only.
@@ -57,6 +59,9 @@ Never put a secret in source, chat, issue text, a screenshot, or a query string.
 8. Confirm `/api/diag` reports Airtable and founder access configured. Stripe may
    remain false for the controlled cash pilot.
 9. Run the automated test suite and retain its pass count with the release SHA.
+10. Run the read-only deployment audit from `services/events` and retain its
+    JSON output: `python -m app.launch_audit --base-url https://…`. It must exit
+    zero before the first order.
 
 ## Live delivery drill
 

@@ -1722,6 +1722,7 @@ async def launch_readiness(key: str):
             checks.append({
                 "area": f"{p.display_name}",
                 "ok": bool(items and p.address and p.about_blurb),
+                "required": True,
                 "detail": (f"{items} menu items · "
                            f"{photos} with photos · "
                            f"{'hero ✓' if p.hero_url else 'no hero photo'} · "
@@ -1733,20 +1734,42 @@ async def launch_readiness(key: str):
         drivers = await at.list_records(at.DRIVERS)
     except Exception:
         drivers = []
-    checks.append({"area": "Drivers", "ok": len(drivers) > 0,
+    checks.append({"area": "Drivers", "ok": len(drivers) > 0, "required": True,
                    "detail": f"{len(drivers)} driver(s) with day links"})
+    dispatch_phone = os.environ.get("GATEWAY_HQ_PHONE", "").strip()
+    checks.append({"area": "Dispatch escalation phone", "ok": bool(dispatch_phone),
+                   "required": True,
+                   "detail": ("Driver call/text escalation is configured" if dispatch_phone
+                              else "NOT SET — add GATEWAY_HQ_PHONE before a live delivery")})
+    backup_at = os.environ.get("GATEWAY_BACKUP_VERIFIED_AT", "").strip()
+    backup_fresh = False
+    if backup_at:
+        try:
+            stamp = datetime.fromisoformat(backup_at.replace("Z", "+00:00"))
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            age = datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)
+            backup_fresh = timedelta(0) <= age <= timedelta(days=7)
+        except ValueError:
+            pass
+    checks.append({"area": "Recoverable database backup", "ok": backup_fresh,
+                   "required": True,
+                   "detail": (f"Verified {backup_at}" if backup_fresh
+                              else "NOT VERIFIED in the last 7 days — create and restore-check a backup")})
     checks.append({"area": "SMS (Twilio)", "ok": bool(os.environ.get("TWILIO_SID")),
+                   "required": False,
                    "detail": "Live texts to customers" if os.environ.get("TWILIO_SID")
                              else "NOT SET — texts queue but never send. Add TWILIO_SID/TOKEN/FROM in Railway."})
     checks.append({"area": "Card payments (Stripe)", "ok": payments.configured(),
+                   "required": False,
                    "detail": "Online payment live" if payments.configured()
                              else "Not set — orders default to CASH at the door (works today)."})
     checks.append({
-        "area": "Database durability", "ok": DB_DURABLE,
+        "area": "Database durability", "ok": DB_DURABLE, "required": True,
         "detail": ("PostgreSQL on Railway · owned event log"
                    if DB_BACKEND == "postgresql"
                    else "SQLite without a declared persistent volume — migrate before live operations"),
     })
-    ready = all(c["ok"] for c in checks if c["area"] != "Card payments (Stripe)")
-    blocking = [c["area"] for c in checks if not c["ok"]]
+    blocking = [c["area"] for c in checks if c["required"] and not c["ok"]]
+    ready = not blocking
     return {"ready_to_take_orders": ready, "checks": checks, "blocking": blocking}
