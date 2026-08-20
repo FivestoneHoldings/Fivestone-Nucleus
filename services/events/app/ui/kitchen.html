@@ -139,6 +139,8 @@ async function kitchenSignOut(){
 <button onclick="toggleHistory()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📊 Today in review</button>
 <button onclick="togglePosts()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">📰 Post an update — your news feed</button>
 <div id="postsPanel" style="display:none;margin-bottom:14px"></div>
+<button onclick="toggleOffers()" style="width:100%;padding:11px;margin-bottom:14px;background:transparent;border:1.5px solid #dfe4ee;color:#5a5e64;font-size:.82rem;box-shadow:none">🏷 Create an offer — Patch wallet</button>
+<div id="offersPanel" style="display:none;margin-bottom:14px"></div>
 <div id="historyPanel" style="display:none;margin-bottom:14px"></div>
 <div id="alertBanner" style="display:none"></div>
 <div id="loadBanner"></div>
@@ -329,6 +331,28 @@ async function deletePost(id){
   await fetch(api('/posts/' + id), {method:'DELETE'});
   paintPosts();
 }
+
+async function toggleOffers(){
+  const el=document.getElementById('offersPanel');
+  if(el.style.display!=='none'){el.style.display='none';return}el.style.display='';await paintOffers();
+}
+async function paintOffers(){
+  const el=document.getElementById('offersPanel');el.innerHTML='<div class="card">Loading…</div>';
+  try{const d=await (await fetch(api('/offers'))).json();const rows=d.offers||[];el.innerHTML=`<div class="card">
+    <div style="font-weight:900;margin-bottom:4px">Create a customer offer</div>
+    <div style="font-size:.76rem;color:#8b93a7;line-height:1.45">Patch creates a unique checkout code and puts the offer in the customer wallet.</div>
+    <input id="offerTitle" placeholder="20% off dinner tonight" maxlength="140" style="margin-top:10px">
+    <textarea id="offerDetail" placeholder="What customers receive and any useful terms" maxlength="400" style="margin-top:8px"></textarea>
+    <div class="row" style="margin-top:8px"><input id="offerPercent" type="number" min="1" max="75" value="10" style="max-width:110px"><label style="display:flex;align-items:center;gap:6px;font-size:.76rem"><input id="offerEod" type="checkbox" style="width:auto"> Ends tonight</label></div>
+    <button onclick="createOffer()" style="margin-top:8px">Publish to Patch wallet</button>
+    ${rows.length?`<div style="font-family:'IBM Plex Mono';font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:#8b93a7;margin:16px 0 7px">Your offers</div>${rows.map(x=>`<div style="padding:9px 0;border-top:1px solid #eef1f5"><b>${esc(x.title)}</b><div style="font-family:'IBM Plex Mono';font-size:.66rem;color:#8b93a7;margin-top:3px">${esc(x.promo_code)}${x.expires_at?' · ends tonight':''}</div><button onclick="setOfferActive('${x.id}',${!x.active})" style="width:auto;margin-top:6px;padding:6px 10px;font-size:.7rem;background:${x.active?'#fff':'#16337a'};color:${x.active?'#b5202a':'#fff'};border:1px solid ${x.active?'#e8b8b8':'#16337a'};box-shadow:none">${x.active?'Pause':'Reactivate'}</button></div>`).join('')}`:'<div style="color:#8b93a7;font-size:.8rem;margin-top:14px">No offers yet.</div>'}
+  </div>`}catch(e){el.innerHTML='<div class="card">Could not load offers.</div>'}
+}
+async function createOffer(){
+  const body={title:document.getElementById('offerTitle').value,detail:document.getElementById('offerDetail').value,percent:Number(document.getElementById('offerPercent').value||10),end_of_day:document.getElementById('offerEod').checked};
+  const r=await fetch(api('/offers'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok){gwToast(d.detail||'Could not create offer',false);return}gwToast(`Offer live · ${d.promo_code}`,true);paintOffers();
+}
+async function setOfferActive(id,active){const r=await fetch(api(`/offers/${id}/active`),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});if(r.ok){gwToast(active?'Offer reactivated':'Offer paused',true);paintOffers()}}
 const HDAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
 async function toggleHours(){
   const el = document.getElementById('hoursPanel');

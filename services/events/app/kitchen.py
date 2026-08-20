@@ -13,7 +13,7 @@ from . import airtable_client as at
 from . import insights
 from .bizday import at_day, business_day, business_day_of
 from .db import SessionLocal
-from .models import Event, Partner
+from .models import Event, Partner, PatchOffer, PromoCode
 
 router = APIRouter()
 _UI = Path(__file__).parent / "ui"
@@ -417,6 +417,87 @@ async def set_special(token: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "special": text}
+
+
+@router.get("/api/kitchen/{token}/offers")
+def kitchen_offers(token: str):
+    p = _partner_by_token(token)
+    db = SessionLocal()
+    try:
+        rows = (db.query(PatchOffer).filter(PatchOffer.partner_code == p.code)
+                .order_by(PatchOffer.created_at.desc()).limit(50).all())
+        return {"offers": [{"id": x.id, "title": x.title, "detail": x.detail,
+                            "promo_code": x.promo_code, "active": x.active,
+                            "expires_at": x.expires_at.isoformat() if x.expires_at else None}
+                           for x in rows]}
+    finally:
+        db.close()
+
+
+@router.post("/api/kitchen/{token}/offers", status_code=201)
+async def create_kitchen_offer(token: str, request: Request):
+    """A partner-funded offer, with server-owned promo math and expiry."""
+    import re
+    import secrets
+    from datetime import time as _time
+    from .bizday import MARKET_TZ
+    p = _partner_by_token(token)
+    body = await request.json()
+    title = str(body.get("title", "")).strip()[:140]
+    detail = str(body.get("detail", "")).strip()[:400]
+    try:
+        percent = max(1, min(75, int(body.get("percent", 10))))
+    except (TypeError, ValueError):
+        percent = 10
+    if len(title) < 3 or len(detail) < 3:
+        raise HTTPException(422, "Add a title and a short description")
+    prefix = re.sub(r"[^A-Z0-9]", "", p.code.upper())[:10] or "PATCH"
+    code = f"{prefix}-{secrets.token_hex(2).upper()}"
+    expires_at = None
+    if body.get("end_of_day"):
+        local_now = datetime.now(MARKET_TZ)
+        expires_at = datetime.combine(local_now.date(), _time(23, 59, 59),
+                                      tzinfo=MARKET_TZ).astimezone(timezone.utc)
+    db = SessionLocal()
+    try:
+        offer = PatchOffer(partner_code=p.code, title=title, detail=detail,
+                           promo_code=code, expires_at=expires_at, active=True)
+        db.add(offer)
+        db.add(PromoCode(code=code, kind="percent", value=percent,
+                         description=title, partner_code=p.code, active=True))
+        db.add(Event(event_type="partner.offer_created", entity_ref=p.code,
+                     tenant="patch", actor=f"partner:{p.code}",
+                     payload=json.dumps({"title": title, "code": code,
+                                         "percent": percent,
+                                         "end_of_day": bool(body.get("end_of_day"))})))
+        db.commit()
+        return {"ok": True, "id": offer.id, "promo_code": code,
+                "expires_at": expires_at.isoformat() if expires_at else None}
+    finally:
+        db.close()
+
+
+@router.post("/api/kitchen/{token}/offers/{offer_id}/active")
+async def set_kitchen_offer_active(token: str, offer_id: str, request: Request):
+    p = _partner_by_token(token)
+    body = await request.json()
+    active = bool(body.get("active", False))
+    db = SessionLocal()
+    try:
+        offer = db.get(PatchOffer, offer_id)
+        if not offer or offer.partner_code != p.code:
+            raise HTTPException(404, "Offer not found")
+        offer.active = active
+        promo = db.get(PromoCode, offer.promo_code)
+        if promo:
+            promo.active = active
+        db.add(Event(event_type="partner.offer_status_changed", entity_ref=offer.id,
+                     tenant="patch", actor=f"partner:{p.code}",
+                     payload=json.dumps({"active": active})))
+        db.commit()
+        return {"ok": True, "active": active}
+    finally:
+        db.close()
 
 
 # ---------- UNDO (v1.1) ----------

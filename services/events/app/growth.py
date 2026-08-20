@@ -250,6 +250,19 @@ def promo_discount_cents(code: str, partner_code: str, subtotal_cents: int, db: 
     p = db.get(PromoCode, code)
     if not p or not p.active:
         return 0, "!invalid"
+    # A Patch wallet offer can carry a real end-of-day deadline. PromoCode is
+    # intentionally schema-stable for the legacy checkout, so expiry lives on
+    # the offer and is enforced here by the same server authority doing price
+    # math—not by a countdown displayed in the browser.
+    from .models import PatchOffer
+    linked_offer = (db.query(PatchOffer).filter(PatchOffer.promo_code == code)
+                    .order_by(PatchOffer.created_at.desc()).first())
+    expiry = linked_offer.expires_at if linked_offer else None
+    if expiry and expiry.tzinfo is None:  # SQLite drops offsets; stored values are UTC.
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    if linked_offer and (not linked_offer.active or
+            (expiry and expiry <= datetime.now(timezone.utc))):
+        return 0, "!expired"
     if p.max_uses and p.uses >= p.max_uses:
         return 0, "!exhausted"
     if p.partner_code and p.partner_code != (partner_code or ""):
