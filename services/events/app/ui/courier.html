@@ -382,7 +382,13 @@ async function sendCourier(){
   const sizeLabel = (SIZES.find(s=>s[0]===SIZE)||[])[1] || '';
   const careLabel = CARE.size ? ' · ' + [...CARE].map(id =>
     (CARE_OPTS.find(c=>c[0]===id)||[])[1]).join(', ') : '';
+  // Keep one key across retries. If the server saved the order but the response
+  // was lost, the next tap resolves to that order instead of creating another.
+  window._GW_COURIER_IDEMPOTENCY = window._GW_COURIER_IDEMPOTENCY ||
+    ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
+      `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
   const params = new URLSearchParams({
+    idempotency_key: window._GW_COURIER_IDEMPOTENCY,
     customer_name: name,
     customer_phone: phone,
     pickup_address: pickup,
@@ -394,7 +400,14 @@ async function sendCourier(){
     payment_method: PAY,
   });
   try{
-    const r = await fetch('/v0/intake?' + params.toString(), {headers: {'Accept': 'application/json'}});
+    const r = await fetch('/v0/intake', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: params.toString()
+    });
     if(!r.ok) throw new Error('intake');
     let oid = '';
     try{ const d = await r.json(); oid = d.order_id || d.id || ''; }catch(e){}

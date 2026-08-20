@@ -2,13 +2,13 @@
 Append-only: POST and GET only. There is no PUT, PATCH, or DELETE, by law (N-2).
 """
 from datetime import datetime, timezone
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from .db import SessionLocal, Base, engine, get_db
+from .db import SessionLocal, Base, engine, get_db, DB_BACKEND, DB_DURABLE
 from .models import Event
 from . import operations_models  # noqa: F401 — register owned Postgres operations tables
 from .schemas import EventIn, EventOut
@@ -205,7 +205,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.38"
+NUCLEUS_VERSION = "1.9.39"
 
 
 @app.middleware("http")
@@ -278,6 +278,11 @@ async def security_headers(request, call_next):
         "connect-src 'self' https://nominatim.openstreetmap.org; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    if request.url.path.startswith(("/board/", "/driver/", "/kitchen/", "/api/", "/proof/")):
+        # These URLs contain or serve capability-scoped operational data.
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 
@@ -335,13 +340,35 @@ def healthz():
         db.close()
     except Exception:
         db_ok = False
-    return {"ok": db_ok, "service": "nucleus", "version": NUCLEUS_VERSION,
-            "db": "up" if db_ok else "DOWN",
-            "time": datetime.now(timezone.utc).isoformat()}
+    payload = {"ok": db_ok, "service": "nucleus", "version": NUCLEUS_VERSION,
+               "db": "up" if db_ok else "DOWN",
+               "db_backend": DB_BACKEND, "db_durable": DB_DURABLE,
+               "time": datetime.now(timezone.utc).isoformat()}
+    if not db_ok:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(payload, status_code=503)
+    return payload
+
+
+def _require_event_access(request: Request) -> None:
+    """The append-only log contains operational payloads and is not public.
+
+    Internal producers write directly to the database. Explicit API callers
+    authenticate with the founder key in a header, keeping the credential out
+    of URLs, referrers, browser history, and proxy logs.
+    """
+    import os
+    import secrets
+    configured = os.environ.get("EVENTS_API_KEY") or os.environ.get("ADMIN_KEY", "")
+    auth = request.headers.get("authorization", "")
+    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+    if not configured or not supplied or not secrets.compare_digest(supplied, configured):
+        raise HTTPException(403, "Event API authentication required")
 
 
 @app.post("/v0/events", response_model=EventOut, status_code=201)
-def append_event(body: EventIn, db: Session = Depends(get_db)):
+def append_event(body: EventIn, request: Request, db: Session = Depends(get_db)):
+    _require_event_access(request)
     ev = Event(
         event_type=body.event_type,
         entity_ref=body.entity_ref,
@@ -358,12 +385,14 @@ def append_event(body: EventIn, db: Session = Depends(get_db)):
 
 @app.get("/v0/events", response_model=list[EventOut])
 def list_events(
+    request: Request,
     entity_ref: str | None = Query(default=None),
     event_type: str | None = Query(default=None),
     tenant: str | None = Query(default=None),
     limit: int = Query(default=100, le=1000),
     db: Session = Depends(get_db),
 ):
+    _require_event_access(request)
     stmt = select(Event).order_by(Event.occurred_at.desc()).limit(limit)
     if entity_ref:
         stmt = stmt.filter(Event.entity_ref == entity_ref)

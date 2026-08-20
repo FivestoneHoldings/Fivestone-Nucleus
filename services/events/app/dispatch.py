@@ -260,7 +260,11 @@ async def driver_note(day_token: str, record_id: str, request: Request):
     if not text:
         raise HTTPException(400, "text required")
     recs = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'", max_records=1)
-    order_id = recs[0]["fields"].get("order_id", record_id) if recs else record_id
+    if not recs:
+        raise HTTPException(404, "No such order")
+    if drv["id"] not in (recs[0]["fields"].get("driver") or []):
+        raise HTTPException(403, "This order is not on your sheet")
+    order_id = recs[0]["fields"].get("order_id", record_id)
     actor = f"driver:{drv['fields'].get('display_name','?')}"
     _log_event("order.driver_note", order_id, actor, {"note": text})
     await _mirror_event_airtable("order.driver_note", order_id, actor, text)
@@ -401,7 +405,9 @@ async def upload_proof(day_token: str, record_id: str, request: Request):
     drv = await _driver_by_token(day_token)
     owned = await at.list_records(at.ORDERS, formula=f"RECORD_ID()='{_fq(record_id)}'",
                                   max_records=1)
-    if owned and drv["id"] not in (owned[0]["fields"].get("driver") or []):
+    if not owned:
+        raise HTTPException(404, "No such order")
+    if drv["id"] not in (owned[0]["fields"].get("driver") or []):
         raise HTTPException(403, "This order is not on your sheet")
     body = await request.json()
     img = body.get("image_b64", "")
@@ -415,7 +421,9 @@ async def upload_proof(day_token: str, record_id: str, request: Request):
     ctype = str(body.get("content_type", "image/jpeg")).lower()
     if ctype not in ("image/jpeg", "image/png", "image/webp"):
         ctype = "image/jpeg"
-    order_id = body.get("order_id", record_id)
+    # Never trust a caller-supplied order ID: otherwise a driver who owns one
+    # delivery could store its proof under a different customer's public ID.
+    order_id = owned[0]["fields"].get("order_id", record_id)
     db: Session = SessionLocal()
     try:
         db.add(Proof(order_id=order_id, content_b64=img,
@@ -598,6 +606,10 @@ async def assign_order(key: str, record_id: str, request: Request):
     driver_rec = body.get("driver_id")
     if not driver_rec:
         raise HTTPException(400, "driver_id required")
+    drivers = await at.list_records(
+        at.DRIVERS, formula=f"RECORD_ID()='{_fq(driver_rec)}'", max_records=1)
+    if not drivers or drivers[0]["fields"].get("status") == "inactive":
+        raise HTTPException(404, "No active driver with that ID")
     cur = await _order_state(record_id)
     _guard("assign", cur)
     updated = await at.patch_record(at.ORDERS, record_id, {
@@ -680,7 +692,9 @@ async def cancel_order(key: str, record_id: str, request: Request):
 # ---------- BOARD: DRIVER MANAGEMENT (Access service owns this at M3) ----------
 
 def _new_token() -> str:
-    return "gw-" + secrets.token_hex(4)
+    # Driver links are bearer credentials. 32 bits was online-guessable; 192
+    # bits is appropriate for a long-lived capability URL.
+    return "gw-" + secrets.token_urlsafe(24)
 
 
 @router.get("/api/board/{key}/drivers")
@@ -1693,6 +1707,7 @@ async def driver_statement_csv(day_token: str, days: int = 90):
 async def launch_readiness(key: str):
     """Everything standing between here and taking real money, in one honest list."""
     _check_key(key)
+    from .db import DB_BACKEND, DB_DURABLE
     from .models import MenuItem, Partner as P
     from . import payments
     checks = []
@@ -1726,7 +1741,12 @@ async def launch_readiness(key: str):
     checks.append({"area": "Card payments (Stripe)", "ok": payments.configured(),
                    "detail": "Online payment live" if payments.configured()
                              else "Not set — orders default to CASH at the door (works today)."})
-    checks.append({"area": "Database", "ok": True, "detail": "PostgreSQL on Railway · owned event log"})
+    checks.append({
+        "area": "Database durability", "ok": DB_DURABLE,
+        "detail": ("PostgreSQL on Railway · owned event log"
+                   if DB_BACKEND == "postgresql"
+                   else "SQLite without a declared persistent volume — migrate before live operations"),
+    })
     ready = all(c["ok"] for c in checks if c["area"] != "Card payments (Stripe)")
     blocking = [c["area"] for c in checks if not c["ok"]]
     return {"ready_to_take_orders": ready, "checks": checks, "blocking": blocking}

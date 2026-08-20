@@ -19,7 +19,7 @@ PATCHES = []
 
 async def fake_list(table, formula="", fields=None, max_records=100):
     if table == at.DRIVERS:
-        return [FAKE_DRIVER] if "tok123" in formula else []
+        return [FAKE_DRIVER] if "tok123" in formula or "recDRV1" in formula else []
     if table == at.ORDERS:
         return [FAKE_ORDER]
     return []
@@ -72,7 +72,8 @@ def test_driver_action_stamps_and_events():
     assert r.json()["new_status"] == "in_transit"
     table, rec, fields = PATCHES[-1]
     assert fields["status"] == "in_transit" and "in_transit_at" in fields
-    ev = client.get("/v0/events", params={"entity_ref": "ORD-AAAA1111"}).json()
+    ev = client.get("/v0/events", headers={"Authorization": "Bearer test-key"},
+                    params={"entity_ref": "ORD-AAAA1111"}).json()
     assert any(e["event_type"] == "order.picked_up" for e in ev)
 
 
@@ -92,6 +93,20 @@ def test_assign_flow():
     assert r.status_code == 200
     _, _, fields = PATCHES[-1]
     assert fields["status"] == "assigned" and fields["driver"] == ["recDRV1"]
+
+
+def test_assign_rejects_an_unknown_driver():
+    FAKE_ORDER["fields"]["status"] = "confirmed"
+    r = client.post("/api/board/test-key/orders/recORD1/assign",
+                    json={"driver_id": "recDOESNOTEXIST"})
+    assert r.status_code == 404
+
+
+def test_new_driver_tokens_are_high_entropy():
+    import app.dispatch as dp
+    token = dp._new_token()
+    assert token.startswith("gw-")
+    assert len(token) >= 35
 
 
 def test_ui_pages_serve():

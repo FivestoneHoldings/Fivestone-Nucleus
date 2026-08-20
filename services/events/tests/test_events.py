@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
+AUTH = {"Authorization": "Bearer test-key"}
 
 
 def test_health():
@@ -14,7 +15,7 @@ def test_health():
 
 
 def test_append_and_read():
-    r = client.post("/v0/events", json={
+    r = client.post("/v0/events", headers=AUTH, json={
         "event_type": "order.received",
         "entity_ref": "ORD-TEST0001",
         "tenant": "gateway",
@@ -24,14 +25,15 @@ def test_append_and_read():
     assert r.status_code == 201
     assert r.json()["event_type"] == "order.received"
 
-    r2 = client.get("/v0/events", params={"entity_ref": "ORD-TEST0001"})
+    r2 = client.get("/v0/events", headers=AUTH,
+                    params={"entity_ref": "ORD-TEST0001"})
     assert r2.status_code == 200
     assert len(r2.json()) == 1
 
 
 def test_no_mutation_paths_exist():
     """N-2: the append-only law is structural, not procedural."""
-    eid = client.post("/v0/events", json={
+    eid = client.post("/v0/events", headers=AUTH, json={
         "event_type": "order.received", "entity_ref": "ORD-TEST0002"
     }).json()["id"]
     assert client.put(f"/v0/events/{eid}", json={}).status_code in (404, 405)
@@ -40,5 +42,13 @@ def test_no_mutation_paths_exist():
 
 
 def test_event_type_format_enforced():
-    r = client.post("/v0/events", json={"event_type": "NOT VALID", "entity_ref": "X"})
+    r = client.post("/v0/events", headers=AUTH,
+                    json={"event_type": "NOT VALID", "entity_ref": "X"})
     assert r.status_code == 422
+
+
+def test_event_log_is_not_public():
+    assert client.get("/v0/events").status_code == 403
+    assert client.post("/v0/events", json={
+        "event_type": "order.received", "entity_ref": "ORD-NOAUTH"
+    }).status_code == 403

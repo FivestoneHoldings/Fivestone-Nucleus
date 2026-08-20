@@ -24,7 +24,9 @@ def _todays_special(p) -> str:
 
 
 def _new_portal_token() -> str:
-    return "kt-" + secrets.token_hex(5)
+    # Kitchen URLs are bearer credentials. Keep 192 bits of entropy so a live
+    # portal cannot be found by enumerating short links.
+    return "kt-" + secrets.token_urlsafe(24)
 
 
 @router.get("/v0/partners/{code}/posts")
@@ -339,6 +341,30 @@ async def set_delivery_radius(key: str, code: str, request: Request):
     finally:
         db.close()
     return {"ok": True, "miles": miles}
+
+
+@router.post("/api/board/{key}/partners/{code}/rotate-token")
+def rotate_partner_token(key: str, code: str):
+    """Invalidate one kitchen's old bearer link and return its replacement.
+
+    The board is the only caller and already protects this response with the
+    founder/team credential boundary. The previous URL stops working as soon
+    as this transaction commits.
+    """
+    _check_key(key)
+    db: Session = SessionLocal()
+    try:
+        p = db.get(Partner, code.lower().strip())
+        if not p:
+            raise HTTPException(404, "Unknown partner")
+        p.portal_token = _new_portal_token()
+        db.add(Event(event_type="partner.portal_token_rotated", entity_ref=p.code,
+                     tenant="gateway", actor="board", payload=json.dumps({})))
+        db.commit()
+        token = p.portal_token
+    finally:
+        db.close()
+    return {"ok": True, "kitchen_link": f"/kitchen/{token}"}
 
 
 @router.post("/api/board/{key}/partners/{code}/accepting")

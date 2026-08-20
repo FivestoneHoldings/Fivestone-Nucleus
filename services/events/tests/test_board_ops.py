@@ -63,7 +63,7 @@ def test_driver_create_and_rotate():
     r = client.post(f"{K}/drivers", json={"name": "New Driver"})
     assert r.status_code == 200
     tok = r.json()["day_token"]
-    assert tok.startswith("gw-") and len(tok) == 11
+    assert tok.startswith("gw-") and len(tok) >= 35
     assert CREATED[-1][1]["display_name"] == "New Driver"
     r2 = client.post(f"{K}/drivers/recD1/rotate")
     assert r2.status_code == 200

@@ -1,14 +1,8 @@
-"""v1.9.24 — courier's fetch() call gets real JSON back, not an HTML page.
+"""Courier fetch receives JSON while browser form checkout receives HTML.
 
-Root cause: order-form.html submits via a real <form method="GET"> (browser
-navigation — correctly wants the HTML redirect-to-tracking page), while
-courier.html calls the SAME /v0/intake endpoint via fetch() so it can stay on
-the page and show an inline confirmation card — but both are indistinguishable
-plain GET requests by HTTP method alone. Before this fix, intake() treated
-every GET as wanting HTML, so courier's `await r.json()` silently failed inside
-a try/catch: the confirmation screen showed a blank order ID, the order was
-never saved to the customer's local order history, and 'view your last order'
-downstream was broken. Every single courier order was affected.
+Both checkout surfaces now POST so customer PII is not placed in URLs. The
+real browser form asks for HTML by normal navigation; courier explicitly asks
+for JSON so it can show its inline confirmation card.
 """
 import os, tempfile
 
@@ -48,4 +42,5 @@ def test_get_with_no_accept_header_defaults_to_html():
 
 def test_courier_html_explicitly_requests_json():
     src = open(os.path.join(UI, "courier.html")).read()
-    assert "headers: {'Accept': 'application/json'}" in src
+    assert "'Accept': 'application/json'" in src
+    assert "method: 'POST'" in src

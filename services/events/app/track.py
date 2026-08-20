@@ -403,7 +403,11 @@ def _eta_window(fields: dict, status: str):
     # if we've blown past the low end, show a tightening "any minute" window
     if hi < now:
         return {"text": "Any minute now", "iso": hi.isoformat()}
-    return {"text": f"{lo.strftime('%-I:%M')}–{hi.strftime('%-I:%M %p')}",
+    def _clock(dt):
+        # ``%-I`` is POSIX-only and crashes every tracking request on Windows.
+        # Build the same no-leading-zero display portably.
+        return dt.strftime("%I:%M").lstrip("0") or "12:00"
+    return {"text": f"{_clock(lo)}–{_clock(hi)} {hi.strftime('%p')}",
             "iso": hi.isoformat(),
             "mins": max(1, int((hi - now).total_seconds() // 60))}
 

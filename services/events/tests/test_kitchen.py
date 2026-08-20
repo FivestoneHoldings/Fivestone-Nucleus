@@ -54,7 +54,18 @@ def _token(code="stephens"):
 
 
 def test_portal_tokens_backfilled():
-    assert _token().startswith("kt-")
+    token = _token()
+    assert token.startswith("kt-") and len(token) >= 35
+
+
+def test_founder_can_rotate_a_kitchen_link():
+    old = _token()
+    r = client.post(f"{K}/partners/stephens/rotate-token")
+    assert r.status_code == 200
+    new = r.json()["kitchen_link"].split("/kitchen/", 1)[1]
+    assert new != old and len(new) >= 35
+    assert client.get(f"/api/kitchen/{old}/orders").status_code == 404
+    assert client.get(f"/api/kitchen/{new}/orders").status_code == 200
 
 
 def test_kitchen_orders_and_ready_flow():

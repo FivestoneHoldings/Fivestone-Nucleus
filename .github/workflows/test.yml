@@ -1,0 +1,31 @@
+name: Patch readiness checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/events
+    env:
+      PYTHONUTF8: "1"
+      ADMIN_KEY: test-key
+      AIRTABLE_PAT: fake-pat
+      CUSTOMER_PROFILES_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/events/requirements.txt
+      - run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - run: python -m pip check
+      - run: python -m pytest -q

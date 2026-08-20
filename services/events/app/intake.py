@@ -4,7 +4,9 @@ paths coexist. This is the canonical path from v0.4 forward.
 """
 import hashlib
 import json
+import secrets
 from datetime import datetime, timezone, timedelta
+from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -23,7 +25,7 @@ FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address"
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
           "special_instructions", "requested_for", "partner",
           "subtotal_cents", "fee_cents", "total_cents", "tip_cents",
-          "promo_code", "discount_cents", "cart_json"]
+          "promo_code", "discount_cents", "cart_json", "idempotency_key"]
 
 CAPS = {"items_description": 1000, "special_instructions": 600,
         "pickup_address": 300, "dropoff_address": 300,
@@ -31,7 +33,8 @@ CAPS = {"items_description": 1000, "special_instructions": 600,
         "customer_phone": 30, "dropoff_contact_phone": 30,
         "requested_for": 40, "partner": 60,
         "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12,
-        "promo_code": 30, "discount_cents": 12, "cart_json": 8000}
+        "promo_code": 30, "discount_cents": 12, "cart_json": 8000,
+        "idempotency_key": 120}
 
 # In-memory per-IP throttle: 30 submissions/minute (dispatch-scale abuse guard)
 _HITS: dict = {}
@@ -52,8 +55,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _fingerprint(dropoff: str, items: str, requested_for: str) -> str:
+def _fingerprint(dropoff: str, items: str, requested_for: str,
+                 idempotency_key: str = "") -> str:
+    if idempotency_key:
+        return hashlib.sha256(("idempotency:" + idempotency_key).encode()).hexdigest()
     bucket = requested_for or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Preserve the Make v0.2 fingerprint contract for callers that have not
+    # adopted explicit idempotency keys yet. This value is internal dedup data,
+    # never the public tracking identifier.
     return hashlib.md5((dropoff.lower() + items.lower() + bucket.lower()).encode()).hexdigest()
 
 
@@ -99,7 +108,7 @@ text-transform:uppercase;letter-spacing:.08em}}</style></head>
 
 @router.api_route("/v0/intake", methods=["GET", "POST"])
 async def intake(request: Request, background_tasks: BackgroundTasks):
-    # Accept form GET, form POST, or JSON POST
+    # Accept legacy GET callers, private browser form POSTs, or JSON POSTs.
     data: dict = {}
     if request.method == "GET":
         data = dict(request.query_params)
@@ -107,6 +116,12 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
         ctype = request.headers.get("content-type", "")
         if "application/json" in ctype:
             data = await request.json()
+        elif "application/x-www-form-urlencoded" in ctype:
+            # Starlette's request.form() requires the optional python-multipart
+            # package even for URL-encoded forms. Parse this standard encoding
+            # directly so production checkout has no undeclared dependency.
+            raw = (await request.body()).decode("utf-8", errors="replace")
+            data = dict(parse_qsl(raw, keep_blank_values=True))
         else:
             form = await request.form()
             data = dict(form)
@@ -114,15 +129,8 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
     from . import payments
     payment_method = payments.normalize_method(data.get("payment_method", ""))
     data = {k: str(data.get(k, "")).strip()[:CAPS[k]] for k in FIELDS}
-    # A real browser form submission (order-form.html's <form method="GET">)
-    # and an AJAX fetch() GET call (courier.html, so it can stay on the page
-    # and show an inline confirmation card) are BOTH plain GET requests — the
-    # method alone can't tell them apart. Without this override, courier's
-    # fetch() got an HTML page back where its JS expected JSON: `await
-    # r.json()` silently failed inside a try/catch, leaving the order ID blank
-    # on the confirmation screen and the order never saved to the customer's
-    # local order history. A caller that explicitly asks for JSON is honored
-    # regardless of HTTP method.
+    # Browser form submissions receive a confirmation page. API/AJAX callers
+    # that explicitly request JSON are honored regardless of HTTP method.
     accept = request.headers.get("accept", "")
     if "application/json" in accept and "text/html" not in accept:
         wants_html = False
@@ -206,8 +214,13 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
         except (ValueError, TypeError):
             data["requested_for"] = ""  # unparseable — drop it rather than 500 later
 
-    fp = _fingerprint(data["dropoff_address"], data["items_description"], data["requested_for"])
-    order_id = "ORD-" + fp[:8].upper()
+    fp = _fingerprint(data["dropoff_address"], data["items_description"],
+                      data["requested_for"], data["idempotency_key"])
+    # A public tracking ID is an opaque capability, not a digest of the
+    # customer's address/cart. It must also be unique for legitimate repeat
+    # orders later the same day. 80 random bits keeps it unguessable while
+    # remaining short enough to read over the phone.
+    order_id = "ORD-" + secrets.token_hex(10).upper()
 
     # --- CART RE-PRICING (v1.4), run BEFORE the try/except below ---
     # A raised HTTPException here must reach the customer as its real status
@@ -327,6 +340,13 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                                          max_records=5)
         now_utc = datetime.now(timezone.utc)
         for _rec in existing:
+            # A caller-supplied idempotency key represents one checkout
+            # attempt. Retries with that key always resolve to the first order,
+            # even after the short accidental-double-tap window has elapsed.
+            if data["idempotency_key"]:
+                duplicate = True
+                order_id = (_rec.get("fields", {}).get("order_id") or order_id)
+                break
             _stamp = _rec.get("fields", {}).get("received_at", "")
             if not _stamp:
                 continue
@@ -338,6 +358,7 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                 continue
             if (now_utc - _when).total_seconds() <= DEDUP_WINDOW_SECONDS:
                 duplicate = True
+                order_id = (_rec.get("fields", {}).get("order_id") or order_id)
                 break
         if not duplicate:
             # --- STANDING DELIVERY PREFERENCES (v1.5) ---
