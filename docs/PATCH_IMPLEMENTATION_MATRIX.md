@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.2
+Updated: 2026-08-20 · version 1.10.3
 
 This is the release truth. A capability is **Live** only when it has a durable
 server workflow, an operator surface, tests, and a customer/partner entrypoint.
@@ -22,7 +22,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Partner catalog/hours/menu control | Live | Existing kitchen portal controls menu availability, specials, hours and posts. |
 | Customer/partner community posts | Live text | Consent-gated neighbor notes and recognition enter moderation; approved posts publish to the reviewed feed. Photo uploads remain out of scope until media moderation is staffed. |
 | Accessibility/personalization | Live | Durable palette, text size, contrast, motion, density, channel and quiet-hour preferences. |
-| Context delivery intelligence | Partial | Service-radius, hours, prep time, distance-unverified and driver heads-up rules are live; external traffic/weather providers are not connected. |
+| Context delivery intelligence | Live weather / partial traffic | Official NWS point alerts are cached and translated into checkout/feed delivery-impact guidance with stale-safe fallback. Service radius, hours, prep time and driver heads-up rules are live. Live traffic still needs an authoritative provider. |
 | Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
 | Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |
 | SMS notifications | External gate | Notification adapter and copy exist; activation requires Twilio credentials and messaging registration. Phone support is 865-964-3843, 9–9 daily. |

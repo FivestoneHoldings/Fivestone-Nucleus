@@ -438,6 +438,7 @@ cursor:pointer;flex:0 0 auto}
     </div>
     <div id="stepCheckout" style="display:none">
     <div id="orderReview"></div>
+    <div id="contextImpact" style="display:none;border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:.8rem;line-height:1.45"></div>
     <div id="pausedBanner" style="display:none;background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem"></div>
     <fieldset id="itemsFs">
       <legend id="itemsLeg">The delivery</legend>
@@ -532,6 +533,7 @@ cursor:pointer;flex:0 0 auto}
 <script src="/static/gw-ui.js"></script>
 <script>
 document.getElementById('patchIdentity').value=localStorage.getItem('patch_identity')||'';
+fetch('/v0/patch/context').then(r=>r.json()).then(d=>{const i=d.delivery_impact||{};if(!['high','watch'].includes(i.level))return;const e=document.getElementById('contextImpact');e.style.display='block';e.style.background=i.level==='high'?'#fff0ef':'#fff8e8';e.style.border=`1px solid ${i.level==='high'?'#efb8b4':'#ead49c'}`;e.innerHTML=`<b>${String(i.headline||'Delivery conditions').replace(/[<>&]/g,'')}</b><br>${String(i.message||'').replace(/[<>&]/g,'')}`}).catch(()=>{});
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
 document.getElementById('idempotencyField').value =

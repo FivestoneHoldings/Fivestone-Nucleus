@@ -47,6 +47,8 @@ from .drivers import router as drivers_router, seed_driver_profiles
 app.include_router(drivers_router)
 from .platform import router as platform_router, seed_patch_platform
 app.include_router(platform_router)
+from .context import router as context_router
+app.include_router(context_router)
 migrate_brand_columns()
 from .geo import ensure_cache_table as _ensure_geo_cache
 _ensure_geo_cache()
@@ -215,7 +217,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.2"
+NUCLEUS_VERSION = "1.10.3"
 
 
 @app.middleware("http")
