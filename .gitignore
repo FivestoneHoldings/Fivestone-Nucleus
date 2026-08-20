@@ -1,5 +1,8 @@
 __pycache__/
 *.py[cod]
 *.db
+*.dump
+backups/gateway-postgres-migration/rotated-access-*.json
+backups/gateway-postgres-migration/launch-drill-evidence-*.json
 .env
 .venv/
