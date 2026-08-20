@@ -2,11 +2,14 @@
 before the app (and its DB engine) is ever imported."""
 import os
 import tempfile
+from datetime import datetime, timezone
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///" + tempfile.mktemp(suffix=".db"))
 os.environ.setdefault("ADMIN_KEY", "test-key")
 os.environ.setdefault("AIRTABLE_PAT", "fake-pat")
 os.environ.setdefault("CUSTOMER_PROFILES_ENABLED", "true")
+os.environ.setdefault("GATEWAY_HQ_PHONE", "865-555-0100")
+os.environ.setdefault("GATEWAY_BACKUP_VERIFIED_AT", datetime.now(timezone.utc).isoformat())
 
 import pytest
 import app.dispatch as dp

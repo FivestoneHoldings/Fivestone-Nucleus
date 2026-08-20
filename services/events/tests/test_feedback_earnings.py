@@ -86,12 +86,30 @@ def test_launch_readiness_tells_the_truth():
     d = client.get(f"{K}/readiness").json()
     areas = {c["area"]: c for c in d["checks"]}
     assert "SMS (Twilio)" in areas and areas["SMS (Twilio)"]["ok"] is False
+    assert areas["SMS (Twilio)"]["required"] is False
     assert "NOT SET" in areas["SMS (Twilio)"]["detail"]
     assert areas["Card payments (Stripe)"]["ok"] is False
+    assert areas["Card payments (Stripe)"]["required"] is False
     assert "CASH at the door" in areas["Card payments (Stripe)"]["detail"]
     assert any("Stephen" in a for a in areas)
+    assert areas["Dispatch escalation phone"]["ok"] is True
+    assert areas["Recoverable database backup"]["ok"] is True
+    assert "SMS (Twilio)" not in d["blocking"]
+    assert "Card payments (Stripe)" not in d["blocking"]
     assert isinstance(d["ready_to_take_orders"], bool)
     assert client.get("/api/board/wrong/readiness").status_code == 403
+
+
+def test_read_only_launch_audit_reports_the_real_sqlite_blocker():
+    from app.launch_audit import audit
+    report = audit(client, "test-key")
+    assert report["ready"] is False
+    checks = {item["area"]: item for item in report["checks"]}
+    assert checks["Health"]["ok"] is True
+    assert checks["Customer surfaces"]["ok"] is True
+    assert checks["Partner discovery"]["ok"] is True
+    assert checks["PostgreSQL durability"]["ok"] is False
+    assert "PostgreSQL durability" in report["blocking"]
 
 
 def test_surfaces_carry_them():

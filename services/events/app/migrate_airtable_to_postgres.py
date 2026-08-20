@@ -56,7 +56,16 @@ def _select(value) -> str:
 def _link_ids(value) -> list[str]:
     if not isinstance(value, list):
         return []
-    return [str(item.get("id")) for item in value if isinstance(item, dict) and item.get("id")]
+    # Airtable's REST API returns linked-record cells as a list of record-ID
+    # strings. Some fixtures/connectors expand them to ``{"id": ...}``. Keep
+    # both representations so relationships are never silently discarded.
+    linked: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item:
+            linked.append(item)
+        elif isinstance(item, dict) and item.get("id"):
+            linked.append(str(item["id"]))
+    return linked
 
 
 def _json(value) -> str:
@@ -141,6 +150,29 @@ def _event(record: dict) -> OpsEvent:
 BUILDERS = {"customers": _customer, "orders": _order, "drivers": _driver,
             "deliveries": _delivery, "events": _event}
 
+LINK_TARGETS = {
+    "customers": {"orders": "orders"},
+    "orders": {"customer": "customers", "driver": "drivers", "deliveries": "deliveries"},
+    "drivers": {"orders": "orders", "deliveries": "deliveries"},
+    "deliveries": {"order": "orders", "driver": "drivers"},
+}
+
+
+def relationship_orphans(payloads: dict[str, list[dict]]) -> list[dict]:
+    """Find linked Airtable records missing from the same complete snapshot."""
+    ids = {name: {str(record.get("id", "")) for record in records}
+           for name, records in payloads.items()}
+    problems = []
+    for source_name, fields in LINK_TARGETS.items():
+        for record in payloads.get(source_name, []):
+            values = record.get("fields", {})
+            for field, target_name in fields.items():
+                missing = sorted(set(_link_ids(values.get(field))) - ids.get(target_name, set()))
+                if missing:
+                    problems.append({"table": source_name, "record_id": record.get("id", ""),
+                                     "field": field, "missing_ids": missing})
+    return problems
+
 
 def apply_payloads(payloads: dict[str, list[dict]], db: Session) -> dict:
     """Upsert a complete Airtable snapshot and return reconciliation facts."""
@@ -155,9 +187,11 @@ def apply_payloads(payloads: dict[str, list[dict]], db: Session) -> dict:
     source_counts = {name: len(records) for name, records in payloads.items()}
     ids = [str(r.get("fields", {}).get("order_id", "")) for r in payloads["orders"]]
     duplicates = sorted(k for k, count in Counter(ids).items() if k and count > 1)
+    orphans = relationship_orphans(payloads)
+    counts_match = source_counts == target_counts
     return {"source_counts": source_counts, "target_counts": target_counts,
-            "duplicate_order_ids": duplicates,
-            "counts_match": source_counts == target_counts}
+            "duplicate_order_ids": duplicates, "relationship_orphans": orphans,
+            "counts_match": counts_match, "reconciled": counts_match and not orphans}
 
 
 async def fetch_payloads() -> dict[str, list[dict]]:
@@ -172,7 +206,8 @@ async def run(apply: bool) -> dict:
     if not apply:
         ids = [str(r.get("fields", {}).get("order_id", "")) for r in payloads["orders"]]
         return {"mode": "dry-run", "source_counts": {k: len(v) for k, v in payloads.items()},
-                "duplicate_order_ids": sorted(k for k, n in Counter(ids).items() if k and n > 1)}
+                "duplicate_order_ids": sorted(k for k, n in Counter(ids).items() if k and n > 1),
+                "relationship_orphans": relationship_orphans(payloads)}
 
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -181,12 +216,12 @@ async def run(apply: bool) -> dict:
         db.add(run_row)
         report = apply_payloads(payloads, db)
         run_row.finished_at = _now()
-        run_row.status = "verified" if report["counts_match"] else "count_mismatch"
+        run_row.status = "verified" if report["reconciled"] else "reconciliation_failed"
         run_row.source_counts_json = _json(report["source_counts"])
         run_row.target_counts_json = _json(report["target_counts"])
         run_row.duplicate_order_ids_json = _json(report["duplicate_order_ids"])
         db.commit()
-        if not report["counts_match"]:
+        if not report["reconciled"]:
             raise RuntimeError(f"Reconciliation failed: {report}")
         return {"mode": "apply", **report, "migration_run_id": run_row.id}
     except Exception as exc:

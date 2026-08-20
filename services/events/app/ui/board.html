@@ -947,7 +947,7 @@ async function showReadiness(){
       ${d.ready_to_take_orders ? '✓ Ready to take real orders' : '⚠ ' + (d.blocking||[]).length + ' item(s) to finish'}</div>
     ${(d.checks||[]).map(c=>`<div class="ev" style="border:none;padding:6px 0">
       <span style="color:${c.ok?'#57c68f':'#f0a04b'};font-weight:800">${c.ok?'✓':'○'}</span>
-      <b>${esc(c.area)}</b><br><span style="color:#8b93a7">${esc(c.detail)}</span></div>`).join('')}
+      <b>${esc(c.area)}</b>${c.required===false?' <span style="color:#69738c;font-size:.7rem">(optional)</span>':''}<br><span style="color:#8b93a7">${esc(c.detail)}</span></div>`).join('')}
   </div>`;
 }
 async function phoneOrder(){
