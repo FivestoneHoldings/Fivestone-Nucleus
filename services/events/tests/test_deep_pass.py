@@ -148,3 +148,5 @@ def test_driver_sheet_reports_done_today():
 def test_healthz_deep():
     d = client.get("/healthz").json()
     assert d["ok"] is True and d["db"] == "up" and d["version"]
+    assert d["db_backend"] in {"sqlite", "postgresql"}
+    assert isinstance(d["db_durable"], bool)

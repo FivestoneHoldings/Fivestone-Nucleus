@@ -69,3 +69,11 @@ def test_headers_present_even_on_error_responses():
     bad requests first."""
     r = client.get("/this-route-does-not-exist")
     assert r.headers.get("x-frame-options") == "DENY"
+
+
+def test_capability_scoped_surfaces_are_never_cached_or_indexed():
+    for path in ("/board/example", "/driver/example", "/kitchen/example",
+                 "/api/diag", "/proof/example"):
+        r = client.get(path)
+        assert r.headers.get("cache-control") == "no-store", path
+        assert r.headers.get("x-robots-tag") == "noindex, nofollow", path

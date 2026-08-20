@@ -48,6 +48,38 @@ def test_driver_cannot_touch_anothers_order():
                        json={}).status_code == 200
 
 
+def test_driver_cannot_note_anothers_or_unknown_order():
+    foreign = client.post(f"/api/driver/tok-B/orders/{ORD_A}/note",
+                          json={"text": "tamper"})
+    assert foreign.status_code == 403
+    missing = client.post("/api/driver/tok-A/orders/recNOPE/note",
+                          json={"text": "tamper"})
+    assert missing.status_code == 404
+
+
+def test_proof_uses_the_owned_orders_id_not_the_request_body():
+    payload = base64.b64encode(b"proof").decode()
+    r = client.post(f"/api/driver/tok-A/orders/{ORD_A}/proof",
+                    json={"image_b64": payload, "order_id": "ORD-SOMEONE-ELSE"})
+    assert r.status_code == 200
+    assert r.json()["order_id"] == "ORD-SECA01"
+    assert client.get("/proof/ORD-SOMEONE-ELSE").status_code == 404
+
+
+def test_proof_rejects_an_unknown_order():
+    r = client.post("/api/driver/tok-A/orders/recNOPE/proof",
+                    json={"image_b64": base64.b64encode(b"x").decode()})
+    assert r.status_code == 404
+
+
+def test_customer_profiles_fail_closed_without_explicit_feature_flag(monkeypatch):
+    monkeypatch.delenv("CUSTOMER_PROFILES_ENABLED", raising=False)
+    assert client.get("/v0/delivery-prefs/8655550199").status_code == 404
+    assert client.post("/v0/delivery-prefs", json={
+        "phone": "8655550199", "access_notes": "private gate code"
+    }).status_code == 404
+
+
 def test_action_on_unknown_order_404():
     assert client.post("/api/driver/tok-A/orders/recNOPE/picked_up",
                        json={}).status_code == 404

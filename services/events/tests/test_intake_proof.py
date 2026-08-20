@@ -20,6 +20,11 @@ FAKE_DRIVER = {"id": "recDRV1", "fields": {"display_name": "Test Driver", "day_t
 async def fake_list(table, formula="", fields=None, max_records=100):
     if table == at.DRIVERS:
         return [FAKE_DRIVER] if "tok123" in formula else []
+    if table == at.ORDERS and "recORD1" in formula:
+        return [{"id": "recORD1", "fields": {
+            "order_id": "ORD-PROOF001", "status": "in_transit",
+            "driver": ["recDRV1"],
+        }}]
     if "fingerprint" in formula:
         return EXISTING
     return []
@@ -81,12 +86,30 @@ def test_intake_allows_a_genuine_repeat_order_later_the_same_day():
     global EXISTING
     from datetime import datetime, timezone, timedelta
     hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
-    EXISTING = [{"id": "recOld", "fields": {"received_at": hours_ago}}]
+    EXISTING = [{"id": "recOld", "fields": {
+        "received_at": hours_ago, "order_id": "ORD-OLDER"}}]
     n = len(CREATED)
     r = client.post("/v0/intake", json={
         "dropoff_address": "123 J St", "items_description": "box"})
     assert r.json()["duplicate"] is False
     assert len(CREATED) == n + 1  # the repeat order really was created
+    assert r.json()["order_id"] != "ORD-OLDER"
+    EXISTING = []
+
+
+def test_explicit_idempotency_key_always_returns_the_original_order():
+    global EXISTING
+    from datetime import datetime, timezone, timedelta
+    old = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    EXISTING = [{"id": "recOld", "fields": {
+        "received_at": old, "order_id": "ORD-ORIGINAL"}}]
+    n = len(CREATED)
+    r = client.post("/v0/intake", json={
+        "dropoff_address": "123 J St", "items_description": "box",
+        "idempotency_key": "checkout-attempt-123",
+    })
+    assert r.json() == {"received": True, "order_id": "ORD-ORIGINAL", "duplicate": True}
+    assert len(CREATED) == n
     EXISTING = []
 
 
@@ -132,3 +155,30 @@ def test_order_form_has_client_side_double_submit_guard():
     assert "Sending your order…" in src
     # and it must release the button if navigation never happens (offline)
     assert "sb.disabled = false" in src
+    assert 'name="idempotency_key"' in src
+    assert "crypto.randomUUID" in src
+    assert '<form method="POST" action="/v0/intake">' in src
+
+
+def test_courier_reuses_its_idempotency_key_across_network_retries():
+    import os
+    ui = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "courier.html")
+    src = open(ui).read()
+    assert "window._GW_COURIER_IDEMPOTENCY = window._GW_COURIER_IDEMPOTENCY ||" in src
+    assert "idempotency_key: window._GW_COURIER_IDEMPOTENCY" in src
+    assert "fetch('/v0/intake'," in src
+    assert "method: 'POST'" in src
+    assert "application/x-www-form-urlencoded" in src
+    assert "'/v0/intake?'" not in src
+
+
+def test_urlencoded_form_post_returns_branded_confirmation():
+    n = len(CREATED)
+    r = client.post("/v0/intake", data={
+        "dropoff_address": "123 Private St",
+        "items_description": "one parcel",
+        "idempotency_key": "browser-form-123",
+    }, headers={"Accept": "text/html"})
+    assert r.status_code == 200
+    assert "Order received" in r.text
+    assert len(CREATED) == n + 1

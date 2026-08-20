@@ -186,7 +186,7 @@ def seed_brands_and_demos():
                 db.add(Partner(code=code, display_name=name, status="pilot",
                                cuisine=cuisine, brand_color=color, tagline=tagline,
                                address=addr, demo=True,
-                               portal_token="kt-" + secrets.token_hex(5)))
+                               portal_token="kt-" + secrets.token_urlsafe(24)))
         db.commit()
         for code, sections in DEMO_MENUS.items():
             has = db.query(MenuItem).filter(MenuItem.partner_code == code).count()
@@ -425,8 +425,23 @@ def _norm_phone(p: str) -> str:
     return "".join(ch for ch in (p or "") if ch.isdigit())[-15:]
 
 
+def _require_customer_profiles_enabled() -> None:
+    """Fail closed until phone ownership can be verified.
+
+    A phone number by itself is public information, not authentication. The
+    legacy endpoints exposed home/access/allergy notes to anyone who guessed a
+    number and allowed them to overwrite those notes. Per-order instructions
+    remain available; persistent profiles stay off in production unless an
+    operator deliberately enables the legacy pilot feature.
+    """
+    if os.environ.get("CUSTOMER_PROFILES_ENABLED", "").lower() not in {
+            "1", "true", "yes"}:
+        raise HTTPException(404, "Customer profiles are not enabled")
+
+
 @router.get("/v0/delivery-prefs/{phone}")
 def get_delivery_prefs(phone: str):
+    _require_customer_profiles_enabled()
     from .models import DeliveryPreference
     db: Session = SessionLocal()
     try:
@@ -445,6 +460,7 @@ def get_delivery_prefs(phone: str):
 
 @router.post("/v0/delivery-prefs")
 def save_delivery_prefs(body: DeliveryPrefIn):
+    _require_customer_profiles_enabled()
     from .models import DeliveryPreference
     phone = _norm_phone(body.phone)
     if len(phone) < 4:

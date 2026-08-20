@@ -425,7 +425,8 @@ cursor:pointer;flex:0 0 auto}
   <h1 id="pageH1">Place a Delivery Order</h1>
   <p class="sub" id="orderSub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
 
-  <form method="GET" action="/v0/intake">
+  <form method="POST" action="/v0/intake">
+    <input type="hidden" name="idempotency_key" id="idempotencyField" value="">
     <input type="hidden" name="partner" id="partnerField" value="">
     <input type="hidden" name="subtotal_cents" id="subtotalField" value="">
     <input type="hidden" name="fee_cents" id="feeField" value="">
@@ -531,6 +532,9 @@ cursor:pointer;flex:0 0 auto}
 <script>
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
+document.getElementById('idempotencyField').value =
+  (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
+  `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 if(p){
   document.getElementById('partnerField').value = p;
   fetch('/v0/partners/' + encodeURIComponent(p))
