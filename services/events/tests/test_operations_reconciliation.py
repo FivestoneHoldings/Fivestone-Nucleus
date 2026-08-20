@@ -4,10 +4,14 @@ from fastapi.testclient import TestClient
 
 from app.finance import create_payment_attempt, record_balanced_entries
 from app.main import app
-from app.db import SessionLocal
+from app.db import Base, SessionLocal
 
 
 client = TestClient(app)
+
+
+def test_owned_operations_tables_register_at_app_startup():
+    assert {"ops_customers", "ops_orders", "ops_drivers", "ops_deliveries", "ops_events"} <= set(Base.metadata.tables)
 
 
 def test_reconciliation_summary_requires_board_access():
