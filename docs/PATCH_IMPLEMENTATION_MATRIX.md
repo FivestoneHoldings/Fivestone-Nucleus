@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.0
+Updated: 2026-08-20 · version 1.10.1
 
 This is the release truth. A capability is **Live** only when it has a durable
 server workflow, an operator surface, tests, and a customer/partner entrypoint.
@@ -11,7 +11,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Merchant ticket acceptance/readiness | Live | Token-scoped kitchen screen and menu controls. |
 | Dispatch and driver lifecycle | Live | Assignment, pickup, live location, proof, delivery, exception and close flows. |
 | Customer tracking/support/history | Live | Capability-scoped tracking, support intake and local device history. |
-| PostgreSQL durability | Live/transition | Owned event, finance and Patch product data are authoritative in PostgreSQL. Legacy order records still write through Airtable while the repository cutover is completed. |
+| PostgreSQL durability | Live/transition | Owned domains are authoritative in PostgreSQL. Every successful legacy Airtable mutation is durably queued and applied to `ops_*`; conversion failures remain visible and retryable. Reads still use Airtable until the repository switch passes shadow-read drills. |
 | Patch Today feed | Live | Reviewed/published items, sources, areas and device topic follows. No unreviewed scraping is published. |
 | Bring It to Patch | Live | Deduplicated nominations, one device vote, visible counts/status and operator queue. |
 | Offers and wallet | Live | Saveable offers, promo codes, single-use redemption records and points balance. |

@@ -138,3 +138,24 @@ class AirtableMigrationRun(Base):
     target_counts_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     duplicate_order_ids_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     detail: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+
+class OperationalSyncQueue(Base):
+    """Durable handoff from a successful Airtable mutation to owned Postgres.
+
+    The queue row commits before transformation is attempted. A conversion or
+    database failure therefore becomes visible/retryable instead of silently
+    allowing the two operational stores to drift.
+    """
+    __tablename__ = "operational_sync_queue"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    table_name: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    source_record_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    raw_json: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
