@@ -154,6 +154,8 @@ pre,code{white-space:pre-wrap;word-break:break-word}
 <div id="insightsPanel" style="display:none;margin-bottom:12px"></div>
 <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
   <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
+  <button onclick="showPatchWork()" id="patchWorkBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #31543e;color:#70d69a;padding:11px;font-size:.8rem;box-shadow:none">🌱 Patch work — services, partners &amp; demand</button>
+  <div id="patchWorkPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="showDriverRequests()" id="drReqBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚗 Driver requests</button>
   <div id="drReqPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="phoneOrder()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#2f6fe0,#16337a);padding:13px">📞 Take a phone order</button>
@@ -886,6 +888,28 @@ async function showInbox(){
   }catch(e){
     el.innerHTML = `<div class="card" style="color:#f0a04b">Couldn't load the inbox. Refresh and try again.</div>`;
   }
+}
+
+async function showPatchWork(){
+  const el=document.getElementById('patchWorkPanel');
+  if(el.style.display!=='none'){el.style.display='none';return}
+  el.style.display='';el.innerHTML='<div class="skel" style="height:100px"></div>';
+  try{
+    const d=await (await fetch(api('/patch-work'))).json();
+    const active=x=>!['completed','declined','partnered'].includes(x.status);
+    const service=(d.service_requests||[]).filter(active), apps=(d.partner_applications||[]).filter(active), submissions=(d.community_submissions||[]).filter(active), bring=d.bring_requests||[];
+    const section=(title,rows,fn)=>`<div class="tmsection" style="margin-top:16px">${title} · ${rows.length}</div>${rows.length?rows.map(fn).join(''):'<div style="color:#5f6a85;font-size:.8rem;padding:8px 0">Nothing waiting.</div>'}`;
+    el.innerHTML='<div class="card">'+
+      section('Service requests',service,x=>`<div style="padding:11px 0;border-bottom:1px solid #1e2942"><b>${esc(x.name)}</b> <span class="chip assigned">${esc(x.kind.replaceAll('_',' '))}</span><div style="color:#8b93a7;font-size:.75rem;margin-top:4px">${esc(x.phone)} · ${esc(x.requested_for||'date to confirm')} · ${x.party_size||1} people/items</div><div style="font-size:.8rem;margin-top:4px">${esc(x.notes||x.pickup||'')}</div><div class="row" style="margin-top:8px"><a href="tel:${esc(x.phone)}" class="copy">📞 call</a><button class="ghost" onclick="patchStatus('service','${x.id}','contacted')">Contacted</button><button onclick="patchStatus('service','${x.id}','confirmed')">Confirmed</button></div></div>`)+
+      section('Partner applications',apps,x=>`<div style="padding:11px 0;border-bottom:1px solid #1e2942"><b>${esc(x.business_name)}</b><div style="color:#8b93a7;font-size:.75rem">${esc(x.contact_name)} · ${esc(x.phone)} · ${esc(x.email)}</div><div style="font-size:.8rem;margin-top:4px">${esc(x.address)}</div><div class="row" style="margin-top:8px"><button class="ghost" onclick="patchStatus('application','${x.id}','reviewing')">Reviewing</button><button onclick="patchStatus('application','${x.id}','approved')">Approve</button><button class="warn" onclick="patchStatus('application','${x.id}','changes_requested')">Request changes</button></div></div>`)+
+      section('Community moderation',submissions,x=>`<div style="padding:11px 0;border-bottom:1px solid #1e2942"><b>${esc(x.display_name)}</b> <span class="chip assigned">${esc(x.kind.replaceAll('_',' '))}</span><div style="font-size:.8rem;margin-top:5px;white-space:pre-wrap">${esc(x.text)}</div><div class="row" style="margin-top:8px"><button onclick="patchStatus('submission','${x.id}','approved')">Publish</button><button class="warn" onclick="patchStatus('submission','${x.id}','declined')">Decline</button></div></div>`)+
+      section('Bring It demand',bring,x=>`<div style="padding:9px 0;border-bottom:1px solid #1e2942"><b>${esc(x.name)}</b><span style="color:#70d69a;font-family:'IBM Plex Mono';font-size:.7rem;margin-left:8px">${x.votes} votes</span><div style="color:#8b93a7;font-size:.74rem">${esc(x.area)} · ${esc(x.status)}</div>${x.votes>=100?`<button style="margin-top:7px" onclick="patchStatus('bring','${x.id}','outreach_ready')">Build outreach</button>`:''}</div>`)+
+      '</div>';
+  }catch(e){el.innerHTML='<div class="card" style="color:#f0a04b">Could not load Patch work.</div>'}
+}
+async function patchStatus(kind,id,status){
+  const r=await fetch(api(`/patch-work/${kind}/${id}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,note:''})});
+  if(!r.ok){gwToast('Could not update this item.',false);return}gwToast('Patch work updated ✓',true);document.getElementById('patchWorkPanel').style.display='none';showPatchWork();
 }
 
 /* --- DRIVER REQUESTS (v1.5) --- The customer's half of "request a driver" is

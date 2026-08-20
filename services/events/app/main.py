@@ -45,6 +45,8 @@ from .options import router as options_router
 app.include_router(options_router)
 from .drivers import router as drivers_router, seed_driver_profiles
 app.include_router(drivers_router)
+from .platform import router as platform_router, seed_patch_platform
+app.include_router(platform_router)
 migrate_brand_columns()
 from .geo import ensure_cache_table as _ensure_geo_cache
 _ensure_geo_cache()
@@ -55,6 +57,7 @@ migrate_real_menus()
 seed_brands_and_demos()
 seed_promos()
 seed_driver_profiles()
+seed_patch_platform()
 from .dispatch import retention_sweep
 retention_sweep(force=True)
 
@@ -186,9 +189,14 @@ def neighbor_fund_page():
 
 @app.get("/roadmap", response_class=HTMLResponse)
 def roadmap_page():
-    """Honest vision page — clearly labeled as NOT YET BUILT. For presentations:
-    lets the founder show ambition without claiming any of it works today."""
+    """Future-state vision, kept separate from the live Patch product."""
     return _page("roadmap.html")
+
+
+@app.get("/patch", response_class=HTMLResponse)
+def patch_page():
+    """Patch Today: community, offers, demand voting and planned services."""
+    return _page("patch.html")
 
 
 @app.get("/merchant", response_class=HTMLResponse)
@@ -205,7 +213,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.42"
+NUCLEUS_VERSION = "1.10.0"
 
 
 @app.middleware("http")
