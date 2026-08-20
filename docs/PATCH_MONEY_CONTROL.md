@@ -44,3 +44,6 @@
 ## Make boundary
 
 Make may receive a red/yellow exception notification or daily digest. It must not calculate allocations, decide payment state, accept a payment, or be the only record of a refund/payout.
+
+When the daily digest scenario is activated, it must use the separate
+`OPS_DIGEST_KEY` credential. Never copy the founder's `ADMIN_KEY` into Make.

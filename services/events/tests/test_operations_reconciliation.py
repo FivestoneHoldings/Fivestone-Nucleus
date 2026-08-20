@@ -41,3 +41,10 @@ def test_reconciliation_summary_reports_balanced_aggregate_without_pii():
     assert payload["card_processing"]["enabled"] is False
     assert "ORD-OPS-1" not in str(payload)
     assert "partner-a" not in str(payload)
+
+
+def test_reconciliation_summary_accepts_scoped_digest_key(monkeypatch):
+    monkeypatch.setenv("OPS_DIGEST_KEY", "make-digest-only-key")
+    response = client.get("/v0/ops/reconciliation?key=make-digest-only-key")
+    assert response.status_code == 200
+    assert response.json()["card_processing"]["enabled"] is False
