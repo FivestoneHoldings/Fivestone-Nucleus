@@ -18,6 +18,7 @@ from .menu import router as menu_router, seed_menus
 from .track import router as track_router
 from .kitchen import router as kitchen_router
 from .guides import router as guides_router
+from .operations import router as operations_router
 from . import boardauth  # noqa: F401 — registers BoardAccess on Base.metadata
 
 Base.metadata.create_all(bind=engine)
@@ -34,6 +35,7 @@ app.include_router(identity_router)
 app.include_router(track_router)
 app.include_router(kitchen_router)
 app.include_router(guides_router)
+app.include_router(operations_router)
 app.include_router(menu_router)
 from .growth import (router as growth_router, migrate_brand_columns,
                      seed_brands_and_demos, seed_promos)
