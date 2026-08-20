@@ -50,6 +50,9 @@ DRIVERS = "tblmRlBF50oAsP4EJ"
 DELIVERIES = "tblEryPmmPwLMiifL"
 EVENTS = "tblNtaoMbDWYnCjEe"
 
+_SYNC_NAMES = {CUSTOMERS: "customers", ORDERS: "orders", DRIVERS: "drivers",
+               DELIVERIES: "deliveries", EVENTS: "events"}
+
 API = "https://api.airtable.com/v0"
 
 
@@ -101,10 +104,16 @@ async def list_all_records(table: str, fields: list[str] | None = None,
 async def patch_record(table: str, record_id: str, fields: dict) -> dict:
     r = await _request("PATCH", f"{API}/{BASE}/{table}/{record_id}",
                        headers=_headers(), json={"fields": fields})
-    return r.json()
+    record = r.json()
+    from .operations_sync import enqueue
+    enqueue(_SYNC_NAMES.get(table, ""), record, "patch")
+    return record
 
 
 async def create_record(table: str, fields: dict) -> dict:
     r = await _request("POST", f"{API}/{BASE}/{table}",
                        headers=_headers(), json={"fields": fields})
-    return r.json()
+    record = r.json()
+    from .operations_sync import enqueue
+    enqueue(_SYNC_NAMES.get(table, ""), record, "create")
+    return record

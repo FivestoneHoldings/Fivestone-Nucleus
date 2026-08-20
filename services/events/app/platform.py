@@ -415,6 +415,7 @@ def patch_work(key: str):
         submissions = db.query(CommunitySubmission).order_by(CommunitySubmission.created_at.desc()).limit(200).all()
         bring = db.query(BringRequest).order_by(BringRequest.created_at.desc()).limit(200).all()
         votes = dict(db.query(BringVote.request_id, func.count(BringVote.id)).group_by(BringVote.request_id).all())
+        from .operations_sync import sync_health
         return {
             "service_requests": [{c.name: getattr(x, c.name) for c in ServiceRequest.__table__.columns
                                   if c.name not in {"identity"}} for x in services],
@@ -424,9 +425,18 @@ def patch_work(key: str):
                                        if c.name != "identity"} for x in submissions],
             "bring_requests": [{"id": x.id, "name": x.name, "category": x.category,
                                 "area": x.area, "status": x.status, "votes": votes.get(x.id, 0)} for x in bring],
+            "operations_sync": sync_health(),
         }
     finally:
         db.close()
+
+
+@router.post("/api/board/{key}/operations-sync/retry")
+def retry_operations_sync(key: str):
+    from .boardauth import check_key
+    from .operations_sync import retry_pending
+    check_key(key)
+    return retry_pending()
 
 
 class StatusIn(BaseModel):

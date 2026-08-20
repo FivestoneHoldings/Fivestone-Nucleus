@@ -58,6 +58,8 @@ seed_brands_and_demos()
 seed_promos()
 seed_driver_profiles()
 seed_patch_platform()
+from .operations_sync import retry_pending
+retry_pending()
 from .dispatch import retention_sweep
 retention_sweep(force=True)
 
@@ -213,7 +215,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.0"
+NUCLEUS_VERSION = "1.10.1"
 
 
 @app.middleware("http")
