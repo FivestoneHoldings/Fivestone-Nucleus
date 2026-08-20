@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from .db import SessionLocal, Base, engine, get_db
 from .models import Event
+from . import operations_models  # noqa: F401 — register owned Postgres operations tables
 from .schemas import EventIn, EventOut
 from .dispatch import router as dispatch_router
 from .intake import router as intake_router
@@ -204,7 +205,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.9.37"
+NUCLEUS_VERSION = "1.9.38"
 
 
 @app.middleware("http")

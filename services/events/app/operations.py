@@ -6,6 +6,7 @@ surface should receive customer addresses, phone numbers, card details, or raw
 provider payloads.
 """
 import os
+import secrets
 
 from fastapi import APIRouter
 from sqlalchemy import select
@@ -18,6 +19,18 @@ from .models import MoneyLedgerEntry, PaymentAttempt, PaymentWebhookReceipt
 router = APIRouter()
 
 
+def _check_operations_key(key: str) -> None:
+    """Accept a narrowly-scoped digest credential when it is configured.
+
+    Make needs only the aggregate digest, not founder-level board access.  The
+    board key remains a break-glass/manual route until the scoped key is set.
+    """
+    configured = os.environ.get("OPS_DIGEST_KEY", "")
+    if configured and secrets.compare_digest(str(key or ""), configured):
+        return
+    boardauth.check_key(key)
+
+
 @router.get("/v0/ops/reconciliation")
 def reconciliation_summary(key: str = ""):
     """Return a small, authenticated money-operations health summary.
@@ -26,7 +39,7 @@ def reconciliation_summary(key: str = ""):
     card processing as disabled until the complete Stripe launch gate is met,
     rather than implying that a configured key means money handling is ready.
     """
-    boardauth.check_key(key)
+    _check_operations_key(key)
     db = SessionLocal()
     try:
         attempts = list(db.scalars(select(PaymentAttempt)))
