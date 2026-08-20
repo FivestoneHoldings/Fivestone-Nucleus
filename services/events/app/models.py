@@ -97,6 +97,68 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
+class PaymentAttempt(Base):
+    """One provider-facing payment lifecycle for an order.
+
+    This intentionally records an attempt before any money is moved. The
+    provider reference is unique when present, while the Patch idempotency key
+    prevents a browser retry from creating a second charge.
+    """
+    __tablename__ = "payment_attempts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="stripe")
+    provider_payment_id: Mapped[str | None] = mapped_column(String(120), nullable=True, unique=True)
+    idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="usd")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="created")
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, default="")
+    raw_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow,
+                                                 onupdate=_utcnow, nullable=False)
+
+
+class MoneyLedgerEntry(Base):
+    """Immutable money movement expressed in integer cents.
+
+    Each business event creates balanced entries under one idempotency key. A
+    negative amount is a debit from that account; positive is a credit. This is
+    Patch's reconciliation record, independent from Stripe's dashboard.
+    """
+    __tablename__ = "money_ledger_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    payment_attempt_id: Mapped[str] = mapped_column(String(36), nullable=False, default="", index=True)
+    account: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="usd")
+    entry_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("ix_ledger_idempotency_account", "idempotency_key", "account", unique=True),
+    )
+
+
+class PaymentWebhookReceipt(Base):
+    """Provider webhook inbox. A provider event is processed at most once."""
+    __tablename__ = "payment_webhook_receipts"
+
+    provider: Mapped[str] = mapped_column(String(30), primary_key=True)
+    provider_event_id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="received")
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class MenuItem(Base):
     """Partner menu catalog. Prices in cents. Seeded menus are DRAFTS until the
     partner confirms pricing — editable live from the Command Board."""

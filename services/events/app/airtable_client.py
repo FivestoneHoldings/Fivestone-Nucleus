@@ -44,8 +44,10 @@ async def _request(method: str, url: str, **kw) -> httpx.Response:
     return last
 
 BASE = "appT0k6nqQC490WTg"
+CUSTOMERS = "tblkOeqgTe7VZJl8Y"
 ORDERS = "tblxkQlInSdBwIeLR"
 DRIVERS = "tblmRlBF50oAsP4EJ"
+DELIVERIES = "tblEryPmmPwLMiifL"
 EVENTS = "tblNtaoMbDWYnCjEe"
 
 API = "https://api.airtable.com/v0"
@@ -69,6 +71,31 @@ async def list_records(table: str, formula: str = "", fields: list[str] | None =
         params.append(("fields[]", f))
     r = await _request("GET", f"{API}/{BASE}/{table}", headers=_headers(), params=params)
     return r.json().get("records", [])
+
+
+async def list_all_records(table: str, fields: list[str] | None = None,
+                           page_size: int = 100) -> list[dict]:
+    """Return every record from a table, following Airtable pagination.
+
+    Operational screens intentionally use ``list_records`` with bounded reads.
+    Migrations and reconciliations need a separate exhaustive path so a table
+    growing beyond 100 rows can never be silently truncated.
+    """
+    records: list[dict] = []
+    offset = ""
+    while True:
+        params: list[tuple] = [("pageSize", str(min(max(page_size, 1), 100)))]
+        if offset:
+            params.append(("offset", offset))
+        for field in fields or []:
+            params.append(("fields[]", field))
+        response = await _request(
+            "GET", f"{API}/{BASE}/{table}", headers=_headers(), params=params)
+        body = response.json()
+        records.extend(body.get("records", []))
+        offset = body.get("offset", "")
+        if not offset:
+            return records
 
 
 async def patch_record(table: str, record_id: str, fields: dict) -> dict:
