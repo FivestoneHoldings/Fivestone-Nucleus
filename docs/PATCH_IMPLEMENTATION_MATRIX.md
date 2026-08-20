@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.1
+Updated: 2026-08-20 · version 1.10.2
 
 This is the release truth. A capability is **Live** only when it has a durable
 server workflow, an operator surface, tests, and a customer/partner entrypoint.
@@ -14,7 +14,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | PostgreSQL durability | Live/transition | Owned domains are authoritative in PostgreSQL. Every successful legacy Airtable mutation is durably queued and applied to `ops_*`; conversion failures remain visible and retryable. Reads still use Airtable until the repository switch passes shadow-read drills. |
 | Patch Today feed | Live | Reviewed/published items, sources, areas and device topic follows. No unreviewed scraping is published. |
 | Bring It to Patch | Live | Deduplicated nominations, one device vote, visible counts/status and operator queue. |
-| Offers and wallet | Live | Saveable offers, promo codes, single-use redemption records and points balance. |
+| Offers and wallet | Live | Partners and operators can publish, pause and expire server-enforced offers; customers can save them; redemption and points records are single-use. |
 | Delivery loyalty | Live | A linked Patch device receives 100 points once when its order is delivered. |
 | Catering and recurring lunch | Live intake | Structured request and operator confirmation workflow; no charge before confirmation. |
 | Custom and partner-created delivery | Live intake | Structured pickup/drop-off workflow enters Command Center. |

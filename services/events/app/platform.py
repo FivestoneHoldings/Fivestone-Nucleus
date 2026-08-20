@@ -13,7 +13,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from .db import SessionLocal
 from .models import (BringRequest, BringVote, CommunityFollow, CommunityItem,
@@ -117,7 +117,9 @@ def overview(request: Request):
     try:
         feed = (db.query(CommunityItem).filter(CommunityItem.published.is_(True))
                 .order_by(CommunityItem.created_at.desc()).limit(30).all())
-        offers = (db.query(PatchOffer).filter(PatchOffer.active.is_(True))
+        now = datetime.now(timezone.utc)
+        offers = (db.query(PatchOffer).filter(PatchOffer.active.is_(True),
+                  or_(PatchOffer.expires_at.is_(None), PatchOffer.expires_at > now))
                   .order_by(PatchOffer.created_at.desc()).all())
         saved = set()
         points = 0
