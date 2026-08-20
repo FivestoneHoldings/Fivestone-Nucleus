@@ -525,6 +525,9 @@ async def driver_action(day_token: str, record_id: str, action: str, request: Re
         elif action == "delivered":
             background_tasks.add_task(notify.send_sms, order_id, phone,
                                       notify.msg_delivered(order_id))
+    if action == "delivered":
+        from .platform import award_delivery_points
+        award_delivery_points(order_id)
     return {"ok": True, "order_id": order_id, "new_status": spec["status"]}
 
 

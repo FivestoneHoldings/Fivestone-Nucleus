@@ -3,7 +3,7 @@ No update or delete path exists in this service. None will be added.
 """
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Float, Integer, String, DateTime, Text, Index
+from sqlalchemy import Boolean, Float, Integer, String, DateTime, Text, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
@@ -343,4 +343,171 @@ class DriverRequest(Base):
     customer_phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     honored: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class CommunityItem(Base):
+    """Reviewed, attributable local information shown in Patch Today."""
+    __tablename__ = "community_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kind: Mapped[str] = mapped_column(String(30), nullable=False, default="community")
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    summary: Mapped[str] = mapped_column(String(600), nullable=False, default="")
+    source_name: Mapped[str] = mapped_column(String(120), nullable=False, default="Patch")
+    source_url: Mapped[str] = mapped_column(String(700), nullable=False, default="")
+    area: Mapped[str] = mapped_column(String(100), nullable=False, default="Knoxville")
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class CommunityFollow(Base):
+    __tablename__ = "community_follows"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    topic: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("identity", "topic", name="uq_community_follow_identity_topic"),)
+
+
+class CommunitySubmission(Base):
+    """Neighbor-authored content stays private until an operator publishes it."""
+    __tablename__ = "community_submissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(30), nullable=False, default="neighbor_note")
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, default="")
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(80), nullable=False, default="Neighbor")
+    consent_to_publish: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    moderation_note: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class CommunityReport(Base):
+    __tablename__ = "community_reports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    item_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(String(240), nullable=False, default="review requested")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("item_id", "identity", name="uq_community_report_identity"),)
+
+
+class BringRequest(Base):
+    """A requested business/service and its transparent outreach state."""
+    __tablename__ = "bring_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(140), nullable=False)
+    category: Mapped[str] = mapped_column(String(60), nullable=False, default="restaurant")
+    area: Mapped[str] = mapped_column(String(100), nullable=False, default="Knoxville")
+    note: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="gathering_votes")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class BringVote(Base):
+    __tablename__ = "bring_votes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("request_id", "identity", name="uq_bring_vote_request_identity"),)
+
+
+class PatchOffer(Base):
+    __tablename__ = "patch_offers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    partner_code: Mapped[str] = mapped_column(String(60), nullable=False, default="")
+    title: Mapped[str] = mapped_column(String(140), nullable=False)
+    detail: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    promo_code: Mapped[str] = mapped_column(String(30), nullable=False, default="")
+    points_cost: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class SavedOffer(Base):
+    __tablename__ = "saved_offers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    offer_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("offer_id", "identity", name="uq_saved_offer_identity"),)
+
+
+class LoyaltyAccount(Base):
+    __tablename__ = "loyalty_accounts"
+
+    identity: Mapped[str] = mapped_column(String(80), primary_key=True)
+    points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lifetime_points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow,
+                                                 onupdate=_utcnow, nullable=False)
+
+
+class PatchPreference(Base):
+    __tablename__ = "patch_preferences"
+
+    identity: Mapped[str] = mapped_column(String(80), primary_key=True)
+    palette: Mapped[str] = mapped_column(String(20), nullable=False, default="patch")
+    text_size: Mapped[str] = mapped_column(String(20), nullable=False, default="standard")
+    contrast: Mapped[str] = mapped_column(String(20), nullable=False, default="standard")
+    reduced_motion: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    density: Mapped[str] = mapped_column(String(20), nullable=False, default="comfortable")
+    email_updates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sms_updates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    quiet_start: Mapped[str] = mapped_column(String(5), nullable=False, default="21:00")
+    quiet_end: Mapped[str] = mapped_column(String(5), nullable=False, default="09:00")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow,
+                                                 onupdate=_utcnow, nullable=False)
+
+
+class ServiceRequest(Base):
+    """Structured fulfillment intake for catering, recurring and courier work."""
+    __tablename__ = "service_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    identity: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    email: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    organization: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    requested_for: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    party_size: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    pickup: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    dropoff: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    cadence: Mapped[str] = mapped_column(String(80), nullable=False, default="once")
+    budget_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    notes: Mapped[str] = mapped_column(String(1200), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="new")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class PartnerApplication(Base):
+    __tablename__ = "partner_applications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    business_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    contact_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    email: Mapped[str] = mapped_column(String(160), nullable=False)
+    address: Mapped[str] = mapped_column(String(300), nullable=False)
+    website: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    fulfillment: Mapped[str] = mapped_column(String(80), nullable=False, default="delivery")
+    notes: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="submitted")
+    review_note: Mapped[str] = mapped_column(String(600), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

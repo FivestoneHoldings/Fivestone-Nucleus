@@ -1,0 +1,37 @@
+# Patch implementation matrix
+
+Updated: 2026-08-20 · version 1.10.0
+
+This is the release truth. A capability is **Live** only when it has a durable
+server workflow, an operator surface, tests, and a customer/partner entrypoint.
+
+| Capability | State | Operational truth |
+|---|---|---|
+| Restaurant and courier order intake | Live | Server-priced, idempotent intake; cash checkout can operate now. |
+| Merchant ticket acceptance/readiness | Live | Token-scoped kitchen screen and menu controls. |
+| Dispatch and driver lifecycle | Live | Assignment, pickup, live location, proof, delivery, exception and close flows. |
+| Customer tracking/support/history | Live | Capability-scoped tracking, support intake and local device history. |
+| PostgreSQL durability | Live/transition | Owned event, finance and Patch product data are authoritative in PostgreSQL. Legacy order records still write through Airtable while the repository cutover is completed. |
+| Patch Today feed | Live | Reviewed/published items, sources, areas and device topic follows. No unreviewed scraping is published. |
+| Bring It to Patch | Live | Deduplicated nominations, one device vote, visible counts/status and operator queue. |
+| Offers and wallet | Live | Saveable offers, promo codes, single-use redemption records and points balance. |
+| Delivery loyalty | Live | A linked Patch device receives 100 points once when its order is delivered. |
+| Catering and recurring lunch | Live intake | Structured request and operator confirmation workflow; no charge before confirmation. |
+| Custom and partner-created delivery | Live intake | Structured pickup/drop-off workflow enters Command Center. |
+| Partner application/review | Live | Durable application, review statuses and approval into paused onboarding account. |
+| Partner catalog/hours/menu control | Live | Existing kitchen portal controls menu availability, specials, hours and posts. |
+| Customer/partner community posts | Live text | Consent-gated neighbor notes and recognition enter moderation; approved posts publish to the reviewed feed. Photo uploads remain out of scope until media moderation is staffed. |
+| Accessibility/personalization | Live | Durable palette, text size, contrast, motion, density, channel and quiet-hour preferences. |
+| Context delivery intelligence | Partial | Service-radius, hours, prep time, distance-unverified and driver heads-up rules are live; external traffic/weather providers are not connected. |
+| Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
+| Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |
+| SMS notifications | External gate | Notification adapter and copy exist; activation requires Twilio credentials and messaging registration. Phone support is 865-964-3843, 9–9 daily. |
+| Square catalog/order integration | External gate | Canonical menu/order models exist; a live Square seller authorization is required. Manual menu/order fallback is live. |
+| Swarm/multi-kitchen routing | Roadmap | Not represented as live. Requires routing economics, batching safety and driver trials. |
+
+## Release gates
+
+Every release must pass the full automated suite, mobile visual inspection,
+console-error inspection, production health/version checks, and a cash delivery
+drill. Stripe, SMS or marketplace integrations may not be labeled live until
+their external credentials, reconciliation and failure drills pass.

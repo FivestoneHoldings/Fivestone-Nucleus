@@ -426,6 +426,7 @@ cursor:pointer;flex:0 0 auto}
   <p class="sub" id="orderSub">Fill in the details below. You'll get a confirmation the moment we receive it.</p>
 
   <form method="POST" action="/v0/intake">
+    <input type="hidden" name="patch_identity" id="patchIdentity">
     <input type="hidden" name="idempotency_key" id="idempotencyField" value="">
     <input type="hidden" name="partner" id="partnerField" value="">
     <input type="hidden" name="subtotal_cents" id="subtotalField" value="">
@@ -530,6 +531,7 @@ cursor:pointer;flex:0 0 auto}
 <script src="/static/gw-profile.js"></script>
 <script src="/static/gw-ui.js"></script>
 <script>
+document.getElementById('patchIdentity').value=localStorage.getItem('patch_identity')||'';
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
 document.getElementById('idempotencyField').value =

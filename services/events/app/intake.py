@@ -4,6 +4,7 @@ paths coexist. This is the canonical path from v0.4 forward.
 """
 import hashlib
 import json
+import re
 import secrets
 from datetime import datetime, timezone, timedelta
 from urllib.parse import parse_qsl
@@ -25,7 +26,8 @@ FIELDS = ["customer_name", "customer_phone", "pickup_address", "dropoff_address"
           "dropoff_contact_name", "dropoff_contact_phone", "items_description",
           "special_instructions", "requested_for", "partner",
           "subtotal_cents", "fee_cents", "total_cents", "tip_cents",
-          "promo_code", "discount_cents", "cart_json", "idempotency_key"]
+          "promo_code", "discount_cents", "cart_json", "idempotency_key",
+          "patch_identity"]
 
 CAPS = {"items_description": 1000, "special_instructions": 600,
         "pickup_address": 300, "dropoff_address": 300,
@@ -34,7 +36,7 @@ CAPS = {"items_description": 1000, "special_instructions": 600,
         "requested_for": 40, "partner": 60,
         "subtotal_cents": 12, "fee_cents": 12, "total_cents": 12, "tip_cents": 12,
         "promo_code": 30, "discount_cents": 12, "cart_json": 8000,
-        "idempotency_key": 120}
+        "idempotency_key": 120, "patch_identity": 80}
 
 # In-memory per-IP throttle: 30 submissions/minute (dispatch-scale abuse guard)
 _HITS: dict = {}
@@ -481,6 +483,9 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
                        {"partner": data["partner"], "customer": data["customer_name"],
                         "dropoff": data["dropoff_address"], "items": data["items_description"],
                         "channel": "nucleus-intake"})
+            if re.fullmatch(r"[A-Za-z0-9_-]{20,80}", data.get("patch_identity", "")):
+                _log_owned("order.customer_identity", order_id,
+                           {"identity": data["patch_identity"]})
             if data["customer_phone"]:
                 background_tasks.add_task(notify.send_sms, order_id,
                                           data["customer_phone"],
