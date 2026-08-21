@@ -14,6 +14,7 @@ from . import insights
 from .bizday import at_day, business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Partner, PatchOffer, PromoCode
+from .order_scope import is_demo_order, production_orders
 
 router = APIRouter()
 _UI = Path(__file__).parent / "ui"
@@ -32,7 +33,7 @@ def _partner_by_token(token: str) -> Partner:
 
 @router.get("/kitchen/{token}", response_class=HTMLResponse)
 def kitchen_page(token: str):
-    return (_UI / "kitchen.html").read_text()
+    return (_UI / "kitchen.html").read_text(encoding="utf-8")
 
 
 @router.get("/api/kitchen/{token}/orders")
@@ -66,16 +67,17 @@ async def kitchen_orders(token: str):
     # picked-up and delivered tickets leave the rail (counted instead).
     # pride stats — the kitchen's whole day (today's records only; cosmetic, not
     # load-bearing for whether a ticket is visible)
-    picked_up_today = sum(1 for r in day_all
+    production_day = production_orders(day_all)
+    picked_up_today = sum(1 for r in production_day
                           if r["fields"].get("status") in ("in_transit", "delivered"))
-    delivered_today = sum(1 for r in day_all
+    delivered_today = sum(1 for r in production_day
                           if r["fields"].get("status") in ("delivered", "closed"))
-    revenue_today = sum(int(r["fields"].get("subtotal_cents") or 0) for r in day_all
+    revenue_today = sum(int(r["fields"].get("subtotal_cents") or 0) for r in production_day
                         if r["fields"].get("status") in ("in_transit", "delivered", "closed"))
     # busiest hour (by received_at) — a little insight the big dashboards bury
     from collections import Counter
     hours = Counter((r["fields"].get("received_at") or "")[11:13]
-                    for r in day_all if r["fields"].get("received_at"))
+                    for r in production_day if r["fields"].get("received_at"))
     peak_hour = hours.most_common(1)[0][0] if hours else ""
     records = [r for r in active_records if r["fields"].get("status") in ACTIVE]
     records.sort(key=lambda r: (r["fields"].get("requested_for")
@@ -120,6 +122,7 @@ async def kitchen_orders(token: str):
             "requested_for": r["fields"].get("requested_for", ""),
             "received_at": r["fields"].get("received_at", ""),
             "ready": r["fields"].get("order_id", "") in ready,
+            "demo": is_demo_order(r),
         } for r in records],
     }
 
@@ -138,6 +141,7 @@ async def kitchen_history(token: str):
                  f"DATETIME_FORMAT(SET_TIMEZONE({{delivered_at}},'America/New_York'),'YYYY-MM-DD')='{today}'),"
                  f"OR({{status}}='in_transit',{{status}}='delivered',{{status}}='closed'))"),
         max_records=100)
+    records = production_orders(records)
     records.sort(key=lambda r: (r["fields"].get("delivered_at")
                                 or r["fields"].get("in_transit_at") or ""), reverse=True)
     # top sellers: parse "2× Pad Thai ($9.00), 1× Rolls (...)" quantity lines
@@ -327,7 +331,7 @@ async def kitchen_insights(token: str, days: int = 30):
         formula=(f"AND({{partner_code}}='{p.code}',"
                  f"{at_day('received_at')}>='{since}')"),
         max_records=1000)
-    report = insights.build_report(records)
+    report = insights.build_report(production_orders(records))
     report["kitchen"] = p.display_name
     return report
 

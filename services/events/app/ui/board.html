@@ -1173,6 +1173,7 @@ function renderOrders(){
       onkeydown="if(event.key==='Enter')jumpTo('${esc(o.order_id)}')"
       style="cursor:pointer;${URGENCY[o.status]?`border-left:4px solid ${URGENCY[o.status]}`:''}">
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+      ${o.demo?'<span style="display:inline-block;margin-left:6px;padding:3px 7px;border:1px solid #6fa0ff;border-radius:999px;color:#9fc0ff;font-family:IBM Plex Mono,monospace;font-size:.56rem;font-weight:800">DEMO · NOT IN KPIs</span>':''}
       ${ageChip(o)}
       <div class="oid">${o.order_id}${o.partner?` <span style="color:#6fa0ff">· ${esc(o.partner)}</span>`:''} <span style="color:#4d5a78;font-size:.68rem;font-weight:700">· tap to open ›</span></div>
       ${o.customer?`<div class="line"><b>From</b>${esc(o.customer)}</div>`:''}

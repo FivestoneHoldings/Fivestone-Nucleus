@@ -17,6 +17,7 @@ from . import insights
 from .bizday import MARKET_TZ, at_day, business_day, business_day_of
 from .db import SessionLocal
 from .models import Event, Proof, DriverLocation
+from .order_scope import is_demo_order, production_orders
 
 router = APIRouter()
 
@@ -190,6 +191,8 @@ async def driver_orders(day_token: str):
             max_records=100),
     )
     combined = list(records) + list(done_today)
+    # Active training tickets intentionally stay in the driver's workflow so
+    # the whole team can rehearse. Only completed demos disappear from pay/KPIs.
     mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
     mine.sort(key=lambda r: (r["fields"].get("requested_for")
                              or r["fields"].get("received_at") or "9999"))
@@ -212,7 +215,7 @@ async def driver_orders(day_token: str):
                     pay_by_order[e.entity_ref] = "cod"
         finally:
             _dbr.close()
-    done_recs = [r for r in combined
+    done_recs = [r for r in production_orders(combined)
                  if r["fields"].get("status") in ("delivered", "closed")]
     my_done = [r for r in done_recs if drv["id"] in (r["fields"].get("driver") or [])]
     my_done.sort(key=lambda r: r["fields"].get("delivered_at") or "", reverse=True)
@@ -246,6 +249,7 @@ async def driver_orders(day_token: str):
             "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
             "collect_cash_cents": _cash_due(r["fields"], pay_by_order),
             "total_cents": int(r["fields"].get("total_cents") or 0),
+            "demo": is_demo_order(r),
         } for r in mine],
     }
 
@@ -364,6 +368,7 @@ async def board_insights(key: str, days: int = 30):
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     records = await at.list_records(
         at.ORDERS, formula=f"{at_day('received_at')}>='{since}'", max_records=1000)
+    records = production_orders(records)
     report = insights.build_report(records)
     # who's carrying the volume — only the founder's view needs this breakdown
     by_partner = {}
@@ -394,7 +399,8 @@ async def driver_insights(day_token: str, days: int = 30):
         formula=(f"AND({at_day('delivered_at')}>='{since}',"
                  f"OR({{status}}='delivered',{{status}}='closed'))"),
         max_records=1000)
-    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    mine = [r for r in production_orders(records)
+            if drv["id"] in (r["fields"].get("driver") or [])]
     report = insights.build_report(mine, include_items=False)
     report["driver"] = drv["fields"].get("display_name", "Driver")
     return report
@@ -782,6 +788,7 @@ async def board_stats(key: str):
     records = await at.list_records(
         at.ORDERS, formula=f"DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')='{today}'",
         max_records=100)
+    records = production_orders(records)
     by_status: dict = {}
     partners: dict = {}
     times = []
@@ -994,6 +1001,7 @@ async def day_summary(key: str, date: str = "", partner: str = ""):
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records = production_orders(records)
     delivered = [r for r in records if r["fields"].get("status") in ("delivered", "closed")]
     revenue = sum(int(r["fields"].get("total_cents") or 0) for r in delivered)
     times = []
@@ -1033,6 +1041,7 @@ async def export_day_csv(key: str, date: str = "", partner: str = "", days: int 
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records = production_orders(records)
     records.sort(key=lambda r: r["fields"].get("received_at", ""))
     cols = ["order_id", "status", "partner_code", "customer_name_raw",
             "pickup_address", "dropoff_address", "items_description",
@@ -1060,6 +1069,7 @@ async def weekly_digest(key: str, partner: str = "", days: int = 7):
     if partner:
         formula = f"AND({formula},{{partner_code}}='{_fq(partner)}')"
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records = production_orders(records)
     by_day: dict = {}
     for r in records:
         f = r["fields"]
@@ -1098,6 +1108,7 @@ async def edit_order(key: str, record_id: str, request: Request):
 
 
 def _stats_from(records: list) -> dict:
+    records = production_orders(records)
     by_status: dict = {}
     partners: dict = {}
     times = []
@@ -1173,6 +1184,7 @@ async def board_snapshot(key: str):
             "received_at": r["fields"].get("received_at", ""),
             "kitchen_ready": r["fields"].get("order_id", "") in ready_ids,
             "driver": (r["fields"].get("driver") or [None])[0],
+            "demo": is_demo_order(r),
         } for r in records],
         "drivers": [{
             "id": d["id"],
@@ -1208,6 +1220,7 @@ async def partner_statement(key: str, partner: str, days: int = 7):
     formula = (f"AND(DATETIME_FORMAT(SET_TIMEZONE({{received_at}},'America/New_York'),'YYYY-MM-DD')>='{start}',"
                f"{{partner_code}}='{p}')")
     records = await at.list_records(at.ORDERS, formula=formula, max_records=100)
+    records = production_orders(records)
     records.sort(key=lambda r: r["fields"].get("received_at", ""))
     def esc(x):
         return (str(x or "").replace("&", "&amp;").replace("<", "&lt;")
@@ -1339,6 +1352,7 @@ async def local_impact():
             max_records=100)
     except Exception:
         records = []
+    records = production_orders(records)
     delivered = len(records)
     food_cents = sum(int(r["fields"].get("subtotal_cents") or 0) for r in records)
     kitchens = len({r["fields"].get("partner_code", "") for r in records
@@ -1634,7 +1648,8 @@ async def driver_earnings(day_token: str, days: int = 7):
         formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
                  f"{at_day('delivered_at')}>='{start}')"),
         max_records=1000)
-    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    mine = [r for r in production_orders(records)
+            if drv["id"] in (r["fields"].get("driver") or [])]
     by_day: dict = {}
     for r in mine:
         # The QUERY filters on market-local dates, but this used to bucket on
@@ -1677,7 +1692,8 @@ async def driver_statement_csv(day_token: str, days: int = 90):
         formula=(f"AND(OR({{status}}='delivered',{{status}}='closed'),"
                  f"{at_day('delivered_at')}>='{start}')"),
         max_records=5000)
-    mine = [r for r in records if drv["id"] in (r["fields"].get("driver") or [])]
+    mine = [r for r in production_orders(records)
+            if drv["id"] in (r["fields"].get("driver") or [])]
     rows = []
     for r in mine:
         f = r["fields"]

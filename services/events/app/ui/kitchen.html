@@ -606,6 +606,7 @@ async function load(){
   document.getElementById('list').innerHTML = d.orders.length ? d.orders.map(o=>`
     <div class="card ${o.ready?'ready':''} ${!wasFirst && freshIds.has(o.order_id)?'new':''}" id="${o.id}">
       <span class="chip ${o.status}">${KLABEL[o.status]||o.status.replace('_',' ')}</span>
+      ${o.demo?'<span style="display:inline-block;margin-left:6px;padding:3px 7px;border:1px solid #6d86b4;border-radius:999px;color:#415a87;font-family:IBM Plex Mono,monospace;font-size:.56rem;font-weight:800">TRAINING DEMO</span>':''}
       ${o.ready ? '' : ageBadge(o.received_at)}
       <div class="oid">${o.order_id}</div>
       <div class="items">${fmtItems(o.items)}</div>

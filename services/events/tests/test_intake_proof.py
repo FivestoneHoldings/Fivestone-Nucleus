@@ -130,6 +130,33 @@ def test_intake_rejects_empty():
     assert client.post("/v0/intake", json={}).status_code == 400
 
 
+def test_intake_rejects_unknown_partner_without_creating_order():
+    n = len(CREATED)
+    r = client.post("/v0/intake", json={
+        "dropoff_address": "123 J St", "items_description": "box",
+        "partner": "not-a-real-kitchen"})
+    assert r.status_code == 404
+    assert r.json()["error"] == "unknown_partner"
+    assert len(CREATED) == n
+
+
+def test_intake_rejects_preview_partner_without_creating_order():
+    n = len(CREATED)
+    r = client.post("/v0/intake", json={
+        "dropoff_address": "123 J St", "items_description": "sample plate",
+        "partner": "riseshine"})
+    assert r.status_code == 409
+    assert r.json()["error"] == "preview_only"
+    assert len(CREATED) == n
+
+
+def test_preview_storefront_is_read_only():
+    r = client.get("/order?partner=riseshine")
+    assert r.status_code == 200
+    for needle in ("PREVIEW_ONLY", "Preview menu", "preview only", "ordering unavailable"):
+        assert needle in r.text
+
+
 def test_proof_roundtrip():
     img = base64.b64encode(b"\xff\xd8\xff fakejpegbytes").decode()
     r = client.post("/api/driver/tok123/orders/recORD1/proof",
@@ -149,7 +176,7 @@ def test_order_form_has_client_side_double_submit_guard():
     """Belt and suspenders: the browser shouldn't even fire the second request."""
     import os
     ui = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "order-form.html")
-    src = open(ui).read()
+    src = open(ui, encoding="utf-8").read()
     assert "_GW_SENDING" in src
     assert "ev.preventDefault()" in src
     assert "Sending your order…" in src
@@ -163,7 +190,7 @@ def test_order_form_has_client_side_double_submit_guard():
 def test_courier_reuses_its_idempotency_key_across_network_retries():
     import os
     ui = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "courier.html")
-    src = open(ui).read()
+    src = open(ui, encoding="utf-8").read()
     assert "window._GW_COURIER_IDEMPOTENCY = window._GW_COURIER_IDEMPOTENCY ||" in src
     assert "idempotency_key: window._GW_COURIER_IDEMPOTENCY" in src
     assert "fetch('/v0/intake'," in src

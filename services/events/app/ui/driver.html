@@ -269,6 +269,7 @@ async function load(){
     <div class="card ${cur?'cur':''}" id="${o.id}">
       ${N>1?`<div class="stoptag ${cur?'on':''}">${cur?'▶ CURRENT · ':''}STOP ${i+1} OF ${N}</div>`:''}
       <span class="chip ${o.status}">${o.status.replace('_',' ')}</span>
+      ${o.demo?'<span style="display:inline-block;margin-left:6px;padding:3px 7px;border:1px solid #6d86b4;border-radius:999px;color:#415a87;font-family:IBM Plex Mono,monospace;font-size:.56rem;font-weight:800">TRAINING DEMO · NO EARNINGS</span>':''}
       <div class="oid">${esc(o.order_id)}</div>
       ${o.kitchen_ready?`<div class="ready">🍳 Kitchen says READY</div>`:''}
       ${o.collect_cash_cents ? `<div class="cash">💵 COLLECT $${(o.collect_cash_cents/100).toFixed(2)} CASH at the door</div>` : `<div class="prepaid">✓ Prepaid — nothing to collect</div>`}
