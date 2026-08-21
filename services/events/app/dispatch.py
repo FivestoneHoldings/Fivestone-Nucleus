@@ -473,7 +473,8 @@ async def driver_heads_up(day_token: str, record_id: str, request: Request):
     body = await request.json()
     note = str(body.get("note", "")).strip()[:160]
     order_id = owned[0]["fields"].get("order_id", record_id)
-    _log_event("order.heads_up", order_id, f"driver:{drv['id']}", {"note": note})
+    actor = f"driver:{drv['fields'].get('display_name', '?')}"
+    _log_event("order.heads_up", order_id, actor, {"note": note})
     return {"ok": True}
 
 

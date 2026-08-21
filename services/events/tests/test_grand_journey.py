@@ -72,6 +72,9 @@ def test_grand_journey():
     client.post(f"/api/driver/{day_token}/orders/{rec}/heads-up",
                 json={"note": "5 minutes out!"})
     assert client.get(f"/v0/track/{oid}/heads-up").json()["note"] == "5 minutes out!"
+    heads_up_event = next(e for e in client.get(f"{K}/events").json()["events"]
+                          if e["event_type"] == "order.heads_up" and e["entity_ref"] == oid)
+    assert heads_up_event["actor"] == "driver:Marcus Webb"
     assert client.get(f"/v0/track/{oid}/location").json()["live"] is True
 
     # 6) Proof + delivered → THANK-YOU note + celebration surface
