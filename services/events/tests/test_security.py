@@ -129,3 +129,14 @@ def test_partner_code_charset_enforced():
                     json={"code": "evil'code", "display_name": "Evil"})
     assert r.status_code == 200
     assert r.json()["code"] == "evilcode"  # quote stripped
+
+
+@pytest.mark.parametrize("path", [
+    "/track/ORD-SECA01",
+    "/v0/track/ORD-SECA01/status",
+    "/v0/intake",
+])
+def test_customer_order_capabilities_are_never_cached_or_indexed(path):
+    response = client.get(path)
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-robots-tag"] == "noindex, nofollow"
