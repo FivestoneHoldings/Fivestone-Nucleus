@@ -84,6 +84,22 @@ def test_stats_shape():
     assert d["avg_received_to_delivered_min"] == 25.0
 
 
+def test_demo_orders_do_not_count_as_business_volume_or_money():
+    FAKE_ORDER_FIELDS["source_channel"] = "demo"
+    try:
+        stats = client.get(f"{K}/stats").json()
+        assert stats["orders_today"] == 0
+        assert stats["delivered_today"] == 0
+        assert stats["avg_received_to_delivered_min"] is None
+        summary = client.get(f"{K}/summary").json()
+        assert summary["orders"] == 0
+        assert summary["revenue_cents"] == 0
+        digest = client.get(f"{K}/digest").json()
+        assert digest["totals"] == {"orders": 0, "delivered": 0, "revenue_cents": 0}
+    finally:
+        FAKE_ORDER_FIELDS.pop("source_channel", None)
+
+
 def test_owned_events_feed():
     client.post(f"{K}/orders/recO1/close")  # generates an owned-log event
     r = client.get(f"{K}/events")

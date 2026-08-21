@@ -455,6 +455,16 @@ function paintList(){
     const meta = [area, prepBit, fee(p)].filter(Boolean).join(' · ');
     const usual = (COUNTS[p.code]||0) >= 2 ? '<span class="rbadge">YOUR USUAL</span>' : '';
     const demo = p.demo ? '<span class="demo">PREVIEW</span>' : '';
+    if(p.demo){
+      return `<a class="rrow" href="/order?partner=${encodeURIComponent(p.code)}">
+        ${thumb(p,'rthumb')}
+        <div class="rinfo">
+          <div class="rname">${name}${demo}</div>
+          <div class="rmeta">Explore a sample menu · ordering unavailable</div>
+        </div>
+        <span class="rgo">›</span>
+      </a>`;
+    }
     if(p.accepting_orders === false){
       return `<div class="rrow paused" style="flex-wrap:wrap">
         ${thumb(p,'rthumb')}

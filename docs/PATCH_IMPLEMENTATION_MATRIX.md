@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.5
+Updated: 2026-08-20 · version 1.10.6
 
 The community, offers, demand, concierge, partner, and preference capabilities
 now live inside the existing GateWay visual shell and shared navigation. The
@@ -12,7 +12,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 
 | Capability | State | Operational truth |
 |---|---|---|
-| Restaurant and courier order intake | Live | Server-priced, idempotent intake; cash checkout can operate now. |
+| Restaurant and courier order intake | Live | Server-priced, idempotent intake; cash checkout can operate now. Unknown or preview kitchens are rejected before record creation. |
 | Merchant ticket acceptance/readiness | Live | Token-scoped kitchen screen and menu controls. |
 | Dispatch and driver lifecycle | Live | Assignment, pickup, live location, proof, delivery, exception and close flows. |
 | Customer tracking/support/history | Live | Capability-scoped tracking, support intake and local device history. |
@@ -30,6 +30,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Context delivery intelligence | Live weather / partial traffic | Official NWS point alerts are cached and translated into checkout/feed delivery-impact guidance with stale-safe fallback. Service radius, hours, prep time and driver heads-up rules are live. Live traffic still needs an authoritative provider. |
 | Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
 | Founder/team command authentication | Live | Clean `/board` sign-in sends the founder or individually revocable team credential in a no-store request header. Compatibility links immediately scrub the bearer key from the address bar. |
+| Demo/training data isolation | Live | Demo tickets remain available for lifecycle drills and are visibly labeled, but are excluded from KPIs, revenue, tips, earnings, statements, exports, merchant insights and public impact. |
 | Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |
 | SMS notifications | External gate | Notification adapter and copy exist; activation requires Twilio credentials and messaging registration. Phone support is 865-964-3843, 9–9 daily. |
 | Square catalog/order integration | External gate | Canonical menu/order models exist; a live Square seller authorization is required. Manual menu/order fallback is live. |

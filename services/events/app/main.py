@@ -120,7 +120,7 @@ async def branded_server_errors(request, exc):
 
 @app.get("/me", response_class=HTMLResponse)
 def me_page():
-    return (_UI / "me.html").read_text()
+    return (_UI / "me.html").read_text(encoding="utf-8")
 
 
 @app.get("/activity", response_class=HTMLResponse)
@@ -128,19 +128,19 @@ def activity_page():
     """A real order history — the Activity tab used to bounce to a single last
     order or dump you on the account page. Now it's its own surface: every
     order you've placed, one tap to track a live one or re-order a past one."""
-    return (_UI / "activity.html").read_text()
+    return (_UI / "activity.html").read_text(encoding="utf-8")
 
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return (_UI / "home.html").read_text()
+    return (_UI / "home.html").read_text(encoding="utf-8")
 
 
 app.mount("/static", StaticFiles(directory=str(_UI / "static")), name="static")
 
 
 def _page(name: str) -> str:
-    return (_UI / name).read_text()
+    return (_UI / name).read_text(encoding="utf-8")
 
 
 @app.get("/driver/{day_token}", response_class=HTMLResponse)
@@ -266,7 +266,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.5"
+NUCLEUS_VERSION = "1.10.6"
 
 
 @app.middleware("http")

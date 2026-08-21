@@ -536,6 +536,7 @@ document.getElementById('patchIdentity').value=localStorage.getItem('patch_ident
 fetch('/v0/patch/context').then(r=>r.json()).then(d=>{const i=d.delivery_impact||{};if(!['high','watch'].includes(i.level))return;const e=document.getElementById('contextImpact');e.style.display='block';e.style.background=i.level==='high'?'#fff0ef':'#fff8e8';e.style.border=`1px solid ${i.level==='high'?'#efb8b4':'#ead49c'}`;e.innerHTML=`<b>${String(i.headline||'Delivery conditions').replace(/[<>&]/g,'')}</b><br>${String(i.message||'').replace(/[<>&]/g,'')}`}).catch(()=>{});
 const p = new URLSearchParams(location.search).get('partner');
 const CART = {};  // id -> {name, cents, qty}
+let PREVIEW_ONLY = false;
 document.getElementById('idempotencyField').value =
   (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
   `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -571,6 +572,7 @@ const HAS_MENU = !!new URLSearchParams(location.search).get('partner');
 
 function goCheckout(){
   if(!HAS_MENU) return;
+  if(PREVIEW_ONLY){ gwToast('This sample menu is for preview only. Choose a live kitchen to order.', false); return; }
   if(!Object.keys(CART).length){ gwToast('Add something first.', false); return; }
   STEP = 'checkout';
   paintReview();
@@ -845,7 +847,15 @@ function applyPartnerMeta(d){
   const ht = document.getElementById('headerTag');
   if(ht && d.cuisine){ ht.textContent = d.cuisine + ' · Delivered by GateWay'; }
   FEE_CENTS = d.delivery_fee_cents || 0;
-  if(d.accepting_orders === false){
+  if(d.demo === true){
+    PREVIEW_ONLY = true;
+    const b = document.getElementById('pausedBanner');
+    b.style.display = '';
+    b.innerHTML = '👀 <b>Preview menu</b> — explore the experience, but this sample kitchen is not taking real orders. ' +
+      '<a href="/" style="color:inherit;font-weight:800">Choose a live local kitchen</a>.';
+    const send = document.querySelector('button[type="submit"]');
+    if(send){ send.disabled = true; send.style.opacity = .55; send.textContent = 'Preview only · ordering unavailable'; }
+  } else if(d.accepting_orders === false){
     const b = document.getElementById('pausedBanner');
     b.style.display = '';
     b.textContent = d.display_name + " isn't taking orders right now — check back soon.";
@@ -868,7 +878,7 @@ function applyPartnerMeta(d){
     const rf = document.getElementById('reqFor');
     if(rf) rf.addEventListener('change', ()=>{
       const s = document.querySelector('button[type="submit"]');
-      if(s && rf.value){ s.disabled = false; s.style.opacity = 1; s.textContent = 'Schedule this order'; }
+      if(s && rf.value && !PREVIEW_ONLY){ s.disabled = false; s.style.opacity = 1; s.textContent = 'Schedule this order'; }
     });
   }
   if(d.address){
@@ -910,6 +920,11 @@ try{
     // while the request is in flight) must never fire two orders. The server
     // also dedups, but stopping it here is instant and gives honest feedback.
     const sb = document.querySelector('button[type="submit"]');
+    if(PREVIEW_ONLY){
+      ev.preventDefault();
+      gwToast('This sample menu is for preview only. Choose a live kitchen to order.', false);
+      return false;
+    }
     if(window._GW_SENDING){ ev.preventDefault(); return false; }
     window._GW_SENDING = true;
     if(sb){
@@ -920,7 +935,7 @@ try{
     // if navigation somehow doesn't happen (offline, blocked), give it back
     setTimeout(()=>{
       window._GW_SENDING = false;
-      if(sb && sb.disabled){ sb.disabled = false; if(sb.dataset.label) sb.textContent = sb.dataset.label; }
+      if(sb && sb.disabled && !PREVIEW_ONLY){ sb.disabled = false; if(sb.dataset.label) sb.textContent = sb.dataset.label; }
     }, 12000);
     if(p) localStorage.setItem('gw_last_partner', JSON.stringify(
       {code: p, name: (document.querySelector('.tag').textContent||'').split(' × ')[0]}));

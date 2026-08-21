@@ -159,7 +159,24 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
             p = db.get(Partner, data["partner"].lower())
         finally:
             db.close()
-        if p and not p.accepting_orders:
+        # A partner code is a routing destination, not free-form metadata.  An
+        # unknown code would otherwise create an order no kitchen can see; a
+        # PREVIEW merchant would create a real ticket for a fictional kitchen.
+        if p is None:
+            if wants_html:
+                return HTMLResponse(CONFIRM_PAGE.format(
+                    headline="That kitchen isn't available",
+                    order_id="—",
+                    message="This ordering link is no longer active. Return to GateWay and choose an available kitchen."), status_code=404)
+            return JSONResponse({"received": False, "error": "unknown_partner"}, status_code=404)
+        if p.demo:
+            if wants_html:
+                return HTMLResponse(CONFIRM_PAGE.format(
+                    headline=f"{p.display_name} is a preview",
+                    order_id="—",
+                    message="You can explore this sample menu, but it is not accepting real orders. Choose a live local kitchen to order now."), status_code=409)
+            return JSONResponse({"received": False, "error": "preview_only"}, status_code=409)
+        if not p.accepting_orders:
             if wants_html:
                 return HTMLResponse(CONFIRM_PAGE.format(
                     headline=f"{p.display_name} isn't taking orders right now",
@@ -170,29 +187,28 @@ async def intake(request: Request, background_tasks: BackgroundTasks):
         # Opening hours. A scheduled order is judged at the time it's FOR, not
         # the time it's placed — ordering Friday lunch on Thursday night is
         # exactly what scheduling is for and must not be refused.
-        if p is not None:
-            when = None
-            if data["requested_for"]:
-                try:
-                    when = datetime.fromisoformat(data["requested_for"])
-                    if when.tzinfo is None:
-                        when = when.replace(tzinfo=MARKET_TZ)
-                    when = when.astimezone(MARKET_TZ)
-                except (ValueError, TypeError):
-                    when = None
-            hstat = hours.status(p, when)
-            if not hstat["open"]:
-                headline = (f"{p.display_name} is closed then"
-                            if when else f"{p.display_name} is closed right now")
-                msg = hstat["message"] or "They're closed at the moment."
-                if not when:
-                    msg += ". You can still schedule an order for when they reopen."
-                if wants_html:
-                    return HTMLResponse(CONFIRM_PAGE.format(
-                        headline=headline, order_id="—", message=msg), status_code=423)
-                return JSONResponse({"received": False, "error": "kitchen_closed",
-                                     "message": msg,
-                                     "next_open": hstat["next_open"]}, status_code=423)
+        when = None
+        if data["requested_for"]:
+            try:
+                when = datetime.fromisoformat(data["requested_for"])
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=MARKET_TZ)
+                when = when.astimezone(MARKET_TZ)
+            except (ValueError, TypeError):
+                when = None
+        hstat = hours.status(p, when)
+        if not hstat["open"]:
+            headline = (f"{p.display_name} is closed then"
+                        if when else f"{p.display_name} is closed right now")
+            msg = hstat["message"] or "They're closed at the moment."
+            if not when:
+                msg += ". You can still schedule an order for when they reopen."
+            if wants_html:
+                return HTMLResponse(CONFIRM_PAGE.format(
+                    headline=headline, order_id="—", message=msg), status_code=423)
+            return JSONResponse({"received": False, "error": "kitchen_closed",
+                                 "message": msg,
+                                 "next_open": hstat["next_open"]}, status_code=423)
 
     # A scheduled order for a time that's already passed would sit forever as
     # neither "now" nor "today" to the kitchen — never cooked, never delivered.
