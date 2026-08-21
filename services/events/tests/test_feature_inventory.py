@@ -32,7 +32,7 @@ CHECKS = {
  ],
  "app/ui/driver.html": [
    "gw-ui.js", "runline", "maps.apple.com", "headsUp", "showShiftSummary", "collect_cash_cents", "showEarnings", "esc(o.pickup)", "Kitchen says READY",
-   "SCHEDULED", "tel:", "tips_today_cents", "shiftBtn", "navigator.vibrate",
+   "SCHEDULED", "tel:", "tips_today_cents", "shiftBtn", "navigator.vibrate", "trainingDeliver",
    "HAS_ACTIVE = (d.orders", "/guide/driver", "netDown", "skel",
  ],
  "app/ui/kitchen.html": [

@@ -296,7 +296,9 @@ async function load(){
       <div class="row">
         ${dest?`<button class="b-nav" data-d="${esc(dest)}" onclick="nav(this.dataset.d)">Navigate ▸<span class="navsub">${toKitchen?'to the kitchen':'to the customer'}</span></button>`:''}
         ${o.status==='assigned'?`<button class="b-pick" onclick="act('${o.id}','picked_up')">Picked Up</button>`:''}
-        ${o.status==='in_transit'?`<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`:''}
+        ${o.status==='in_transit'?(o.demo
+          ? `<button class="b-del" onclick="trainingDeliver('${o.id}','${o.order_id}')">Training proof + deliver ✓</button>`
+          : `<button class="b-del" onclick="deliver('${o.id}','${o.order_id}')">Delivered ✓</button>`):''}
         ${o.status==='in_transit'?`<button class="b-note" onclick="headsUp('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Heads-up ▸</button>`:''}
         <button class="b-note" onclick="addNote('${o.id}')" style="background:transparent;border:1.5px solid #c7c3ba;color:#5a5e64;border-radius:10px;padding:10px;font-size:.78rem">Note</button>
         <button class="b-fail" onclick="fail('${o.id}')">Problem</button>
@@ -566,6 +568,31 @@ function deliver(id, orderId){
   // If picker is cancelled, still allow delivery after a beat
   inp.addEventListener('cancel', ()=>{ if(!fired) act(id,'delivered'); });
   inp.click();
+}
+async function trainingDeliver(id, orderId){
+  // Rehearsals run inside desktop test harnesses that cannot grant a camera or
+  // populate an OS file picker.  Demo tickets get a clearly branded, local
+  // proof image and still exercise the exact protected proof endpoint, event
+  // log, database retention, customer rendering, and delivered transition.
+  try{
+    const blob = await (await fetch('/static/gwd-emblem.png')).blob();
+    const image_b64 = await new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    const proof = await fetch(api(`/orders/${id}/proof`), {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image_b64, content_type:'image/png', order_id:orderId})});
+    if(!proof.ok){
+      let detail='Could not save training proof.';
+      try{ detail=(await proof.json()).detail||detail; }catch(e){}
+      gwToast(detail, false); return;
+    }
+    gwToast('Training proof captured ✓');
+    await act(id, 'delivered');
+  }catch(e){ gwToast('Could not complete the training proof.', false); }
 }
 function shrink(file){
   return new Promise(res=>{
