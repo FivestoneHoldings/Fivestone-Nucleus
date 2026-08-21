@@ -72,7 +72,7 @@ def test_headers_present_even_on_error_responses():
 
 
 def test_capability_scoped_surfaces_are_never_cached_or_indexed():
-    for path in ("/board/example", "/driver/example", "/kitchen/example",
+    for path in ("/board", "/board/example", "/driver/example", "/kitchen/example",
                  "/api/diag", "/proof/example"):
         r = client.get(path)
         assert r.headers.get("cache-control") == "no-store", path

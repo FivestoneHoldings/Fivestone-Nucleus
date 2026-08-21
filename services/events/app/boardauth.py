@@ -26,6 +26,7 @@ Design:
 """
 import hashlib
 import secrets
+from contextvars import ContextVar, Token
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -33,6 +34,9 @@ from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal
+
+
+_REQUEST_KEY: ContextVar[str] = ContextVar("gateway_board_request_key", default="")
 
 
 class BoardAccess(Base):
@@ -56,6 +60,20 @@ def _admin_key() -> str:
     return os.environ.get("ADMIN_KEY", "")
 
 
+def bind_request_key(key: str) -> Token:
+    """Bind a board credential to this one async request only.
+
+    The public route value ``session`` is intentionally not a credential. The
+    actual key travels in a no-store request header, keeping it out of URLs,
+    browser history, referrers, screenshots, and reverse-proxy access logs.
+    """
+    return _REQUEST_KEY.set(str(key or ""))
+
+
+def reset_request_key(token: Token) -> None:
+    _REQUEST_KEY.reset(token)
+
+
 def check_key(key: str) -> str:
     """Validate a board key. Returns the name to attribute actions to.
 
@@ -63,6 +81,8 @@ def check_key(key: str) -> str:
     regardless of WHY it failed, so a bad key can't be used to fingerprint
     whether a name exists in the system."""
     key = str(key or "")
+    if key == "session":
+        key = _REQUEST_KEY.get()
     admin = _admin_key()
     if admin and secrets.compare_digest(key, admin):
         return "Founder"

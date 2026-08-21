@@ -112,5 +112,7 @@ def test_new_driver_tokens_are_high_entropy():
 def test_ui_pages_serve():
     assert client.get("/driver/tok123").status_code == 200
     assert "Driver Hub" in client.get("/driver/tok123").text
-    assert client.get("/board/anything").status_code == 200
+    assert client.get("/board").status_code == 200
+    assert "Open Command" in client.get("/board").text
+    assert client.get("/board/anything").status_code == 403
     assert client.get("/order").status_code == 200

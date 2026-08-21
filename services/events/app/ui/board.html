@@ -102,6 +102,17 @@ body{padding-top:76px !important}
 button{border-radius:11px}
 select,input{border-radius:11px}
 .chip{font-weight:500}
+.board-login{display:none;position:fixed;inset:0;z-index:300;background:#0b1020;
+align-items:center;justify-content:center;padding:24px}.board-login-card{width:min(100%,390px);
+background:#121a30;border:1px solid #263252;border-radius:22px;padding:24px;
+box-shadow:0 24px 70px rgba(0,0,0,.45)}.board-login-card img{height:38px;margin-bottom:24px}
+.board-login-card h1{font-size:1.45rem;letter-spacing:-.03em;margin-bottom:8px}
+.board-login-card p{color:#9ca3b5;line-height:1.5;font-size:.86rem;margin-bottom:18px}
+.board-login-card input{width:100%;margin-bottom:10px}.board-login-card button{width:100%;padding:13px}
+.board-login-error{min-height:20px;color:#ff8b80;font-size:.76rem;margin-top:10px}
+body.locked .board-login{display:flex}body.locked>*:not(.board-login):not(script){visibility:hidden}
+body.locked .board-login{visibility:visible}.signout{background:transparent;border:0;color:#8b93a7;
+font:500 .58rem 'IBM Plex Mono';padding:5px 0;text-transform:uppercase;letter-spacing:.08em}
 
 .card{padding:16px}
 .line{font-size:.87rem;margin:7px 0}
@@ -124,7 +135,16 @@ pre,code{white-space:pre-wrap;word-break:break-word}
 </head>
 <body>
 <div class="gw-bar"><img src="/static/logo-bar.png" alt="GateWay Dispatch">
-<span class="surf">Command <span class="gw-dash"><i></i><i></i><i></i></span></span></div>
+<span class="surf">Command <span class="gw-dash"><i></i><i></i><i></i></span> · <button class="signout" onclick="boardSignOut()">Sign out</button></span></div>
+
+<div class="board-login" id="boardLogin"><form class="board-login-card" onsubmit="boardSignIn(event)">
+  <img src="/static/logo-bar.png" alt="GateWay Dispatch">
+  <h1>Open Command</h1><p>Enter your founder or individually assigned team key. It is exchanged for a protected browser session and never added to the URL.</p>
+  <label for="boardKeyInput" style="display:block;font-size:.7rem;font-weight:800;margin-bottom:6px">COMMAND KEY</label>
+  <input id="boardKeyInput" type="password" autocomplete="current-password" required placeholder="Your private command key">
+  <label style="display:flex;gap:9px;align-items:center;color:#aeb5c6;font-size:.75rem;margin:2px 0 13px"><input id="boardRemember" type="checkbox" checked style="width:auto;flex:0 0 auto">Remember this trusted device for 7 days</label>
+  <button id="boardLoginButton">Open Command</button><div class="board-login-error" id="boardLoginError" role="alert"></div>
+</form></div>
 
 <div class="mark" style="display:none">GateWay <span>Command Board</span></div>
 <div class="sub">Live · Fivestone infrastructure</div>
@@ -154,7 +174,7 @@ pre,code{white-space:pre-wrap;word-break:break-word}
 <div id="insightsPanel" style="display:none;margin-bottom:12px"></div>
 <button onclick="showInbox()" id="inboxBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">📥 Inbox — who raised their hand</button>
   <div id="inboxPanel" style="display:none;margin-bottom:12px"></div>
-  <button onclick="showPatchWork()" id="patchWorkBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #31543e;color:#70d69a;padding:11px;font-size:.8rem;box-shadow:none">🌱 Patch work — services, partners &amp; demand</button>
+  <button onclick="showPatchWork()" id="patchWorkBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🌐 Community work — services, partners &amp; demand</button>
   <div id="patchWorkPanel" style="display:none;margin-bottom:12px"></div>
   <button onclick="showDriverRequests()" id="drReqBtn" style="width:100%;margin-bottom:8px;background:transparent;border:1.5px solid #263252;color:#8b93a7;padding:11px;font-size:.8rem;box-shadow:none">🚗 Driver requests</button>
   <div id="drReqPanel" style="display:none;margin-bottom:12px"></div>
@@ -172,8 +192,43 @@ pre,code{white-space:pre-wrap;word-break:break-word}
 <div id="log" style="display:none"></div>
 <script src="/static/gw-ui.js"></script>
 <script>
-const key = location.pathname.split('/').filter(Boolean).pop();
-const api = p => `/api/board/${key}` + p;
+const api = p => `/api/board/session` + p;
+const _boardFetch = window.fetch.bind(window);
+window.fetch = function(input, init={}){
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if(url.startsWith('/api/board/session')){
+    init = {...init, cache:'no-store'};
+  }
+  return _boardFetch(input, init);
+};
+let authenticated=false;
+document.body.classList.add('locked');
+async function boardSignIn(event){
+  event.preventDefault();
+  const candidate=document.getElementById('boardKeyInput').value.trim();
+  const error=document.getElementById('boardLoginError');
+  const button=document.getElementById('boardLoginButton');
+  if(!candidate)return;
+  button.disabled=true;button.textContent='Checking…';error.textContent='';
+  try{
+    const response=await _boardFetch('/api/board/login',{method:'POST',cache:'no-store',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({key:candidate,remember:document.getElementById('boardRemember').checked})});
+    if(!response.ok)throw Error('That command key is not valid.');
+    document.getElementById('boardKeyInput').value='';authenticated=true;
+    document.body.classList.remove('locked');
+    document.getElementById('csvLink').href='#';
+    await load();paintAlertBanner();
+  }catch(err){error.textContent=err.message||'Unable to sign in.'}
+  finally{button.disabled=false;button.textContent='Open Command'}
+}
+async function boardSignOut(){await _boardFetch('/api/board/logout',{method:'POST',cache:'no-store'});location.replace('/board')}
+async function startBoard(){
+  try{
+    const response=await fetch(api('/readiness'));
+    if(!response.ok)throw Error();
+    authenticated=true;document.body.classList.remove('locked');await load();paintAlertBanner();
+  }catch(e){setTimeout(()=>document.getElementById('boardKeyInput').focus(),50)}
+}
 let DRIVERS = [], VIEW = 'orders';
 function esc(x){ const d=document.createElement('div'); d.textContent=x||''; return d.innerHTML; }
 
@@ -222,7 +277,7 @@ async function loadPartners(){
       <div class="row"><button class="${x.accepting_orders?'warn':''}" onclick="setAccepting('${x.code}',${!x.accepting_orders})">${x.accepting_orders?'Pause orders ⏸':'Resume orders ▶'}</button></div>
       <div class="row"><button class="ghost" onclick="toggleMenu('${x.code}')">Menu ▸</button>
         <button class="ghost" onclick="showDigest('${x.code}')">7-day ▸</button>
-        <button class="ghost" onclick="openLink(api('/statement/${x.code}').replace(location.origin,''))">Statement ↗</button></div>
+        <button class="ghost" onclick="openProtected(api('/statement/${x.code}'))">Statement ↗</button></div>
       <div class="row">
         <button class="${x.__live===false?'warn':'ghost'}" onclick="goLive('${x.code}')">🚦 Go-live check</button>
         <button class="ghost" onclick="editBrand('${x.code}')">🎨 Brand ✎</button></div>
@@ -377,6 +432,13 @@ async function savePartnerMeta(code){
       address, delivery_fee_cents: fee})) loadPartners();
 }
 function openLink(path){ window.open(location.origin + path, '_blank'); }
+async function openProtected(path){
+  const response=await fetch(path);
+  if(!response.ok){gwToast('Unable to open that report.',false);return}
+  const url=URL.createObjectURL(await response.blob());
+  window.open(url,'_blank','noopener');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
 async function shareLink(title, path){
   const url = location.origin + path;
   if(navigator.share){
@@ -906,11 +968,11 @@ async function showPatchWork(){
       section('Community moderation',submissions,x=>`<div style="padding:11px 0;border-bottom:1px solid #1e2942"><b>${esc(x.display_name)}</b> <span class="chip assigned">${esc(x.kind.replaceAll('_',' '))}</span><div style="font-size:.8rem;margin-top:5px;white-space:pre-wrap">${esc(x.text)}</div><div class="row" style="margin-top:8px"><button onclick="patchStatus('submission','${x.id}','approved')">Publish</button><button class="warn" onclick="patchStatus('submission','${x.id}','declined')">Decline</button></div></div>`)+
       section('Bring It demand',bring,x=>`<div style="padding:9px 0;border-bottom:1px solid #1e2942"><b>${esc(x.name)}</b><span style="color:#70d69a;font-family:'IBM Plex Mono';font-size:.7rem;margin-left:8px">${x.votes} votes</span><div style="color:#8b93a7;font-size:.74rem">${esc(x.area)} · ${esc(x.status)}</div>${x.votes>=100?`<button style="margin-top:7px" onclick="patchStatus('bring','${x.id}','outreach_ready')">Build outreach</button>`:''}</div>`)+
       '</div>';
-  }catch(e){el.innerHTML='<div class="card" style="color:#f0a04b">Could not load Patch work.</div>'}
+  }catch(e){el.innerHTML='<div class="card" style="color:#f0a04b">Could not load community work.</div>'}
 }
 async function patchStatus(kind,id,status){
   const r=await fetch(api(`/patch-work/${kind}/${id}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,note:''})});
-  if(!r.ok){gwToast('Could not update this item.',false);return}gwToast('Patch work updated ✓',true);document.getElementById('patchWorkPanel').style.display='none';showPatchWork();
+  if(!r.ok){gwToast('Could not update this item.',false);return}gwToast('Community work updated ✓',true);document.getElementById('patchWorkPanel').style.display='none';showPatchWork();
 }
 async function retryOpsSync(){const r=await fetch(api('/operations-sync/retry'),{method:'POST'});const d=await r.json();gwToast(d.remaining?`${d.remaining} still waiting`:'PostgreSQL sync is current ✓',!d.remaining);document.getElementById('patchWorkPanel').style.display='none';showPatchWork()}
 
@@ -1273,7 +1335,14 @@ async function loadLog(){
   }
 }
 
-document.getElementById('csvLink').href = api('/export.csv');
+document.getElementById('csvLink').onclick = async event => {
+  event.preventDefault();
+  const response=await fetch(api('/export.csv'));
+  if(!response.ok){gwToast('Export failed.',false);return}
+  const url=URL.createObjectURL(await response.blob());
+  const a=document.createElement('a');a.href=url;a.download=`gateway-orders-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 function netDown(){
   if(document.getElementById('netB')) return;
   const b = document.createElement('div'); b.id = 'netB';
@@ -1284,7 +1353,8 @@ function netDown(){
 function netUp(){ const b = document.getElementById('netB'); if(b) b.remove(); }
 const _rawLoad = load;
 load = async function(){ try { await _rawLoad(); netUp(); } catch(e) { netDown(); } };
-load(); paintAlertBanner(); setInterval(()=>{ if(VIEW==='orders') load(); }, 20000);
+startBoard();
+setInterval(()=>{ if(authenticated&&VIEW==='orders') load(); }, 20000);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTicketModal(); });
 </script>
 <div id="ticketModalWrap" class="tmwrap" onclick="if(event.target===this)closeTicketModal()">

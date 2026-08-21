@@ -14,7 +14,7 @@ driver, tracking, proof, closeout, and the append-only event record.
 - Database service: `Postgres-RITE`
 - Production URL: `https://fivestone-nucleus-production.up.railway.app`
 - Health endpoint: `/healthz`
-- Founder surface: `/board/{individual-or-founder-key}`
+- Founder surface: `/board` (enter the founder or individual team key in the protected sign-in; do not share bearer-key URLs)
 - Merchant surface: `/kitchen/{merchant-token}`
 - Driver surface: `/driver/{driver-token}`
 
