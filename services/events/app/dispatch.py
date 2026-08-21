@@ -1360,12 +1360,15 @@ async def create_demo_order(key: str, code: str):
     now = _now()
     oid = "ORD-" + hashlib.md5(f"demo{p.code}{now}".encode()).hexdigest()[:8].upper()
     fields = {
-        "order_id": oid, "status": "received", "source_channel": "demo",
+        # Airtable's source_channel is a locked single select in production.  Use
+        # its established value and carry the rehearsal marker in the text
+        # fingerprint instead of requiring schema-write permission at runtime.
+        "order_id": oid, "status": "received", "source_channel": "webhook",
         "partner_code": p.code, "pickup_address": p.address or "",
         "dropoff_address": "123 Demo Lane, Knoxville TN",
         "items_description": f"{lines} — subtotal ${subtotal/100:.2f}",
         "customer_name_raw": "Demo Customer", "customer_phone_raw": "",
-        "fingerprint": hashlib.md5(f"demo{now}".encode()).hexdigest(),
+        "fingerprint": "demo:" + hashlib.md5(f"demo{now}".encode()).hexdigest(),
         "received_at": now, "subtotal_cents": subtotal, "fee_cents": fee,
         "tip_cents": tip, "total_cents": total,
     }
@@ -1510,11 +1513,13 @@ async def phone_order(key: str, request: Request):
     now = _now()
     oid = "ORD-" + hashlib.md5(f"phone{addr}{items}{now}".encode()).hexdigest()[:8].upper()
     fields = {
-        "order_id": oid, "status": "received", "source_channel": "phone",
+        # Keep the locked Airtable select on its established value.  The owned
+        # event log below remains the authoritative source-channel audit trail.
+        "order_id": oid, "status": "received", "source_channel": "webhook",
         "partner_code": code, "pickup_address": pickup, "dropoff_address": addr,
         "items_description": items, "special_instructions": notes,
         "customer_name_raw": name, "customer_phone_raw": phone,
-        "fingerprint": hashlib.md5(f"phone{now}{addr}".encode()).hexdigest(),
+        "fingerprint": "phone:" + hashlib.md5(f"phone{now}{addr}".encode()).hexdigest(),
         "received_at": now, "subtotal_cents": subtotal, "fee_cents": fee,
         "tip_cents": tip, "total_cents": total,
     }

@@ -37,7 +37,8 @@ def test_phone_order_enters_the_same_record_path():
     assert r.status_code == 200
     d = r.json()
     rec = fake.tables[at.ORDERS][d["record_id"]]
-    assert rec["source_channel"] == "phone"
+    assert rec["source_channel"] == "webhook"
+    assert rec["fingerprint"].startswith("phone:")
     assert rec["status"] == "received"                    # lands on the board like any order
     assert rec["partner_code"] == "burgerboys"
     assert rec["pickup_address"]                          # kitchen address auto-filled

@@ -59,7 +59,8 @@ def test_demo_order_priced_from_menu():
     rec = fake.tables[at.ORDERS][d["record_id"]]
     assert rec["partner_code"] == "stephens"
     assert rec["total_cents"] == rec["subtotal_cents"] + rec["fee_cents"] + rec["tip_cents"]
-    assert rec["source_channel"] == "demo"
+    assert rec["source_channel"] == "webhook"
+    assert rec["fingerprint"].startswith("demo:")
     ev = client.get(f"{K}/events").json()["events"]
     assert any(e["actor"] == "founder:demo" and e["entity_ref"] == d["order_id"] for e in ev)
 

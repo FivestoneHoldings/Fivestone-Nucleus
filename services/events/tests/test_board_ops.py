@@ -85,7 +85,8 @@ def test_stats_shape():
 
 
 def test_demo_orders_do_not_count_as_business_volume_or_money():
-    FAKE_ORDER_FIELDS["source_channel"] = "demo"
+    FAKE_ORDER_FIELDS["source_channel"] = "webhook"
+    FAKE_ORDER_FIELDS["fingerprint"] = "demo:training-run"
     try:
         stats = client.get(f"{K}/stats").json()
         assert stats["orders_today"] == 0
@@ -98,6 +99,7 @@ def test_demo_orders_do_not_count_as_business_volume_or_money():
         assert digest["totals"] == {"orders": 0, "delivered": 0, "revenue_cents": 0}
     finally:
         FAKE_ORDER_FIELDS.pop("source_channel", None)
+        FAKE_ORDER_FIELDS.pop("fingerprint", None)
 
 
 def test_owned_events_feed():

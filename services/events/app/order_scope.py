@@ -7,7 +7,9 @@ Command, kitchens, statements, exports, insights, and public impact all agree.
 
 
 def is_demo_order(record: dict) -> bool:
-    return str(record.get("fields", {}).get("source_channel", "")).lower() == "demo"
+    fields = record.get("fields", {})
+    return (str(fields.get("source_channel", "")).lower() == "demo"
+            or str(fields.get("fingerprint", "")).lower().startswith("demo:"))
 
 
 def production_orders(records: list) -> list:
