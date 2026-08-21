@@ -55,13 +55,16 @@ Never put a secret in source, chat, issue text, a screenshot, or a query string.
 6. Open the chosen merchant's go-live check. Resolve every blocking item:
    menu, prices, pickup address, accepting-orders state.
 7. Confirm at least one active driver appears in Command and can open the Driver
-   Hub on the phone that will be used.
+   Hub on the phone that will be used. The driver completes their customer card
+   and taps **OFF SHIFT — tap to start** before dispatch assigns live work.
 8. Confirm `/api/diag` reports Airtable and founder access configured. Stripe may
    remain false for the controlled cash pilot.
 9. Run the automated test suite and retain its pass count with the release SHA.
 10. Run the read-only deployment audit from `services/events` and retain its
     JSON output: `python -m app.launch_audit --base-url https://…`. It must exit
     zero before the first order.
+11. Confirm Command's active queue is clear. Launch readiness must report
+    **No stale active tickets**; audit-cancel abandoned test work with a reason.
 
 ## Live delivery drill
 
