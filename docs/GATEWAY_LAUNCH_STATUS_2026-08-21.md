@@ -15,8 +15,8 @@ reconciliation, and failure drills are complete.
 
 | Check | Result |
 |---|---|
-| Production release | `v1.10.10` · commit `fa3b8d0` |
-| Automated verification | 754 tests passed on 2026-08-20 |
+| Production release | `v1.10.14` · app commit `b979e25` |
+| Automated verification | 756 tests passed locally and in GitHub CI on 2026-08-21 |
 | Database | Railway PostgreSQL · up · durable |
 | Restore/backup gate | Verified within the required seven-day window |
 | Founder launch gate | Ready to take real orders · zero blockers |
@@ -32,10 +32,38 @@ reconciliation, and failure drills are complete.
 | Capability privacy | Command, driver, kitchen, proof, tracking and intake responses are no-store/no-index |
 | Escalation | HQ phone and 9 AM–9 PM daily hours configured |
 
+## Production rehearsal completed
+
+A safely labeled Stephen's training ticket completed the full production path
+on 2026-08-21:
+
+1. Command created the ticket from live menu prices.
+2. Stephen's protected kitchen accepted it and marked it ready.
+3. Command assigned Malcolm-Martin (Founder).
+4. The rotated Driver Hub link started a shift, picked up the ticket, and sent
+   a customer heads-up.
+5. Customer tracking showed the named driver and heads-up without exposing the
+   drop-off address on the active page.
+6. Driver Hub stored a branded training proof through the same protected proof
+   endpoint used by real deliveries and marked the ticket delivered.
+7. Customer tracking showed the delivered state, proof image, and Stephen's
+   thank-you content.
+8. Command closed the ticket; the active queue returned to **All clear** and
+   Launch readiness returned **Ready to take real orders** with zero blockers.
+9. Training volume, money, tips, driver counts, statements, and public impact
+   remained at zero. The driver shift was ended.
+
+The rehearsal exposed and fixed three production defects: locked Airtable
+single-select rejection of training/phone channel values, opaque Command error
+feedback, and inconsistent heads-up audit actors. It also added a clearly
+demo-only proof mechanism for automated rehearsals. No customer data or real
+money was used.
+
 Five abandoned pre-launch assignments were cancelled with an explicit
 `Pre-launch cleanup` reason. They were not deleted; the append-only audit log
 retains all five cancellations. Both driver day links were rotated afterward,
-and the old links are invalid.
+and rotated again after a private capability appeared in deployment
+diagnostics. All older links are invalid.
 
 ## Known nonblocking launch gaps
 
