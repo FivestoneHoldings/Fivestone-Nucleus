@@ -60,6 +60,16 @@ def test_driver_hub_shows_profile_completeness_badge():
     assert "paintProfBadge" in d
 
 
+def test_driver_hub_exposes_live_shift_control_and_day_stats():
+    d = _f("driver.html")
+    assert 'id="shiftBtn"' in d
+    assert 'onclick="toggleShift()"' in d
+    assert 'aria-pressed="false"' in d
+    assert 'id="driverStats"' in d
+    assert "SHIFT = !!d.shift" in d
+    assert "doneText(d)" in d
+
+
 def test_kitchen_86_panel_has_search_for_long_menus():
     k = _f("kitchen.html")
     assert 'id="m86Search"' in k

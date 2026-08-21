@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.8
+Updated: 2026-08-20 · version 1.10.9
 
 The community, offers, demand, concierge, partner, and preference capabilities
 now live inside the existing GateWay visual shell and shared navigation. The
