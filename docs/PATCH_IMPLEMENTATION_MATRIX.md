@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.7
+Updated: 2026-08-20 · version 1.10.8
 
 The community, offers, demand, concierge, partner, and preference capabilities
 now live inside the existing GateWay visual shell and shared navigation. The
@@ -31,6 +31,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
 | Founder/team command authentication | Live | Clean `/board` sign-in sends the founder or individually revocable team credential in a no-store request header. Compatibility links immediately scrub the bearer key from the address bar. |
 | Demo/training data isolation | Live | Demo tickets remain available for lifecycle drills and are visibly labeled, but are excluded from KPIs, revenue, tips, earnings, statements, exports, merchant insights and public impact. |
+| Active queue hygiene | Live | Launch readiness blocks on abandoned received/confirmed/assigned/in-transit/failed tickets while preserving legitimate future scheduled work and training demos. |
 | Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |
 | SMS notifications | External gate | Notification adapter and copy exist; activation requires Twilio credentials and messaging registration. Phone support is 865-964-3843, 9–9 daily. |
 | Square catalog/order integration | External gate | Canonical menu/order models exist; a live Square seller authorization is required. Manual menu/order fallback is live. |
