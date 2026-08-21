@@ -94,10 +94,32 @@ def test_launch_readiness_tells_the_truth():
     assert any("Stephen" in a for a in areas)
     assert areas["Dispatch escalation phone"]["ok"] is True
     assert areas["Recoverable database backup"]["ok"] is True
+    assert areas["Active queue hygiene"]["ok"] is True
+    assert areas["Active queue hygiene"]["required"] is True
+    assert "Driver customer profiles" in areas
+    assert areas["Driver customer profiles"]["required"] is False
     assert "SMS (Twilio)" not in d["blocking"]
     assert "Card payments (Stripe)" not in d["blocking"]
     assert isinstance(d["ready_to_take_orders"], bool)
     assert client.get("/api/board/wrong/readiness").status_code == 403
+
+
+def test_stale_live_ticket_blocks_readiness_but_stale_demo_does_not():
+    old = (NOW - _dt.timedelta(days=3)).isoformat()
+    stale_id = fake.seed(at.ORDERS, {"order_id": "ORD-STALE", "status": "assigned",
+                                     "received_at": old})
+    demo_id = fake.seed(at.ORDERS, {"order_id": "ORD-DEMO-STALE", "status": "assigned",
+                                    "received_at": old, "source_channel": "demo"})
+    try:
+        d = client.get(f"{K}/readiness").json()
+        queue = next(c for c in d["checks"] if c["area"] == "Active queue hygiene")
+        assert queue["ok"] is False
+        assert "ORD-STALE" in queue["detail"]
+        assert "ORD-DEMO-STALE" not in queue["detail"]
+        assert "Active queue hygiene" in d["blocking"]
+    finally:
+        fake.tables[at.ORDERS].pop(stale_id, None)
+        fake.tables[at.ORDERS].pop(demo_id, None)
 
 
 def test_read_only_launch_audit_reports_the_real_sqlite_blocker():

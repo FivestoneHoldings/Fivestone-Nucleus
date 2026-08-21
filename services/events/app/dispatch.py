@@ -781,6 +781,46 @@ def _minutes_between(a: str, b: str):
         return None
 
 
+def _stale_active_orders(records: list, now: datetime | None = None) -> list:
+    """Return active, non-demo tickets too old to be legitimate live work.
+
+    Future scheduled work is allowed even when it was placed days early. An
+    in-transit ticket gets the shortest leash; a missing/unparseable received
+    time is itself unsafe because dispatch cannot establish its age.
+    """
+    now = now or datetime.now(timezone.utc)
+    limits = {"received": 24, "confirmed": 24, "assigned": 12,
+              "in_transit": 6, "failed": 24}
+    stale = []
+    for record in production_orders(records):
+        fields = record.get("fields", {})
+        status = fields.get("status", "")
+        if status not in limits:
+            continue
+        requested = fields.get("requested_for", "")
+        if requested:
+            try:
+                scheduled = datetime.fromisoformat(str(requested).replace("Z", "+00:00"))
+                if scheduled.tzinfo is None:
+                    scheduled = scheduled.replace(tzinfo=MARKET_TZ)
+                if scheduled.astimezone(timezone.utc) > now:
+                    continue
+            except (TypeError, ValueError):
+                pass
+        received = fields.get("received_at", "")
+        try:
+            stamp = datetime.fromisoformat(str(received).replace("Z", "+00:00"))
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            age_hours = (now - stamp.astimezone(timezone.utc)).total_seconds() / 3600
+        except (TypeError, ValueError):
+            age_hours = float("inf")
+        if age_hours > limits[status]:
+            stale.append({"order_id": fields.get("order_id", record.get("id", "")),
+                          "status": status, "age_hours": age_hours})
+    return stale
+
+
 @router.get("/api/board/{key}/stats")
 async def board_stats(key: str):
     _check_key(key)
@@ -1755,6 +1795,34 @@ async def launch_readiness(key: str):
         drivers = []
     checks.append({"area": "Drivers", "ok": len(drivers) > 0, "required": True,
                    "detail": f"{len(drivers)} driver(s) with day links"})
+    from .models import DriverProfile
+    driver_ids = {d["fields"].get("driver_id", "") for d in drivers}
+    db = SessionLocal()
+    try:
+        profiles = [p for p in db.query(DriverProfile).all()
+                    if p.driver_id in driver_ids and (p.avatar or p.photo_url) and p.vehicle]
+    finally:
+        db.close()
+    checks.append({"area": "Driver customer profiles",
+                   "ok": bool(drivers) and len(profiles) == len(drivers),
+                   "required": False,
+                   "detail": (f"{len(profiles)} of {len(drivers)} drivers have a face and vehicle for customer tracking")})
+    try:
+        active_orders = await at.list_records(
+            at.ORDERS,
+            formula=("OR({status}='received',{status}='confirmed',{status}='assigned',"
+                     "{status}='in_transit',{status}='failed')"),
+            max_records=500)
+        stale = _stale_active_orders(active_orders)
+        queue_ok = not stale
+        queue_detail = ("No stale active tickets" if queue_ok else
+                        f"{len(stale)} stale active ticket(s): " +
+                        ", ".join(x["order_id"] for x in stale[:5]))
+    except Exception:
+        queue_ok = False
+        queue_detail = "Active queue could not be audited"
+    checks.append({"area": "Active queue hygiene", "ok": queue_ok,
+                   "required": True, "detail": queue_detail})
     dispatch_phone = os.environ.get("GATEWAY_HQ_PHONE", "").strip()
     checks.append({"area": "Dispatch escalation phone", "ok": bool(dispatch_phone),
                    "required": True,
