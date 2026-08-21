@@ -250,11 +250,12 @@ gwSplash({name:'GateWay Delivery',
 <div id="quickReorder" style="display:none"></div>
 <div id="localImpact" style="display:none"></div>
 
-<a href="/patch" style="display:block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#102319,#28543b);border-radius:20px;padding:18px;margin:0 0 18px;box-shadow:0 8px 24px rgba(16,35,25,.24)">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.13em;text-transform:uppercase;color:#d8ef8a">New · Patch Today</div>
-  <div style="font-size:1.18rem;font-weight:900;margin-top:6px">Your neighborhood, in one place <span style="float:right">→</span></div>
-  <div style="font-size:.78rem;line-height:1.45;color:#c5d4c9;margin-top:4px">Local updates, offers, Bring It voting, catering and flexible delivery.</div>
+<a href="/community" style="display:block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#16337a,#1e4292);border-radius:20px;padding:18px;margin:0 0 12px;box-shadow:0 8px 24px rgba(22,51,122,.28)">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.13em;text-transform:uppercase;color:#a9c2ff">New around here</div>
+  <div style="font-size:1.18rem;font-weight:900;margin-top:6px">GateWay Community <span style="float:right">→</span></div>
+  <div style="font-size:.78rem;line-height:1.45;color:#c3d0f0;margin-top:4px">Neighbor updates, local offers, places you want next, catering and bigger plans.</div>
 </a>
+<div id="communityPreview"></div>
 
 <div class="gsearch">
   <span class="gsico">🔍</span>
@@ -301,13 +302,13 @@ gwSplash({name:'GateWay Delivery',
   <a href="/drive-with-us" style="flex:1;text-decoration:none;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)">
     <div style="font-size:1.3rem">🚗</div><b style="font-size:.85rem">Drive with us</b>
     <div style="font-size:.68rem;color:var(--dim);margin-top:2px">Earn on your schedule</div></a>
-  <a href="/patch?tab=partner" style="flex:1;text-decoration:none;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)">
+  <a href="/community?tab=partner" style="flex:1;text-decoration:none;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;color:var(--ink);box-shadow:0 2px 10px rgba(20,30,60,.05)">
     <div style="font-size:1.3rem">🏪</div><b style="font-size:.85rem">Partner with us</b>
     <div style="font-size:.68rem;color:var(--dim);margin-top:2px">Grow your kitchen</div></a>
 </div>
 <div style="text-align:center;margin-top:14px"><a href="/support" style="font-size:.78rem;color:#16337a;font-weight:700;text-decoration:none">💬 Help &amp; support</a></div>
 
-<div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus · <a href="/team" style="color:#9a9ea5">Team sign-in</a> · <a href="/patch" style="color:#9a9ea5">Patch</a> · <a href="/roadmap" style="color:#9a9ea5">Roadmap</a></div>
+<div class="foot">GateWay Delivery · Fivestone Holdings<br>Built on Nucleus · <a href="/team" style="color:#9a9ea5">Team sign-in</a> · <a href="/community" style="color:#9a9ea5">Community</a> · <a href="/roadmap" style="color:#9a9ea5">Roadmap</a></div>
 <script src="/static/gw-profile.js"></script>
 <script src="/static/gw-ui.js"></script>
 <script>
@@ -356,6 +357,10 @@ fetch('/v0/community-fund').then(r=>r.json()).then(cf=>{
       <div style="color:#7a7f87;font-size:.75rem">The Neighbor Fund · GateWay takes nothing</div>
     </div>
     <div style="color:#c3cbd8;font-size:1.1rem">›</div></div></a>`);
+}).catch(()=>{});
+fetch('/v0/patch/overview').then(r=>r.json()).then(d=>{
+  const rows=(d.feed||[]).slice(0,2); if(!rows.length) return;
+  document.getElementById('communityPreview').innerHTML=`<div class="hlrail" style="margin-bottom:12px">${rows.map(x=>`<a href="/community" style="text-decoration:none;color:inherit"><div class="hlcard" style="--tint:#2f6fe0"><div class="hlbody"><div class="hlkind">GATEWAY COMMUNITY · ${esc(x.kind)}</div><b>${esc(String(x.title||'').replaceAll('Patch','GateWay'))}</b></div><p>${esc(String(x.summary||'').replaceAll('Patch','GateWay'))}</p></div></a>`).join('')}</div>`;
 }).catch(()=>{});
 fetch('/v0/local-impact').then(r=>r.json()).then(li=>{
   if(!li || !li.delivered) return;

@@ -9,6 +9,7 @@ import app.kitchen as kitchen_mod
 import app.intake as intake_mod
 import app.track as track_mod
 from app.db import SessionLocal
+from app.bizday import business_day
 from app.models import Partner
 from app.main import app
 from tests.fake_airtable import FakeAirtable
@@ -16,7 +17,7 @@ from tests.fake_airtable import FakeAirtable
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 
 @pytest.fixture(autouse=True)

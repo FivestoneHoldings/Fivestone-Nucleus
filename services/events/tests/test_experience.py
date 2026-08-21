@@ -6,6 +6,7 @@ import app.airtable_client as at
 import app.dispatch as dp
 import app.track as track_mod
 from app.db import SessionLocal
+from app.bizday import business_day
 from app.models import DriverLocation, Partner, Proof
 from app.main import app
 from tests.fake_airtable import FakeAirtable
@@ -13,7 +14,7 @@ from tests.fake_airtable import FakeAirtable
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 DRV = fake.seed(at.DRIVERS, {"driver_id": "DRV-XP", "day_token": "tokXP",
                               "display_name": "Marcus Webb", "status": "active"})

@@ -11,16 +11,35 @@ IDENTITY = "p_123456789012345678901234567890"
 HEADERS = {"X-Patch-Identity": IDENTITY}
 
 
-def test_patch_page_and_seeded_overview_are_live():
-    page = client.get("/patch")
+def test_community_is_integrated_into_gateway_and_legacy_route_redirects():
+    redirect = client.get("/patch", follow_redirects=False)
+    assert redirect.status_code == 307
+    assert redirect.headers["location"] == "/community"
+    page = client.get("/community")
     assert page.status_code == 200
+    assert "/static/logo-bar.png" in page.text
+    assert "GateWay Community" in page.text
     assert "Bring it" in page.text
+    assert "#102319" not in page.text
+    home = client.get("/")
+    assert 'href="/community"' in home.text
+    assert 'href="/courier"' in home.text
+    assert "GateWay Community" in home.text
+
+
+def test_seeded_overview_is_live_and_gateway_branded():
     response = client.get("/v0/patch/overview", headers=HEADERS)
     assert response.status_code == 200
     data = response.json()
     assert data["feed"]
     assert data["offers"]
     assert data["wallet"]["points"] == 0
+    seeded_copy = " ".join(
+        [x["title"] + " " + x["summary"] + " " + x["source_name"] for x in data["feed"]]
+        + [x["title"] + " " + x["detail"] for x in data["offers"]]
+    )
+    assert "Patch operations" not in seeded_copy
+    assert "Welcome to Patch" not in seeded_copy
 
 
 def test_bring_request_deduplicates_and_allows_one_vote_per_identity():

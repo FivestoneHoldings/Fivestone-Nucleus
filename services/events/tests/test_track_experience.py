@@ -5,12 +5,13 @@ from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.dispatch as dp
 import app.track as track_mod
+from app.bizday import business_day
 from app.main import app
 from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 fake.seed(at.ORDERS, {"order_id": "ORD-TRX01", "status": "assigned",
                        "items_description": "1× Thing ($5.00)",

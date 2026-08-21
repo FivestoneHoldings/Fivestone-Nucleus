@@ -4,12 +4,13 @@ import pytest
 from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.dispatch as dp
+from app.bizday import business_day
 from app.main import app
 from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 for i,(st,partner,sub) in enumerate([("delivered","stephens",1799),("closed","stephens",1200),
                                       ("delivered","burgerboys",900),("received","friendsbbq",2000)]):

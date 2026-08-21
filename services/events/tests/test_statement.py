@@ -4,15 +4,15 @@ import pytest
 from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.dispatch as dp
+from app.bizday import business_day
 from app.main import app
 from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-NOW = _dt.datetime.now(_dt.timezone.utc)
-TODAY = NOW.strftime("%Y-%m-%d")
-D2 = (NOW - _dt.timedelta(days=2)).strftime("%Y-%m-%d")
+TODAY = business_day()
+D2 = (_dt.datetime.strptime(TODAY, "%Y-%m-%d") - _dt.timedelta(days=2)).strftime("%Y-%m-%d")
 
 fake.seed(at.ORDERS, {"order_id": "ORD-ST-A1", "status": "delivered", "partner_code": "stephens",
                        "items_description": "1× Pepperoni", "received_at": f"{D2}T15:00:00.000Z",

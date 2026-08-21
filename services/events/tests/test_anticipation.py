@@ -6,6 +6,7 @@ import app.airtable_client as at
 import app.dispatch as dp
 import app.track as track_mod
 from app.db import SessionLocal
+from app.bizday import business_day
 from app.models import Partner
 from app.main import app
 from tests.fake_airtable import FakeAirtable
@@ -13,7 +14,7 @@ from tests.fake_airtable import FakeAirtable
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 fake.seed(at.ORDERS, {"order_id": "ORD-ANT-WAIT", "status": "received",
                        "partner_code": "stephens", "items_description": "1× Pie",

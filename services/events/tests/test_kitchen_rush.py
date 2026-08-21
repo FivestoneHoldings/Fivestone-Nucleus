@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.kitchen as kitchen_mod
+from app.bizday import business_day
 from app.db import SessionLocal
 from app.models import Partner
 from app.main import app
@@ -11,9 +12,8 @@ from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 fake = FakeAirtable()
-NOW = _dt.datetime.now(_dt.timezone.utc)
-TODAY = NOW.strftime("%Y-%m-%d")
-YESTERDAY = (NOW - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
+TODAY = business_day()
+YESTERDAY = (_dt.datetime.strptime(TODAY, "%Y-%m-%d") - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 SEED = [
     # (order_id, status, received, requested_for)

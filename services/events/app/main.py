@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from .db import SessionLocal, Base, engine, get_db, DB_BACKEND, DB_DURABLE
 from .models import Event
 from . import operations_models  # noqa: F401 — register owned Postgres operations tables
@@ -199,8 +199,13 @@ def roadmap_page():
 
 @app.get("/patch", response_class=HTMLResponse)
 def patch_page():
-    """Patch Today: community, offers, demand voting and planned services."""
-    return _page("patch.html")
+    """Compatibility route: community is part of GateWay, not a second app."""
+    return RedirectResponse("/community", status_code=307)
+
+
+@app.get("/community", response_class=HTMLResponse)
+def community_page():
+    return _page("community.html")
 
 
 @app.get("/merchant", response_class=HTMLResponse)
@@ -217,7 +222,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.3"
+NUCLEUS_VERSION = "1.10.4"
 
 
 @app.middleware("http")
