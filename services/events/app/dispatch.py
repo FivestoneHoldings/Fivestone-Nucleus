@@ -1369,7 +1369,27 @@ async def create_demo_order(key: str, code: str):
         "received_at": now, "subtotal_cents": subtotal, "fee_cents": fee,
         "tip_cents": tip, "total_cents": total,
     }
-    created = await at.create_record(at.ORDERS, fields)
+    try:
+        created = await at.create_record(at.ORDERS, fields)
+    except Exception as exc:
+        # This is a founder-only launch tool.  Preserve the normal branded error
+        # response, but surface Airtable's field-level rejection so a failed
+        # rehearsal is actionable instead of a generic red toast.  Never return
+        # request headers, credentials, or the submitted customer payload.
+        detail = "The live order store rejected the training ticket."
+        response = getattr(exc, "response", None)
+        if response is not None:
+            try:
+                error = response.json().get("error", {})
+                if isinstance(error, dict):
+                    kind = str(error.get("type", "")).strip()[:80]
+                    message = str(error.get("message", "")).strip()[:240]
+                    safe = ": ".join(part for part in (kind, message) if part)
+                    if safe:
+                        detail = f"Live order store: {safe}"
+            except Exception:
+                pass
+        raise HTTPException(502, detail) from exc
     _log_event("order.received", oid, "founder:demo", {"demo": True, "partner": p.code})
     return {"ok": True, "order_id": oid, "record_id": created["id"],
             "total_cents": total, "partner": p.code}

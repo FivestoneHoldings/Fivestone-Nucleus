@@ -455,7 +455,11 @@ async function demoOrder(code){
   const r = await fetch(api(`/partners/${code}/demo-order`), {method:'POST'});
   if(r.ok){ const d = await r.json();
     gwToast(`Demo order ${d.order_id} placed — $${(d.total_cents/100).toFixed(2)}`); load(); }
-  else gwToast('Demo order failed.', false);
+  else {
+    let detail = 'The training ticket could not be created.';
+    try { const d = await r.json(); if(d.detail) detail = d.detail; } catch(e) {}
+    gwToast(detail, false);
+  }
 }
 async function editThanks(code, current){
   const note = await gwPrompt({title:'Thank-you note from this kitchen', multiline:true,

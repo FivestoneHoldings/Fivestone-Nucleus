@@ -64,6 +64,22 @@ def test_demo_order_priced_from_menu():
     assert any(e["actor"] == "founder:demo" and e["entity_ref"] == d["order_id"] for e in ev)
 
 
+def test_demo_order_failure_is_actionable_without_leaking_payload(monkeypatch):
+    async def reject(_table, _fields):
+        raise RuntimeError("secret upstream internals")
+
+    monkeypatch.setattr(dp.at, "create_record", reject)
+    r = client.post(f"{K}/partners/stephens/demo-order")
+    assert r.status_code == 502
+    assert r.json()["detail"] == "The live order store rejected the training ticket."
+    assert "secret" not in r.text
+
+
+def test_board_surfaces_training_ticket_failure_detail():
+    html = client.get("/board").text
+    assert "if(d.detail) detail = d.detail" in html
+
+
 def test_thanks_note_flow_to_delivered_page():
     r = client.post(f"{K}/partners/stephens/thanks",
                     json={"note": "Grazie! — the Stephen's family"})
