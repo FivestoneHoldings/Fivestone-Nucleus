@@ -9,6 +9,7 @@ import app.identity as identity_mod
 import app.kitchen as kitchen_mod
 import app.notify as notify
 from app.db import SessionLocal
+from app.bizday import business_day
 from app.models import Partner, ReopenAlert
 from app.main import app
 from tests.fake_airtable import FakeAirtable
@@ -16,7 +17,7 @@ from tests.fake_airtable import FakeAirtable
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 SENT = []
 
 DONE = fake.seed(at.ORDERS, {"order_id": "ORD-TIP-DONE", "status": "delivered",

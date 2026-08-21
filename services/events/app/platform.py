@@ -88,18 +88,41 @@ def award_delivery_points(order_id: str, points: int = 100) -> bool:
 def seed_patch_platform() -> None:
     db = SessionLocal()
     try:
+        # v1.10.4 folds these capabilities into the existing GateWay app. Only
+        # migrate copy that we seeded ourselves; never rewrite a neighbor's or
+        # operator's authored content.
+        seeded_items = {
+            "Patch is open for local delivery": (
+                "GateWay Community is open",
+                "Order from local kitchens, send a custom delivery, or plan a larger meal from one place.",
+            ),
+            "Catering and recurring lunch requests are live": (
+                "Catering and recurring lunch requests are live",
+                "Tell us the headcount, date and budget. GateWay operations will confirm the plan before anything is charged.",
+            ),
+        }
+        for old_title, (new_title, new_summary) in seeded_items.items():
+            row = db.query(CommunityItem).filter_by(title=old_title).first()
+            if row:
+                row.title = new_title
+                row.summary = new_summary
+                if row.source_name == "Patch operations":
+                    row.source_name = "GateWay operations"
+        welcome_offer = db.query(PatchOffer).filter_by(title="Welcome to Patch").first()
+        if welcome_offer:
+            welcome_offer.title = "Welcome to GateWay"
         if not db.query(CommunityItem).count():
             db.add_all([
-                CommunityItem(kind="welcome", title="Patch is open for local delivery",
+                CommunityItem(kind="welcome", title="GateWay Community is open",
                               summary="Order from local kitchens, send a custom delivery, or plan a larger meal from one place.",
-                              source_name="Patch operations", published=True),
+                              source_name="GateWay operations", published=True),
                 CommunityItem(kind="service", title="Catering and recurring lunch requests are live",
-                              summary="Tell us the headcount, date and budget. Patch operations will confirm the plan before anything is charged.",
-                              source_name="Patch operations", published=True),
+                              summary="Tell us the headcount, date and budget. GateWay operations will confirm the plan before anything is charged.",
+                              source_name="GateWay operations", published=True),
             ])
         if not db.query(PatchOffer).count():
             db.add_all([
-                PatchOffer(title="Welcome to Patch", detail="Save 10% on a first local-kitchen order.",
+                PatchOffer(title="Welcome to GateWay", detail="Save 10% on a first local-kitchen order.",
                            promo_code="WELCOME10"),
                 PatchOffer(title="Neighbor loyalty reward", detail="Save this reward and use LOYAL10 at checkout.",
                            promo_code="LOYAL10"),

@@ -11,6 +11,7 @@ import app.dispatch as dp
 import app.intake as intake_mod
 import app.kitchen as kitchen_mod
 import app.track as track_mod
+from app.bizday import business_day
 from app.db import SessionLocal
 from app.models import Partner, Proof
 from app.main import app
@@ -22,7 +23,7 @@ fake = FakeAirtable()
 DRV = fake.seed(at.DRIVERS, {"driver_id": "DRV-TP", "day_token": "tokTP",
                              "display_name": "Tipped", "status": "active"})
 import datetime as _dt
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 for tip, n in ((300, "T1"), (500, "T2")):
     fake.seed(at.ORDERS, {"order_id": f"ORD-TIP{n}", "status": "delivered",
                           "driver": [DRV], "tip_cents": tip,

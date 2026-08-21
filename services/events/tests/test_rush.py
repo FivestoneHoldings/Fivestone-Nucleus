@@ -5,13 +5,14 @@ import pytest
 from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.dispatch as dp
+from app.bizday import business_day
 from app.main import app
 from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 DRIVERS = [fake.seed(at.DRIVERS, {"driver_id": f"DRV-R{i}", "day_token": f"tokR{i}",
                                    "display_name": f"Rush {i}", "status": "active"})
@@ -96,6 +97,6 @@ def test_rush_driver_run_payload():
 
 def test_summary_honors_explicit_past_date():
     """Day-open fetches yesterday's scorecard via /summary?date= — pin the param."""
-    y = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
+    y = (_dt.datetime.strptime(business_day(), "%Y-%m-%d") - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
     d = client.get(f"{K}/summary", params={"date": y}).json()
     assert d["date"] == y            # not silently coerced to today

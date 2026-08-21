@@ -6,13 +6,14 @@ from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.dispatch as dp
 import app.intake as intake_mod
+from app.bizday import business_day
 from app.main import app
 from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 K = "/api/board/test-key"
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 DRV = fake.seed(at.DRIVERS, {"driver_id": "DRV-CASH", "day_token": "tokCASH",
                               "display_name": "Cash Carrier", "status": "active"})

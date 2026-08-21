@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 import app.airtable_client as at
 import app.kitchen as kitchen_mod
+from app.bizday import business_day
 from app.db import SessionLocal
 from app.models import Partner
 from app.main import app
@@ -11,7 +12,7 @@ from tests.fake_airtable import FakeAirtable
 
 client = TestClient(app)
 fake = FakeAirtable()
-TODAY = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+TODAY = business_day()
 
 
 @pytest.fixture(autouse=True)

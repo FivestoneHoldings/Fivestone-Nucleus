@@ -1,6 +1,11 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.3
+Updated: 2026-08-20 · version 1.10.4
+
+The community, offers, demand, concierge, partner, and preference capabilities
+now live inside the existing GateWay visual shell and shared navigation. The
+public product remains GateWay until the founder supplies the official Patch
+brand assets; no interim logo or replacement visual identity is in use.
 
 This is the release truth. A capability is **Live** only when it has a durable
 server workflow, an operator surface, tests, and a customer/partner entrypoint.
