@@ -32,6 +32,55 @@ def test_founder_master_key_still_works():
     assert client.get("/api/board/founder-master-key/feedback").status_code == 200
 
 
+def test_clean_board_entrypoint_uses_header_session_not_url_credentials():
+    page = client.get("/board")
+    assert page.status_code == 200
+    assert "Open Command" in page.text
+    assert "/api/board/session" in page.text
+    assert "/api/board/login" in page.text
+    assert "sessionStorage" not in page.text
+    assert "location.pathname.split('/').filter(Boolean).pop()" not in page.text
+    assert page.headers["cache-control"] == "no-store"
+
+
+def test_header_session_authorizes_without_putting_key_in_route():
+    denied = client.get("/api/board/session/readiness")
+    assert denied.status_code == 403
+    allowed = client.get("/api/board/session/readiness",
+                         headers={"X-Board-Key": "founder-master-key"})
+    assert allowed.status_code == 200
+    assert "X-Board-Key" not in allowed.request.url.path
+
+
+def test_login_uses_httponly_cookie_and_logout_clears_it():
+    login = client.post("/api/board/login",
+                        json={"key": "founder-master-key", "remember": True})
+    assert login.status_code == 200
+    cookie = login.headers["set-cookie"]
+    assert "gw_board_session=" in cookie and "HttpOnly" in cookie
+    assert "SameSite=strict" in cookie and "Max-Age=604800" in cookie
+    assert client.get("/api/board/session/readiness").status_code == 200
+    logout = client.post("/api/board/logout")
+    assert logout.status_code == 200
+    assert "gw_board_session=" in logout.headers["set-cookie"]
+    assert client.get("/api/board/session/readiness").status_code == 403
+
+
+def test_header_cannot_rescue_an_unrelated_bad_path_key():
+    response = client.get("/api/board/not-the-key/readiness",
+                          headers={"X-Board-Key": "founder-master-key"})
+    assert response.status_code == 403
+
+
+def test_legacy_board_link_scrubs_address_bar_before_api_calls():
+    bridge = client.get("/board/founder-master-key", follow_redirects=False)
+    assert bridge.status_code == 303
+    assert bridge.headers["location"] == "/board"
+    assert "HttpOnly" in bridge.headers["set-cookie"]
+    page = client.get("/board")
+    assert "showReadiness" in page.text
+
+
 def test_unknown_key_is_rejected():
     assert client.get("/api/board/totally-made-up/feedback").status_code == 403
 

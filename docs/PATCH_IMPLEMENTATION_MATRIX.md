@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.4
+Updated: 2026-08-20 · version 1.10.5
 
 The community, offers, demand, concierge, partner, and preference capabilities
 now live inside the existing GateWay visual shell and shared navigation. The
@@ -29,6 +29,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Accessibility/personalization | Live | Durable palette, text size, contrast, motion, density, channel and quiet-hour preferences. |
 | Context delivery intelligence | Live weather / partial traffic | Official NWS point alerts are cached and translated into checkout/feed delivery-impact guidance with stale-safe fallback. Service radius, hours, prep time and driver heads-up rules are live. Live traffic still needs an authoritative provider. |
 | Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
+| Founder/team command authentication | Live | Clean `/board` sign-in sends the founder or individually revocable team credential in a no-store request header. Compatibility links immediately scrub the bearer key from the address bar. |
 | Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |
 | SMS notifications | External gate | Notification adapter and copy exist; activation requires Twilio credentials and messaging registration. Phone support is 865-964-3843, 9–9 daily. |
 | Square catalog/order integration | External gate | Canonical menu/order models exist; a live Square seller authorization is required. Manual menu/order fallback is live. |

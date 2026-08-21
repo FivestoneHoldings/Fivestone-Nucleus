@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .db import SessionLocal, Base, engine, get_db, DB_BACKEND, DB_DURABLE
 from .models import Event
 from . import operations_models  # noqa: F401 — register owned Postgres operations tables
@@ -149,10 +149,54 @@ def driver_ui(day_token: str):
     return _page("driver.html")
 
 
-@app.get("/board/{key}", response_class=HTMLResponse)
-def board_ui(key: str):
-    """Founder command board."""
+@app.get("/board", response_class=HTMLResponse)
+def board_signin():
+    """Clean founder entrypoint; the credential is submitted in-page and is
+    never placed in a URL."""
     return _page("board.html")
+
+
+def _set_board_cookie(response, key: str, secure: bool, remember: bool = True) -> None:
+    response.set_cookie("gw_board_session", key, httponly=True, secure=secure,
+                        samesite="strict", path="/",
+                        max_age=604800 if remember else None)
+
+
+@app.post("/api/board/login")
+async def board_login(request: Request):
+    """Exchange a board key for an HttpOnly same-site browser session."""
+    try:
+        payload = await request.json()
+    except ValueError:
+        payload = {}
+    key = str(payload.get("key", "")).strip()
+    actor = boardauth.check_key(key)
+    response = JSONResponse({"ok": True, "actor": actor})
+    forwarded_https = request.headers.get("x-forwarded-proto", "").lower() == "https"
+    _set_board_cookie(response, key, request.url.scheme == "https" or forwarded_https,
+                      bool(payload.get("remember", True)))
+    return response
+
+
+@app.post("/api/board/logout")
+def board_logout():
+    response = JSONResponse({"ok": True})
+    response.delete_cookie("gw_board_session", path="/", samesite="strict")
+    return response
+
+
+@app.get("/board/{key}", response_class=HTMLResponse)
+def board_ui(key: str, request: Request):
+    """One-time compatibility bridge for already-issued founder/team links.
+
+    The old URL is immediately replaced before the full board is loaded. New
+    access starts at /board and never needs a bearer secret in the address bar.
+    """
+    boardauth.check_key(key)
+    response = RedirectResponse("/board", status_code=303)
+    forwarded_https = request.headers.get("x-forwarded-proto", "").lower() == "https"
+    _set_board_cookie(response, key, request.url.scheme == "https" or forwarded_https)
+    return response
 
 
 @app.get("/team", response_class=HTMLResponse)
@@ -222,7 +266,26 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.4"
+NUCLEUS_VERSION = "1.10.5"
+
+
+@app.middleware("http")
+async def board_request_credential(request, call_next):
+    """Make header-auth available to the existing board route family.
+
+    ContextVar keeps concurrent requests isolated and lets every existing
+    endpoint continue using the central boardauth.check_key function.
+    """
+    token = None
+    if request.url.path.startswith("/api/board/session"):
+        key = (request.headers.get("x-board-key", "") or
+               request.cookies.get("gw_board_session", ""))
+        token = boardauth.bind_request_key(key)
+    try:
+        return await call_next(request)
+    finally:
+        if token is not None:
+            boardauth.reset_request_key(token)
 
 
 @app.middleware("http")
@@ -296,7 +359,7 @@ async def security_headers(request, call_next):
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    if request.url.path.startswith(("/board/", "/driver/", "/kitchen/", "/api/", "/proof/")):
+    if request.url.path.startswith(("/board", "/driver/", "/kitchen/", "/api/", "/proof/")):
         # These URLs contain or serve capability-scoped operational data.
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
