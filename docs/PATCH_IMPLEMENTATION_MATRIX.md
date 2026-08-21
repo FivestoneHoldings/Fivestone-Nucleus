@@ -1,6 +1,6 @@
 # Patch implementation matrix
 
-Updated: 2026-08-20 · version 1.10.9
+Updated: 2026-08-20 · version 1.10.10
 
 The community, offers, demand, concierge, partner, and preference capabilities
 now live inside the existing GateWay visual shell and shared navigation. The
@@ -30,6 +30,7 @@ server workflow, an operator surface, tests, and a customer/partner entrypoint.
 | Context delivery intelligence | Live weather / partial traffic | Official NWS point alerts are cached and translated into checkout/feed delivery-impact guidance with stale-safe fallback. Service radius, hours, prep time and driver heads-up rules are live. Live traffic still needs an authoritative provider. |
 | Customer accounts/RBAC | Partial | Device identities and scoped operator/merchant/driver capabilities are live; verified multi-role customer accounts require an OTP provider. |
 | Founder/team command authentication | Live | Clean `/board` sign-in sends the founder or individually revocable team credential in a no-store request header. Compatibility links immediately scrub the bearer key from the address bar. |
+| Capability-page privacy | Live | Founder, driver, kitchen, proof, tracking and intake responses are no-store and no-index; strict referrer, frame, MIME, HSTS and CSP policies apply globally. |
 | Demo/training data isolation | Live | Demo tickets remain available for lifecycle drills and are visibly labeled, but are excluded from KPIs, revenue, tips, earnings, statements, exports, merchant insights and public impact. |
 | Active queue hygiene | Live | Launch readiness blocks on abandoned received/confirmed/assigned/in-transit/failed tickets while preserving legitimate future scheduled work and training demos. |
 | Stripe Connect/card payments | External gate | Money controls exist; activation requires Stripe business onboarding, credentials and approved allocation/refund rules. Cash is the live payment method. |

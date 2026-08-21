@@ -266,7 +266,7 @@ def order_form():
     return _page("order-form.html")
 
 
-NUCLEUS_VERSION = "1.10.9"
+NUCLEUS_VERSION = "1.10.10"
 
 
 @app.middleware("http")
@@ -359,7 +359,8 @@ async def security_headers(request, call_next):
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    if request.url.path.startswith(("/board", "/driver/", "/kitchen/", "/api/", "/proof/")):
+    if request.url.path.startswith(("/board", "/driver/", "/kitchen/", "/api/", "/proof/",
+                                    "/track/", "/v0/track/", "/v0/intake")):
         # These URLs contain or serve capability-scoped operational data.
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
