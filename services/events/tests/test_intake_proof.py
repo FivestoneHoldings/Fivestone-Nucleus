@@ -155,6 +155,8 @@ def test_preview_storefront_is_read_only():
     assert r.status_code == 200
     for needle in ("PREVIEW_ONLY", "Preview menu", "preview only", "ordering unavailable"):
         assert needle in r.text
+    assert r.text.index('id="pausedBanner"') < r.text.index('id="stepMenu"')
+    assert 'role="status"' in r.text
 
 
 def test_proof_roundtrip():

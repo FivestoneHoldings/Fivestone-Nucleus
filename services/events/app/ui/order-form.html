@@ -433,13 +433,15 @@ cursor:pointer;flex:0 0 auto}
     <input type="hidden" name="fee_cents" id="feeField" value="">
     <input type="hidden" name="total_cents" id="totalField" value="">
     <input type="hidden" name="tip_cents" id="tipField" value="">
+    <!-- Status belongs above the step machine: paused, closed, and preview
+         kitchens must say so while the customer is still browsing. -->
+    <div id="pausedBanner" role="status" style="display:none;background:#3a1512;color:#f0a89d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem;line-height:1.45"></div>
     <div id="stepMenu">
       <div id="menuZone" style="display:none"></div>
     </div>
     <div id="stepCheckout" style="display:none">
     <div id="orderReview"></div>
     <div id="contextImpact" style="display:none;border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:.8rem;line-height:1.45"></div>
-    <div id="pausedBanner" style="display:none;background:#3a1512;color:#e07b6d;border-radius:12px;padding:12px 16px;font-weight:800;text-align:center;margin-bottom:14px;font-size:.85rem"></div>
     <fieldset id="itemsFs">
       <legend id="itemsLeg">The delivery</legend>
       <label class="req" for="items" id="itemsLabel">What are we delivering?</label>
